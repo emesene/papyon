@@ -185,8 +185,8 @@ class ClientCapabilities(gobject.GObject):
             extra = int(caps[1])
         else:
             extra = 0
-        object.__setattr__(self, 'capabilities', self.MSNC[msnc] | capabilities)
-        object.__setattr__(self, 'extra', extra)
+        gobject.GObject.__setattr__(self, 'capabilities', self.MSNC[msnc] | capabilities)
+        gobject.GObject.__setattr__(self, 'extra', extra)
 
     def __getattr__(self, name):
         if name in self._CAPABILITIES:
@@ -204,19 +204,19 @@ class ClientCapabilities(gobject.GObject):
             mask = self._CAPABILITIES[name]
             old_value = bool(self.capabilities & mask)
             if value:
-                object.__setattr__(self, 'capabilities', self.capabilities | mask)
+                gobject.GObject.__setattr__(self, 'capabilities', self.capabilities | mask)
             else:
-                object.__setattr__(self, 'capabilities', self.capabilities & ~mask)
-            if value != old_value
+                gobject.GObject.__setattr__(self, 'capabilities', self.capabilities & ~mask)
+            if value != old_value:
                 self.emit('capability-changed', name, value)
         elif name in self._EXTRA:
             mask = self._EXTRA[name]
             old_value = bool(self.extra & mask)
             if value:
-                object.__setattr__(self, 'extra', self.extra | mask)
+                gobject.GObject.__setattr__(self, 'extra', self.extra | mask)
             else:
-                object.__setattr__(self, 'extra', self.extra & ~mask)
-            if value != old_value
+                gobject.GObject.__setattr__(self, 'extra', self.extra & ~mask)
+            if value != old_value:
                 self.emit('capability-changed', name, value)
         else:
             raise AttributeError("object 'ClientCapabilities' has no attribute '%s'" % name)
@@ -404,8 +404,8 @@ class Profile(gobject.GObject):
         self._signature_sound = None
         self._end_point_name = ""
 
-        self.client_id = ClientCapabilities(10)
-        self.client_id.supports_sip_invite = True
+        self._client_id = ClientCapabilities(10)
+        self._client_id.supports_sip_invite = True
         #self.client_id.supports_tunneled_sip = True
         self._client_id.connect("capability-changed", self._client_capability_changed)
 

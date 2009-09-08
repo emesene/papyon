@@ -1,8 +1,11 @@
 papyon - Python msn client library
 =================================
 
+Homepage: http://telepathy.freedesktop.org/wiki/Papyon
+
 papyon is an MSN client library, that tries to abstract the MSN protocol
-gory details.
+gory details. papyon is a fork of the unmaintained library pymsn
+(http://telepathy.freedesktop.org/wiki/Pymsn).
 
 Dependencies
 ============

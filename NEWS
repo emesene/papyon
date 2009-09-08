@@ -1,5 +1,7 @@
-papyon-0.4.2 (UNRELEASED)
+papyon-0.4.2 (2009-09-03)
 =========================
+
+The "Red Kayak" release.
 
 Enhancements:
   * Bumped minimal required Python version to 2.5

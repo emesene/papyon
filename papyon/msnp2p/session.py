@@ -67,11 +67,13 @@ class P2PSession(gobject.GObject):
             self._call_id = message.call_id
             self._cseq = message.cseq
             self._branch = message.branch
+            self._incoming = True
         else:
             self._id =  self._generate_id()
             self._call_id = "{%s}" % uuid.uuid4()
             self._cseq = 0
             self._branch = "{%s}" % uuid.uuid4()
+            self._incoming = False
 
         self._session_manager._register_session(self)
 
@@ -87,6 +89,10 @@ class P2PSession(gobject.GObject):
     @property
     def id(self):
         return self._id
+
+    @property
+    def incoming(self):
+        return self._incoming
 
     @property
     def call_id(self):

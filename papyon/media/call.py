@@ -48,6 +48,14 @@ class MediaCall(object):
             self.on_media_session_ready))
 
     @property
+    def incoming(self):
+        raise NotImplementedError
+
+    @property
+    def peer(self):
+        raise NotImplementedError
+
+    @property
     def media_session(self):
         return self._media_session
 

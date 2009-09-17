@@ -23,7 +23,7 @@ class odict(UserDict):
         return dict
 
     def items(self):
-        return zip(self._keys, self.values())
+        return map(lambda key: (key, self[key]), self._keys)
 
     def keys(self):
         return self._keys[:]

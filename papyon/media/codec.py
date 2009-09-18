@@ -29,6 +29,23 @@ class MediaCodec(object):
         self.clockrate = clockrate
         self.params = params or dict()
 
+        if encoding is None or clockrate is None or clockrate == 0:
+            if payload == 0:
+                self.encoding = "PCMU"
+                self.clockrate = 8000
+            elif payload == 8:
+                self.encoding = "PCMA"
+                self.clockrate = 8000
+            elif payload == 13:
+                self.encoding = "CN"
+                self.clockrate = 8000
+            elif payload == 31:
+                self.encoding = "H261"
+                self.clockrate = 90000
+            elif payload == 34:
+                self.encoding = "H263"
+                self.clockrate = 90000
+
     def __eq__(self, other):
         return (self.payload == other.payload and
                 self.encoding == other.encoding and

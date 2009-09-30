@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
+from papyon.service.AddressBook.constants import AddressBookError
 
 __all__ = ['GroupContactDeleteScenario']
 

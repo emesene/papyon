@@ -69,7 +69,7 @@ class Message(HTTPMessage):
         """Represents the payload of the message"""
         message = ''
         for header_name, header_value in self.headers.iteritems():
-            message += '\t%s: %s\\r\\n\n' % (header_name, header_value)
+            message += '\t%s: %s\\r\\n\n' % (header_name, repr(header_value))
         message += '\t\\r\\n\n'
         if self.headers['Content-Type'] != "application/x-msnmsgrp2p":
             message += '\t' + debug.escape_string(self.body).\

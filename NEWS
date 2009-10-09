@@ -1,3 +1,14 @@
+papyon-0.4.3 (2009-11-09)
+=========================
+
+The "Green Carrot" release.
+
+Fixes:
+  * Add the missing arument to Profile._client_capability_changed (fd.o #24042)
+  * Fix crash when printing unicode char in message headers (fd.o #24223)
+  * Add missing import in group_contact_delete (fd.o #24236)
+  * Improve audio/video call support
+
 papyon-0.4.2 (2009-09-03)
 =========================
 

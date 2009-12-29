@@ -159,7 +159,10 @@ class MSNObject(object):
             shad = base64.b64decode(shad)
         shac = element.get("SHA1C", None)
         if shac is not None:
-            shac = base64.b64decode(shac)
+            try:
+                shac = base64.b64decode(shac)
+            except TypeError:
+                logger.warning("Invalid SHA1C in MSNObject")
 
         result = MSNObject(creator, size, type, location, friendly, shad, shac)
         result._repr = xml_data

@@ -1,3 +1,9 @@
+papyon-0.4.5 (UNRELEASED)
+=========================
+
+Fixes:
+  * Don't display the password in the logs anymore (fd.o #25014)
+
 papyon-0.4.4 (2010-01-19)
 =========================
 

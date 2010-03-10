@@ -1,5 +1,7 @@
-papyon-0.4.5 (UNRELEASED)
+papyon-0.4.5 (2010-03-10)
 =========================
+
+The "Beige Curtain" release.
 
 Fixes:
   * Don't display the password in the logs anymore (fd.o #25014)

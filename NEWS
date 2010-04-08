@@ -1,3 +1,13 @@
+papyon-0.4.6 (2010-04-08)
+=========================
+
+The "Blue Sofa" release.
+
+Fixes:
+  * Don't try to reconnect in an infinite loop in HTTP mode (fd.o #27119)
+  * Fix parse error in HTTPMessage (fd.o #26804)
+  * Display presence of contacts using web messenger (fd.o #22553)
+
 papyon-0.4.5 (2010-03-10)
 =========================
 

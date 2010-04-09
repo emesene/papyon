@@ -1,3 +1,9 @@
+papyon-0.4.7 (UNRELEASED)
+=========================
+
+Fixes:
+  * Deal with bad SHA1{C,D} in MSNObjects and log the failures. (fd.o#24138)
+
 papyon-0.4.6 (2010-04-08)
 =========================
 

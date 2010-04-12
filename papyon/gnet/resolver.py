@@ -55,7 +55,11 @@ class HostnameResolver(object):
         self._queries = {}
 
     def query(self, host, callback):
-        result = socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            result = socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM)
+        except socket.gaierror:
+            result = []
+
         if len(result) == 0:
             status = 1
             cname = ''

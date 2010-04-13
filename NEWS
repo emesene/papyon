@@ -4,6 +4,7 @@ papyon-0.4.7 (UNRELEASED)
 Fixes:
   * Deal with bad SHA1{C,D} in MSNObjects and log the failures. (fd.o#24138)
   * Use python-crypto instead of an embedded copy of pyDes. (fd.o#26638)
+  * Signal an error in IOChannel if resolving fails. (fd.o#27554)
 
 papyon-0.4.6 (2010-04-08)
 =========================

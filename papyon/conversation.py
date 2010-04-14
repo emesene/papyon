@@ -227,6 +227,8 @@ class TextFormat(object):
 
     def __parse(self, format):
         for property in format.split(';'):
+            if not property:
+                continue
             key, value =  [p.strip(' \t|').upper() \
                     for p in property.split('=', 1)]
             if key == 'FN':

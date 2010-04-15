@@ -77,7 +77,10 @@ class HTTPMessage(object):
         #if "Content-Length" not in self.headers:
         #    result.append("Content-Length: %d" % len(body))
         result.append("")
-        result.append(str(self.body))
+        if "Content-Encoding" in self.headers:
+            result.append("<" + self.headers.get('Content-Encoding', '') + " encoded data>")
+        else:
+            result.append(str(self.body))
         return "\r\n".join(result)
 
     def __unicode__(self):

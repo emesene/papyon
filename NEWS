@@ -7,6 +7,7 @@ Fixes:
   * Signal an error in IOChannel if resolving fails. (fd.o#27554)
   * Don't choke on trailing semicolons in message headers. (fd.o#27556)
   * Allow receiving gzip-encoded soap responses (fd.o#27673)
+  * Work around invalid SHA1D attributes appearing in MSN objects (fd.o#27672)
 
 papyon-0.4.6 (2010-04-08)
 =========================

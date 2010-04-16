@@ -65,6 +65,30 @@ class MSNObjectType(object):
     LOCATION = 14
     "Location"
 
+def __decode_shad(shad, warning=True):
+    try:
+        shad = base64.b64decode(shad)
+    except TypeError:
+        # See fd.o#27672 for details on this workaround.
+        if ' ' in shad:
+            parts = shad.split(' ')
+
+            # Try the first part.
+            shad = __decode_shad(parts[0], False)
+
+            # Try the second part.
+            if shad is None:
+                shad = __decode_shad(parts[1], False)
+
+        else:
+            # Only display this warning if we're not in a nested call otherwise the
+            # warning will be confusing.
+            if warning:
+                logger.warning("Invalid SHA1D in MSNObject: %s" % shad)
+            shad = None
+
+    return shad
+
 class MSNObject(object):
     "Represents an MSNObject."
     def __init__(self, creator, size, typ, location, friendly,
@@ -156,11 +180,7 @@ class MSNObject(object):
         friendly = base64.b64decode(xml.unescape(element["Friendly"]))
         shad = element.get("SHA1D", None)
         if shad is not None:
-            try:
-                shad = base64.b64decode(shad)
-            except TypeError:
-                logger.warning("Invalid SHA1D in MSNObject: %s" % shad)
-                shad = None
+            shad = __decode_shad(shad)
         shac = element.get("SHA1C", None)
         if shac is not None:
             try:

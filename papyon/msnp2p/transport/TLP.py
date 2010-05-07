@@ -119,6 +119,28 @@ class MessageChunk(object):
     def __str__(self):
         return str(self.header) + str(self.body)
 
+    @property
+    def session_id(self):
+        return self.header.session_id
+
+    @property
+    def blob_id(self):
+        if self.is_ack_chunk():
+            return self.header.dw1
+        else:
+            return self.header.blob_id
+
+    @property
+    def ack_id(self):
+        if self.is_ack_chunk():
+            return (self.header.dw1, self.header.dw2)
+        else:
+            return (self.header.blob_id, self.header.dw1)
+
+    @property
+    def blob_size(self):
+        return self.header.blob_size
+
     def is_control_chunk(self):
         return self.header.flags & 0xCF
 
@@ -143,6 +165,16 @@ class MessageChunk(object):
         if current_size == self.header.blob_size:
             return True
         return False
+
+    def create_ack_chunk(self):
+        flags = TLPFlag.ACK
+        if self.header.flags & TLPFlag.RAK:
+            flags |= TLPFlag.RAK
+
+        blob_id = _generate_id()
+        header = TLPHeader(self.header.session_id, blob_id, 0, 0, 0, flags,
+            self.header.blob_id, self.header.dw1, self.header.blob_size)
+        return MessageChunk(header)
 
     def get_nonce(self):
         """Get the nonce from the chunk. The chunk needs to have the KEY flag
@@ -291,11 +323,10 @@ class MessageBlob(object):
 
 
 class ControlBlob(MessageBlob):
-    def __init__(self, session_id, flags, dw1=0, dw2=0, qw1=0):
+    def __init__(self, chunk):
         MessageBlob.__init__(self, 0, None)
-        header = TLPHeader(session_id, self.id, 0, 0, 0,
-                flags, dw1, dw2, qw1)
-        self.chunk = MessageChunk(header, "")
+        self.id = chunk.blob_id
+        self.chunk = chunk
 
     def __repr__(self):
         return "<ControlBlob id=%x session_id=%x>" % (self.id, self.session_id)
@@ -305,4 +336,3 @@ class ControlBlob(MessageBlob):
     
     def is_control_blob(self):
         return True
-

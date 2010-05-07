@@ -84,8 +84,8 @@ class P2PTransportManager(gobject.GObject):
 
     def _on_chunk_received(self, transport, chunk):
         self.emit("chunk-transferred", chunk)
-        session_id = chunk.header.session_id
-        blob_id = chunk.header.blob_id
+        session_id = chunk.session_id
+        blob_id = chunk.blob_id
 
         if session_id == 0: # signaling blob
             if blob_id in self._signaling_blobs:
@@ -93,8 +93,7 @@ class P2PTransportManager(gobject.GObject):
             else:
                 # create an in-memory blob
                 blob = MessageBlob(chunk.application_id, "",
-                    chunk.header.blob_size,
-                    session_id, chunk.header.blob_id)
+                    chunk.blob_size, session_id, chunk.blob_id)
                 self._signaling_blobs[blob_id] = blob
         else: # data blob
             if chunk.is_data_preparation_chunk():
@@ -105,12 +104,11 @@ class P2PTransportManager(gobject.GObject):
             if session_id in self._data_blobs:
                 blob = self._data_blobs[session_id]
                 if blob.transferred == 0:
-                    blob.id = chunk.header.blob_id
+                    blob.id = chunk.blob_id
             else:
                 # create an in-memory blob
                 blob = MessageBlob(chunk.application_id, "",
-                        chunk.header.blob_size,
-                        session_id, chunk.header.blob_id)
+                        chunk.blob_size, session_id, chunk.blob_id)
                 self._data_blobs[session_id] = blob
 
         blob.append_chunk(chunk)

@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.transport.TLP import TLPFlag, MessageChunk, ControlBlob
+from papyon.msnp2p.transport.TLP import ControlBlob
 
 import gobject
 import logging
@@ -102,34 +102,39 @@ class BaseP2PTransport(gobject.GObject):
         self._queue_lock.acquire()
         self._control_blob_queue = []
         self._data_blob_queue = []
-        self._pending_blob = {} # last_chunk : (blob, callback, errback)
-        self._pending_ack = {} # blob_id : [blob_offset1, blob_offset2 ...]
+        self._pending_blob = {} # blob_id : (blob, callback, errback)
+        self._pending_ack = set()
         self._queue_lock.release()
 
-    def _add_pending_ack(self, blob_id, chunk_id=0):
-        if blob_id not in self._pending_ack:
-            self._pending_ack[blob_id] = set()
-        self._pending_ack[blob_id].add(chunk_id)
+    def _add_pending_ack(self, ack_id):
+        self._pending_ack.add(ack_id)
 
-    def _del_pending_ack(self, blob_id, chunk_id=0):
-        if blob_id not in self._pending_ack:
+    def _del_pending_ack(self, ack_id):
+        self._pending_ack.discard(ack_id)
+
+    def _add_pending_blob(self, blob_id, blob, callback, errback):
+        if blob.is_data_blob():
+            self._pending_blob[blob_id] = (blob, callback, errback)
+        elif callback:
+            callback[0](*callback[1:])
+
+    def _del_pending_blob(self, blob_id):
+        if not blob_id in self._pending_blob:
             return
-        self._pending_ack[blob_id].discard(chunk_id)
-
-        if len(self._pending_ack[blob_id]) == 0:
-            del self._pending_ack[blob_id]
+        blob, callback, errback = self._pending_blob[blob_id]
+        del self._pending_blob[blob_id]
+        if callback:
+            callback[0](*callback[1:])
 
     def _on_chunk_received(self, chunk):
         if chunk.require_ack():
-            self._send_ack(chunk)
+            ack_chunk = chunk.create_ack_chunk()
+            ack = ControlBlob(ack_chunk)
+            self.send(ack)
 
-        if chunk.header.flags & TLPFlag.ACK:
-            self._del_pending_ack(chunk.header.dw1, chunk.header.dw2)
-            if chunk.header.dw1 in self._pending_blob:
-                blob, callback, errback = self._pending_blob[chunk.header.dw1]
-                del self._pending_blob[blob.id]
-                if callback:
-                    callback[0](*callback[1:])
+        if chunk.is_ack_chunk():
+            self._del_pending_ack(chunk.ack_id)
+            self._del_pending_blob(chunk.blob_id)
 
         #FIXME: handle all the other flags
 
@@ -164,26 +169,12 @@ class BaseP2PTransport(gobject.GObject):
         chunk = blob.get_chunk(self.max_chunk_size)
         if blob.is_complete():
             queue.pop(0)
-            self._pending_blob[chunk] = (blob, callback, errback)
+            self._add_pending_blob(chunk.blob_id, blob, callback, errback)
         self._queue_lock.release()
 
         if chunk.require_ack() :
-            self._add_pending_ack(chunk.header.blob_id, chunk.header.dw1)
+            self._add_pending_ack(chunk.ack_id)
         self._send_chunk(chunk)
         return True
-
-    def _send_ack(self, received_chunk):
-        flags = received_chunk.header.flags
-
-        flags = TLPFlag.ACK
-        if received_chunk.header.flags & TLPFlag.RAK:
-            flags |= TLPFlag.RAK
-
-        ack_blob = ControlBlob(received_chunk.header.session_id, flags,
-                dw1 = received_chunk.header.blob_id,
-                dw2 = received_chunk.header.dw1,
-                qw1 = received_chunk.header.blob_size)
-
-        self.send(ack_blob)
 
 gobject.type_register(BaseP2PTransport)

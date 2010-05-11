@@ -143,7 +143,10 @@ class MessageChunk(object):
         return self.header.flags & 0xCF
 
     def is_ack_chunk(self):
-        return self.header.flags & (TLPFlag.NAK | TLPFlag.ACK)
+        return self.header.flags & TLPFlag.ACK
+
+    def is_nak_chunk(self):
+        return self.header.flags & TLPFlag.NAK
 
     def is_nonce_chunk(self):
         return self.header.flags & TLPFlag.KEY

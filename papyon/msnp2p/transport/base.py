@@ -132,11 +132,11 @@ class BaseP2PTransport(gobject.GObject):
             ack = ControlBlob(ack_chunk)
             self.send(ack)
 
-        if chunk.is_ack_chunk():
+        if chunk.is_ack_chunk() or chunk.is_nak_chunk():
             self._del_pending_ack(chunk.acked_id)
             self._del_pending_blob(chunk.acked_id)
 
-        #FIXME: handle all the other flags
+        #FIXME: handle all the other flags (NAK...)
 
         if not chunk.is_control_chunk():
             self.emit("chunk-received", chunk)

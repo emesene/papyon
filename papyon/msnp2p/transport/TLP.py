@@ -125,17 +125,15 @@ class MessageChunk(object):
 
     @property
     def blob_id(self):
-        if self.is_ack_chunk():
-            return self.header.dw1
-        else:
-            return self.header.blob_id
+        return self.header.blob_id
 
     @property
     def ack_id(self):
-        if self.is_ack_chunk():
-            return (self.header.dw1, self.header.dw2)
-        else:
-            return (self.header.blob_id, self.header.dw1)
+        return (self.header.blob_id, self.header.dw1)
+
+    @property
+    def acked_id(self):
+        return (self.header.dw1, self.header.dw2)
 
     @property
     def blob_size(self):

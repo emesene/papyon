@@ -102,7 +102,7 @@ class BaseP2PTransport(gobject.GObject):
         self._queue_lock.acquire()
         self._control_blob_queue = []
         self._data_blob_queue = []
-        self._pending_blob = {} # blob_id : (blob, callback, errback)
+        self._pending_blob = {} # ack_id : (blob, callback, errback)
         self._pending_ack = set()
         self._queue_lock.release()
 
@@ -112,17 +112,17 @@ class BaseP2PTransport(gobject.GObject):
     def _del_pending_ack(self, ack_id):
         self._pending_ack.discard(ack_id)
 
-    def _add_pending_blob(self, blob_id, blob, callback, errback):
+    def _add_pending_blob(self, ack_id, blob, callback, errback):
         if blob.is_data_blob():
-            self._pending_blob[blob_id] = (blob, callback, errback)
+            self._pending_blob[ack_id] = (blob, callback, errback)
         elif callback:
             callback[0](*callback[1:])
 
-    def _del_pending_blob(self, blob_id):
-        if not blob_id in self._pending_blob:
+    def _del_pending_blob(self, ack_id):
+        if not ack_id in self._pending_blob:
             return
-        blob, callback, errback = self._pending_blob[blob_id]
-        del self._pending_blob[blob_id]
+        blob, callback, errback = self._pending_blob[ack_id]
+        del self._pending_blob[ack_id]
         if callback:
             callback[0](*callback[1:])
 
@@ -133,8 +133,8 @@ class BaseP2PTransport(gobject.GObject):
             self.send(ack)
 
         if chunk.is_ack_chunk():
-            self._del_pending_ack(chunk.ack_id)
-            self._del_pending_blob(chunk.blob_id)
+            self._del_pending_ack(chunk.acked_id)
+            self._del_pending_blob(chunk.acked_id)
 
         #FIXME: handle all the other flags
 
@@ -169,7 +169,7 @@ class BaseP2PTransport(gobject.GObject):
         chunk = blob.get_chunk(self.max_chunk_size)
         if blob.is_complete():
             queue.pop(0)
-            self._add_pending_blob(chunk.blob_id, blob, callback, errback)
+            self._add_pending_blob(chunk.ack_id, blob, callback, errback)
         self._queue_lock.release()
 
         if chunk.require_ack() :

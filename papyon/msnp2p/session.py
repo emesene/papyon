@@ -196,7 +196,7 @@ class P2PSession(gobject.GObject):
         self._session_manager._transport_manager.cleanup(self._id)
         self._session_manager._unregister_session(self)
 
-    def _send_p2p_data(self, data_or_file, is_file=False):
+    def _send_p2p_data(self, data_or_file):
         if isinstance(data_or_file, SLPMessage):
             session_id = 0
             data = str(data_or_file)
@@ -207,7 +207,7 @@ class P2PSession(gobject.GObject):
             total_size = None
 
         blob = MessageBlob(self._application_id,
-                data, total_size, session_id, None, is_file)
+                data, total_size, session_id, None)
         self._session_manager._transport_manager.send(self.peer, blob)
 
     def _on_blob_sent(self, blob):

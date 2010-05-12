@@ -53,7 +53,7 @@ class MessageChunk(object):
 
 class MessageBlob(object):
     def __init__(self, application_id, data, total_size=None,
-            session_id=None, blob_id=None, is_file=False):
+            session_id=None, blob_id=None):
         if data is not None:
             if isinstance(data, str):
                 if len(data) > 0:
@@ -77,7 +77,6 @@ class MessageBlob(object):
             session_id = _generate_id()
         self.session_id = session_id
         self.id = blob_id or _generate_id()
-        self.is_file = is_file
 
     def __del__(self):
         #if self.data is not None:

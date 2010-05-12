@@ -218,7 +218,7 @@ class MessageChunk(object):
 
 
     @staticmethod
-    def create(app_id, session_id, blob_id, offset, blob_size, max_size):
+    def create(app_id, session_id, blob_id, offset, blob_size, max_size, sync):
         header = TLPHeader()
         header.session_id = session_id
         header.blob_id = blob_id

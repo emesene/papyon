@@ -43,9 +43,9 @@ def _generate_id(max=MAX_INT32):
 
 class MessageChunk(object):
     @staticmethod
-    def create(app_id, session_id, blob_id, offset, blob_size, max_size):
+    def create(app_id, session_id, blob_id, offset, blob_size, max_size, sync):
         return TLPv1.MessageChunk.create(app_id, session_id, blob_id, offset,
-                blob_size, max_size)
+                blob_size, max_size, sync)
 
     @staticmethod
     def parse(data):
@@ -119,9 +119,9 @@ class MessageBlob(object):
         self.data.seek(0, os.SEEK_SET)
         return data
 
-    def get_chunk(self, max_size):
+    def get_chunk(self, max_size, sync=False):
         chunk = MessageChunk.create(self.application_id, self.session_id,
-                self.id, self.transferred, self.total_size, max_size)
+                self.id, self.transferred, self.total_size, max_size, sync)
 
         if self.data is not None:
             self.data.seek(self.transferred, os.SEEK_SET)
@@ -152,7 +152,7 @@ class ControlBlob(MessageBlob):
     def __repr__(self):
         return "<ControlBlob id=%x session_id=%x>" % (self.id, self.session_id)
 
-    def get_chunk(self, max_size):
+    def get_chunk(self, max_size, sync=False):
         return self.chunk
     
     def is_control_blob(self):

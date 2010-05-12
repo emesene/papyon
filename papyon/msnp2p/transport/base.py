@@ -51,7 +51,7 @@ class BaseP2PTransport(gobject.GObject):
         self._name = name
         self._source = None
 
-        self._local_chunk_id = random.randint(1000, MAX_INT32)
+        self._local_chunk_id = None
         self._remote_chunk_id = None
 
         self._transport_manager._register_transport(self)
@@ -172,8 +172,14 @@ class BaseP2PTransport(gobject.GObject):
                 self._source = None
             return False
 
+        if self._local_chunk_id is None:
+            sync = True
+            self._local_chunk_id = random.randint(1000, MAX_INT32)
+        else:
+            sync = False
+
         blob, callback, errback = queue[0]
-        chunk = blob.get_chunk(self.max_chunk_size)
+        chunk = blob.get_chunk(self.max_chunk_size, sync)
         chunk.id = self._local_chunk_id
         self._local_chunk_id = chunk.next_id
 

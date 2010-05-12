@@ -22,12 +22,16 @@ from papyon.msnp2p.transport.TLP import ControlBlob
 
 import gobject
 import logging
+import random
 import threading
 import weakref
 
 __all__ = ['BaseP2PTransport']
 
 logger = logging.getLogger('papyon.msnp2p.transport')
+
+
+MAX_INT32 = 2147483647
 
 class BaseP2PTransport(gobject.GObject):
     __gsignals__ = {
@@ -46,6 +50,9 @@ class BaseP2PTransport(gobject.GObject):
         self._client = transport_manager._client
         self._name = name
         self._source = None
+
+        self._local_chunk_id = random.randint(1000, MAX_INT32)
+        self._remote_chunk_id = None
 
         self._transport_manager._register_transport(self)
         self._queue_lock = threading.Lock()
@@ -167,6 +174,9 @@ class BaseP2PTransport(gobject.GObject):
 
         blob, callback, errback = queue[0]
         chunk = blob.get_chunk(self.max_chunk_size)
+        chunk.id = self._local_chunk_id
+        self._local_chunk_id = chunk.next_id
+
         if blob.is_complete():
             queue.pop(0)
             self._add_pending_blob(chunk.ack_id, blob, callback, errback)

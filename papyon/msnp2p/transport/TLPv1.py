@@ -19,26 +19,19 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import ApplicationID
+from papyon.util.decorator import rw_property
 
 import struct
 import random
 import logging
 
-MAX_INT32 = 2147483647
-
 logger = logging.getLogger('papyon.msnp2p.transport')
 
 
+MAX_INT32 = 2147483647
+
 def _generate_id(max=MAX_INT32):
     return random.randint(1000, max)
-
-_previous_chunk_id = _generate_id(MAX_INT32 - 1)
-def _chunk_id():
-    global _previous_chunk_id
-    _previous_chunk_id += 1
-    if _previous_chunk_id == MAX_INT32:
-        _previous_chunk_id = 1
-    return _previous_chunk_id
 
 
 class TLPFlag(object):
@@ -104,6 +97,20 @@ class MessageChunk(object):
 
     def __str__(self):
         return str(self.header) + str(self.body)
+
+    @rw_property
+    def id():
+        def fget(self):
+            return self.header.dw1
+        def fset(self, value):
+            self.header.dw1 = value
+        return locals()
+
+    @property
+    def next_id(self):
+        if self.id + 1 == MAX_INT32:
+            return 1
+        return self.id + 1
 
     @property
     def session_id(self):
@@ -218,7 +225,6 @@ class MessageChunk(object):
         header.blob_offset = offset
         header.blob_size = blob_size
         header.chunk_size = min(blob_size - offset, max_size - header.size)
-        header.dw1 = _chunk_id()
         return MessageChunk(header, application_id=app_id)
 
     @staticmethod

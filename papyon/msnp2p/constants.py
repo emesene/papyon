@@ -55,3 +55,9 @@ class SLPRequestMethod(object):
     INVITE = 'INVITE'
     BYE = 'BYE'
     ACK = 'ACK'
+
+class PeerInfo(object):
+    PROTOCOL_VERSION = 512
+    IMPLEMENTATION_ID = 0
+    VERSION = 3584
+    CAPABILITIES = 271

@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.transport import TLPv1
+from papyon.msnp2p.transport import TLPv1, TLPv2
 import papyon.util.string_io as StringIO
 
 import struct
@@ -43,13 +43,22 @@ def _generate_id(max=MAX_INT32):
 
 class MessageChunk(object):
     @staticmethod
-    def create(app_id, session_id, blob_id, offset, blob_size, max_size, sync):
-        return TLPv1.MessageChunk.create(app_id, session_id, blob_id, offset,
-                blob_size, max_size, sync)
+    def create(version, app_id, session_id, blob_id, offset, blob_size,
+            max_size, sync):
+        if version in (1, 2):
+            module = globals()["TLPv%i" % version]
+            return module.MessageChunk.create(app_id, session_id, blob_id,
+                    offset, blob_size, max_size, sync)
+        else:
+            return None
 
     @staticmethod
-    def parse(data):
-        return TLPv1.MessageChunk.parse(data)
+    def parse(version, data):
+        if version in (1, 2):
+            module = globals()["TLPv%i" % version]
+            return module.MessageChunk.parse(data)
+        else:
+            return None
 
 class MessageBlob(object):
     def __init__(self, application_id, data, total_size=None,
@@ -119,8 +128,8 @@ class MessageBlob(object):
         self.data.seek(0, os.SEEK_SET)
         return data
 
-    def get_chunk(self, max_size, sync=False):
-        chunk = MessageChunk.create(self.application_id, self.session_id,
+    def get_chunk(self, version, max_size, sync=False):
+        chunk = MessageChunk.create(version, self.application_id, self.session_id,
                 self.id, self.transferred, self.total_size, max_size, sync)
 
         if self.data is not None:
@@ -152,7 +161,7 @@ class ControlBlob(MessageBlob):
     def __repr__(self):
         return "<ControlBlob id=%x session_id=%x>" % (self.id, self.session_id)
 
-    def get_chunk(self, max_size, sync=False):
+    def get_chunk(self, version, max_size, sync=False):
         return self.chunk
     
     def is_control_blob(self):

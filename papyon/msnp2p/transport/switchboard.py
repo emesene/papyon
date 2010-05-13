@@ -69,7 +69,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
                 MessageAcknowledgement.MSNC, self._on_chunk_sent, (chunk,))
 
     def _on_message_received(self, message):
-        chunk = MessageChunk.parse(message.body[:-4])
+        chunk = MessageChunk.parse(self._version, message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         self._on_chunk_received(chunk)
 

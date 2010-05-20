@@ -1,5 +1,7 @@
-papyon-0.4.7 (UNRELEASED)
+papyon-0.4.7 (2010-05-20)
 =========================
+
+The "Red Wire" release
 
 Fixes:
   * Deal with bad SHA1{C,D} in MSNObjects and log the failures. (fd.o#24138)

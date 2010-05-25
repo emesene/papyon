@@ -78,4 +78,3 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
 
     def _on_contact_left(self, contact):
         self.close()
-

@@ -54,7 +54,7 @@ class P2PTransportManager(gobject.GObject):
         switchboard_manager.register_handler(SwitchboardP2PTransport, self)
         self._default_transport = \
                 lambda transport_mgr, peer : \
-                        SwitchboardP2PTransport(client, (peer,), transport_mgr)
+                        SwitchboardP2PTransport(client, None, (peer,), transport_mgr)
         self._transports = set()
         self._transport_signals = {}
         self._signaling_blobs = {} # blob_id => blob

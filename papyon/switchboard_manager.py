@@ -37,22 +37,24 @@ __all__ = ['SwitchboardManager']
 logger = logging.getLogger('papyon.protocol.switchboard_manager')
 
 class SwitchboardClient(object):
-    def __init__(self, client, contacts, priority=99):
+    def __init__(self, client, switchboard, contacts, priority=99):
         self._client = client
         self._switchboard_manager = weakref.proxy(self._client._switchboard_manager)
         self.__switchboard = None
         self._switchboard_requested = False
         self._switchboard_priority = priority
 
+        self.participants = set()
         self._pending_invites = set(contacts)
         self._pending_messages = []
         self._delivery_callbacks = {}
 
-        if self._client.protocol_version >= 16:
-            self._pending_invites.add(self._client.profile)
-
-        self.participants = set()
-        self._process_pending_queues()
+        if switchboard is not None:
+            self._switchboard = switchboard
+        else:
+            if self._client.protocol_version >= 16:
+                self._pending_invites.add(self._client.profile)
+            self._process_pending_queues()
 
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -367,9 +369,9 @@ class SwitchboardManager(gobject.GObject):
                     continue
                 if not handler_class._can_handle_message(message):
                     continue
-                handler = handler_class(self._client, (), *extra_args)
+                handler = handler_class.handle_message(self._client,
+                        switchboard, message, *extra_args)
                 handlers.add(handler)
-                handler._switchboard = switchboard
                 self.emit("handler-created", handler_class, handler)
                 handler._on_message_received(message)
 
@@ -377,9 +379,9 @@ class SwitchboardManager(gobject.GObject):
             for handler_class, extra_args in self._handlers_class:
                 if not handler_class._can_handle_message(message):
                     continue
-                handler = handler_class(self._client, (), *extra_args)
+                handler = handler_class.handle_message(self._client,
+                        switchboard, message, *extra_args)
                 self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
                 self._orphaned_switchboards.discard(switchboard)
-                handler._switchboard = switchboard
                 self.emit("handler-created", handler_class, handler)
                 handler._on_message_received(message)

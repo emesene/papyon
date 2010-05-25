@@ -88,6 +88,21 @@ class P2PSessionManager(gobject.GObject):
                 return session
         return None
 
+    def _find_contact(self, account):
+        if ';' in account:
+            account, guid = account.split(';', 1)
+            guid = guid[1:-1]
+        else:
+            guid = ""
+
+        if account == self._client.profile.account:
+            peer = self._client.profile
+        else:
+            peer = self._client.address_book.search_or_build_contact(
+                    account, papyon.profile.NetworkID.MSN)
+
+        return peer, guid
+
     def _blob_to_session(self, blob):
         session_id = blob.session_id
 
@@ -146,8 +161,7 @@ class P2PSessionManager(gobject.GObject):
                     message.method == SLPRequestMethod.INVITE:
                 if isinstance(message.body, SLPSessionRequestBody):
                     # Find the contact we received the message from
-                    peer = self._client.address_book.search_or_build_contact(
-                            message.frm, papyon.profile.NetworkID.MSN)
+                    peer, guid = self._find_contact(message.frm)
                     try:
                         for handler in self._handlers:
                             if handler._can_handle_message(message):

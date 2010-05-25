@@ -144,7 +144,7 @@ class SIPTunneledTransport(SIPBaseTransport):
 
     def send(self, message):
         call_id = message.call.id
-        contact = message.call.contact
+        contact = message.call.peer
         self.log_message(">>", str(message))
         data = base64.b64encode(str(message))
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \

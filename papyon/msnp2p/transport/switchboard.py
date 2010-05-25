@@ -65,14 +65,28 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         return 1250 # length of the chunk including the header but not the footer
 
     def _send_chunk(self, chunk):
-        headers = {'P2P-Dest': self.peer.account}
+        if self.version is 1:
+            headers = {'P2P-Dest': self.peer.account}
+        elif self.version is 2:
+            headers = {'P2P-Src' : self._client.profile.account + ";{" +
+                                   self._client.machine_guid + "}",
+                       'P2P-Dest': self.peer.account + ";{" +
+                                   self.peer_guid + "}"}
         content_type = 'application/x-msnmsgrp2p'
         body = str(chunk) + struct.pack('>L', chunk.application_id)
         self._send_message(content_type, body, headers,
                 MessageAcknowledgement.MSNC, self._on_chunk_sent, (chunk,))
 
     def _on_message_received(self, message):
-        chunk = MessageChunk.parse(self._version, message.body[:-4])
+        version = 1
+        # if destination contains a GUID, the protocol should be TLPv2
+        if 'P2P-Dest' in message.headers and ';' in message.headers['P2P-Dest']:
+            version = 2
+            dest_guid = message.headers['P2P-Dest'].split(';', 1)[1][1:-1]
+            if dest_guid != self._client.machine_guid:
+                return # this chunk is not for us
+
+        chunk = MessageChunk.parse(version, message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         self._on_chunk_received(chunk)
 

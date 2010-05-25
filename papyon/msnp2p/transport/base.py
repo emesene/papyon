@@ -51,11 +51,6 @@ class BaseP2PTransport(gobject.GObject):
         self._name = name
         self._source = None
 
-        self._version = 1
-        if self._client.profile.client_capabilities.supports_p2pv2 and \
-                peer.client_capabilities.supports_p2pv2:
-            self._version = 2
-
         self._local_chunk_id = None
         self._remote_chunk_id = None
 
@@ -78,6 +73,14 @@ class BaseP2PTransport(gobject.GObject):
     @property
     def max_chunk_size(self):
         raise NotImplementedError
+
+    @property
+    def version(self):
+        if self._client.profile.client_id.supports_p2pv2 and \
+                self.peer.client_capabilities.supports_p2pv2:
+            return 2
+        else:
+            return 1
 
     def send(self, blob, callback=None, errback=None):
         self._queue_lock.acquire()
@@ -184,7 +187,7 @@ class BaseP2PTransport(gobject.GObject):
             sync = False
 
         blob, callback, errback = queue[0]
-        chunk = blob.get_chunk(self._version, self.max_chunk_size, sync)
+        chunk = blob.get_chunk(self.version, self.max_chunk_size, sync)
         chunk.id = self._local_chunk_id
         self._local_chunk_id = chunk.next_id
 

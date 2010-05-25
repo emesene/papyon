@@ -29,7 +29,7 @@ import logging
 
 __all__ = ['SwitchboardP2PTransport']
 
-logger = logging.getLogger('papyon.msnp2p.transport')
+logger = logging.getLogger('papyon.msnp2p.transport.switchboard')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
@@ -65,6 +65,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         return 1250 # length of the chunk including the header but not the footer
 
     def _send_chunk(self, chunk):
+        logger.debug(">>> %s" % repr(chunk))
         if self.version is 1:
             headers = {'P2P-Dest': self.peer.account}
         elif self.version is 2:
@@ -88,6 +89,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
 
         chunk = MessageChunk.parse(version, message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
+        logger.debug("<<< %s" % repr(chunk))
         self._on_chunk_received(chunk)
 
     def _on_contact_joined(self, contact):

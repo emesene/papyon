@@ -57,15 +57,22 @@ class P2PSession(gobject.GObject):
                 (object,))
     }
 
-    def __init__(self, session_manager, peer, euf_guid="", application_id=0,
-            message=None):
+    def __init__(self, session_manager, peer, peer_guid=None, euf_guid="",
+            application_id=0, message=None):
         gobject.GObject.__init__(self)
         self._session_manager = session_manager
+        self._client = session_manager._client
         self._peer = peer
+        self._peer_guid = peer_guid
 
         self._euf_guid = euf_guid
         self._application_id = application_id
         self._completed = False
+
+        self._version = 1
+        if self._client.profile.client_id.supports_p2pv2 and \
+                peer.client_capabilities.supports_p2pv2:
+            self._version = 2
 
         if message is not None:
             self._id = message.body.session_id
@@ -111,6 +118,23 @@ class P2PSession(gobject.GObject):
     def peer(self):
         return self._peer
 
+    @property
+    def peer_guid(self):
+        return self._peer_guid
+
+    @property
+    def local_id(self):
+        if self._version >= 2:
+            return "%s;{%s}" % (self._client.profile.account,
+                    self._client.machine_guid)
+        return self._client.profile.account
+
+    @property
+    def remote_id(self):
+        if self._version >= 2:
+            return "%s;{%s}" % (self._peer.account, self._peer_guid)
+        return self._peer.account
+
     def set_receive_data_buffer(self, buffer, total_size):
         blob = MessageBlob(self._application_id, buffer, total_size, self.id)
         self._session_manager._transport_manager.register_writable_blob(blob)
@@ -119,9 +143,9 @@ class P2PSession(gobject.GObject):
         body = SLPSessionRequestBody(self._euf_guid, self._application_id,
                 context, self._id)
         message = SLPRequestMessage(SLPRequestMethod.INVITE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
+                "MSNMSGR:" + self.remote_id,
+                to=self.remote_id,
+                frm=self.local_id,
                 branch=self._branch,
                 cseq=self._cseq,
                 call_id=self._call_id)
@@ -132,9 +156,9 @@ class P2PSession(gobject.GObject):
         self._cseq = 0
         body = SLPTransferRequestBody(self._id, 0, 1)
         message = SLPRequestMessage(SLPRequestMethod.INVITE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
+                "MSNMSGR:" + self.remote_id,
+                to=self.remote_id,
+                frm=self.local_id,
                 branch=self._branch,
                 cseq=self._cseq,
                 call_id=self._call_id)
@@ -146,8 +170,8 @@ class P2PSession(gobject.GObject):
                 s_channel_state=None)
         self._cseq += 1
         response = SLPResponseMessage(status_code,
-            to=self._peer.account,
-            frm=self._session_manager._client.profile.account,
+            to=self.remote_id,
+            frm=self.local_id,
             cseq=self._cseq,
             branch=self._branch,
             call_id=self._call_id)
@@ -157,8 +181,8 @@ class P2PSession(gobject.GObject):
     def _respond_transreq(self, transreq, status, body):
         self._cseq += 1
         response = SLPResponseMessage(status,
-            to=self._peer.account,
-            frm=self._session_manager._client.profile.account,
+            to=self.remote_id,
+            frm=self.local_id,
             cseq=self._cseq,
             branch=transreq.branch,
             call_id=self._call_id)
@@ -181,9 +205,9 @@ class P2PSession(gobject.GObject):
         self._cseq = 0
         self._branch = "{%s}" % uuid.uuid4()
         message = SLPRequestMessage(SLPRequestMethod.BYE,
-                "MSNMSGR:" + self._peer.account,
-                to=self._peer.account,
-                frm=self._session_manager._client.profile.account,
+                "MSNMSGR:" + self.remote_id,
+                to=self.remote_id,
+                frm=self.local_id,
                 branch=self._branch,
                 cseq=self._cseq,
                 call_id=self._call_id)
@@ -208,7 +232,8 @@ class P2PSession(gobject.GObject):
 
         blob = MessageBlob(self._application_id,
                 data, total_size, session_id, None)
-        self._session_manager._transport_manager.send(self.peer, blob)
+        self._session_manager._transport_manager.send(self.peer,
+                self.peer_guid, blob)
 
     def _on_blob_sent(self, blob):
         if blob.session_id == 0:

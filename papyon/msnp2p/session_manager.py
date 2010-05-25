@@ -165,7 +165,7 @@ class P2PSessionManager(gobject.GObject):
                     try:
                         for handler in self._handlers:
                             if handler._can_handle_message(message):
-                                session = handler._handle_message(peer, message)
+                                session = handler._handle_message(peer, guid, message)
                                 if session is not None:
                                     self._register_session(session)
                                     break

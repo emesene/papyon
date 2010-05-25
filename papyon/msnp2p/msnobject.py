@@ -33,8 +33,9 @@ import random
 __all__ = ['MSNObjectSession']
 
 class MSNObjectSession(P2PSession):
-    def __init__(self, session_manager, peer, application_id, message=None):
-        P2PSession.__init__(self, session_manager, peer,
+    def __init__(self, session_manager, peer, peer_guid, application_id,
+            message=None):
+        P2PSession.__init__(self, session_manager, peer, peer_guid,
                 EufGuid.MSN_OBJECT, application_id, message)
 
         if message is not None:

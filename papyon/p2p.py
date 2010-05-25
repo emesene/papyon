@@ -254,9 +254,9 @@ class MSNObjectStore(object):
         else:
             return False
 
-    def _handle_message(self, peer, message):
+    def _handle_message(self, peer, guid, message):
         session = MSNObjectSession(self._client._p2p_session_manager,
-                peer, message.body.application_id, message)
+                peer, guid, message.body.application_id, message)
 
         handle_id = session.connect("completed",
                         self._incoming_session_transfer_completed)
@@ -380,7 +380,7 @@ class WebcamHandler(gobject.GObject):
         else:
             return False
 
-    def _handle_message (self, peer, message):
+    def _handle_message (self, peer, guid, message):
         euf_guid = message.body.euf_guid
         if (euf_guid == EufGuid.MEDIA_SESSION):
             producer = False
@@ -388,7 +388,7 @@ class WebcamHandler(gobject.GObject):
             producer = True
 
         session = WebcamSession(producer, self._client._p2p_session_manager, \
-                                    peer, message.body.euf_guid, message)
+                                    peer, guid, message.body.euf_guid, message)
         self._sessions.append(session)
         self.emit("session-created", session, producer)
         return session

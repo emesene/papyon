@@ -52,9 +52,8 @@ class P2PTransportManager(gobject.GObject):
         self._client = client
         switchboard_manager = self._client._switchboard_manager
         switchboard_manager.register_handler(SwitchboardP2PTransport, self)
-        self._default_transport = \
-                lambda transport_mgr, peer : \
-                        SwitchboardP2PTransport(client, None, (peer,), transport_mgr)
+        self._default_transport = lambda peer, peer_guid : \
+            SwitchboardP2PTransport.handle_peer(client, peer, peer_guid, self)
         self._transports = set()
         self._transport_signals = {}
         self._signaling_blobs = {} # blob_id => blob
@@ -76,11 +75,11 @@ class P2PTransportManager(gobject.GObject):
             transport.disconnect(signal)
         del self._transport_signals[transport]
 
-    def _get_transport(self, peer):
+    def _get_transport(self, peer, peer_guid):
         for transport in self._transports:
-            if transport.peer == peer:
+            if transport.peer == peer and transport.peer_guid == peer_guid:
                 return transport
-        return self._default_transport(self, peer)
+        return self._default_transport(peer, peer_guid)
 
     def _on_chunk_received(self, transport, chunk):
         self.emit("chunk-transferred", chunk)
@@ -126,8 +125,8 @@ class P2PTransportManager(gobject.GObject):
     def _on_blob_sent(self, transport, blob):
         self.emit("blob-sent", blob)
 
-    def send(self, peer, blob):
-        transport = self._get_transport(peer)
+    def send(self, peer, peer_guid, blob):
+        transport = self._get_transport(peer, peer_guid)
         transport.send(blob, (self._on_blob_sent, transport, blob))
 
     def cleanup(self, session_id):

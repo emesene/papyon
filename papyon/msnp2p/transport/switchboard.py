@@ -33,7 +33,9 @@ logger = logging.getLogger('papyon.msnp2p.transport.switchboard')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
-    def __init__(self, client, switchboard, contacts, transport_manager):
+    def __init__(self, client, switchboard, contacts, peer, peer_guid, transport_manager):
+        self._peer = peer
+        self._peer_guid = peer_guid
         SwitchboardClient.__init__(self, client, switchboard, contacts)
         BaseP2PTransport.__init__(self, transport_manager, "switchboard")
 
@@ -47,14 +49,31 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         return content_type == 'application/x-msnmsgrp2p'
 
     @staticmethod
+    def handle_peer(client, peer, peer_guid, transport_manager):
+        return SwitchboardP2PTransport(client, None, (peer,), peer, peer_guid,
+            transport_manager)
+
+    @staticmethod
     def handle_message(client, switchboard, message, transport_manager):
-        return SwitchboardP2PTransport(client, switchboard, (), transport_manager)
+        guid = None
+        peer = None
+        if 'P2P-Src' in message.headers and ';' in message.headers['P2P-Src']:
+            account, guid = message.headers['P2P-Src'].split(';', 1)
+            guid = guid[1:-1]
+            if account == client.profile.account:
+                peer = client.profile
+        if peer is None:
+            peer = switchboard.participants.values()[0]
+        return SwitchboardP2PTransport(client, switchboard, (), peer, guid,
+            transport_manager)
 
     @property
     def peer(self):
-        for peer in self.total_participants:
-            return peer
-        return None
+        return self._peer
+
+    @property
+    def peer_guid(self):
+        return self._peer_guid
 
     @property
     def rating(self):

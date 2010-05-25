@@ -415,6 +415,12 @@ class Profile(gobject.GObject):
         self.__pending_set_personal_message = [self._personal_message, self._current_media]
 
     @property
+    def network_id(self):
+        """The network ID
+            @rtype: L{NetworkID<papyon.profile.NetworkID>}"""
+        return NetworkID.MSN
+
+    @property
     def account(self):
         """The user account
             @rtype: utf-8 encoded string"""
@@ -440,6 +446,12 @@ class Profile(gobject.GObject):
 
     @property
     def client_id(self):
+        """The user capabilities
+            @rtype: ClientCapabilities"""
+        return self._client_id
+
+    @property
+    def client_capabilities(self):
         """The user capabilities
             @rtype: ClientCapabilities"""
         return self._client_id

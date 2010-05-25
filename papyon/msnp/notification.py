@@ -696,6 +696,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('QRY',
                 (ProtocolConstant.PRODUCT_ID,), payload=response)
 
+    # --------- Notification -------------------------------------------------
+    def _handle_NOT(self, command):
+        pass
+
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self.__switchboard_callbacks = PriorityQueue()

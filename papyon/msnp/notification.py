@@ -411,10 +411,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         else:
             self._client.profile._server_property_changed("msn_object", None)
 
-    def _handle_ILN(self,command):
+    def _handle_ILN(self, command):
         self._handle_NLN(command)
 
-    def _handle_FLN(self,command):
+    def _handle_FLN(self, command):
         idx, network_id, account = self._parse_account(command)
 
         contacts = self._client.address_book.contacts.\
@@ -429,7 +429,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             contact._server_property_changed("presence",
                     profile.Presence.OFFLINE)
 
-    def _handle_NLN(self,command):
+    def _handle_NLN(self, command):
         idx, network_id, account = self._parse_account(command, 1)
 
         contacts = self._client.address_book.contacts.\
@@ -476,13 +476,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_UUX(self, command):
         pass
 
-    def _handle_UBN(self,command): # contact infos
+    def _handle_UBN(self, command): # contact infos
         if not command.payload:
             return
         type = int(command.arguments[1])
         self.emit("buddy-notification-received", type, command)
 
-    def _handle_UBX(self,command): # contact infos
+    def _handle_UBX(self, command): # contact infos
         if not command.payload:
             return
 
@@ -529,7 +529,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             contact._server_property_changed("personal-message", pm)
             contact._server_property_changed("signature-sound", ss)
 
-    def _handle_UUN(self,command): # UBN acknowledgment
+    def _handle_UUN(self, command): # UBN acknowledgment
         pass
 
     # --------- Contact List -------------------------------------------------
@@ -672,7 +672,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             callback(post_url, form_dict)
 
     # --------- Invitation ---------------------------------------------------
-    def _handle_RNG(self,command):
+    def _handle_RNG(self, command):
         session_id = command.arguments[0]
         host, port = command.arguments[1].split(':',1)
         port = int(port)
@@ -685,13 +685,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self.emit("switchboard-invitation-received", session, inviter)
 
     # --------- Challenge ----------------------------------------------------
-    def _handle_QNG(self,command):
+    def _handle_QNG(self, command):
         pass
 
-    def _handle_QRY(self,command):
+    def _handle_QRY(self, command):
         pass
 
-    def _handle_CHL(self,command):
+    def _handle_CHL(self, command):
         response = _msn_challenge(command.arguments[0])
         self._send_command('QRY',
                 (ProtocolConstant.PRODUCT_ID,), payload=response)

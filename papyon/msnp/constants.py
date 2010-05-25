@@ -33,8 +33,10 @@ class ClientTypes(object):
     XBOX = 4
 
 class UserNotificationTypes(object):
+    XML_DATA = 1
     SIP_INVITE = 2
     P2P_DATA = 3
+    CLOSED_CONVERSATION = 5
     RESYNCHRONIZE = 6
     SIP_PROGESS = 11
     TUNNELED_SIP = 12

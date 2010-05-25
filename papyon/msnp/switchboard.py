@@ -234,6 +234,17 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.participants[account] = contact
         self.emit("user-joined", contact)
 
+    def __participant_left(self, account):
+        account, guid = self.__parse_account(account)
+        if guid is not None:
+            places = self.end_points.setdefault(account, [])
+            places.remove(guid)
+            return # wait for the command without GUID to remove from participants
+        if account == self._client.profile.account:
+            return # ignore our own user
+        self.emit("user-left", self.participants[account])
+        del self.participants[account]
+
     def _handle_IRO(self, command):
         account = command.arguments[2]
         display_name = urllib.unquote(command.arguments[3])
@@ -256,8 +267,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _handle_BYE(self, command):
         if len(command.arguments) == 1:
             account = command.arguments[0]
-            self.emit("user-left", self.participants[account])
-            del self.participants[account]
+            self.__participant_left(account)
         else:
             self._state = ProtocolState.CLOSED
             self.participants = {}

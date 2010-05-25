@@ -305,6 +305,20 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
+    def _search_account(self, account, network_id):
+        if account == self._client.profile.account:
+            return [self._client.profile]
+
+        contacts = self._client.address_book.contacts.\
+                search_by_network_id(network_id).\
+                search_by_account(account)
+
+        if len(contacts) == 0:
+            logger.warning("Contact (network_id=%d) %s not found" % \
+                    (network_id, account))
+
+        return contacts
+
     def _handle_VER(self, command):
         self._protocol_version = int(command.arguments[0].lstrip('MSNP'))
         self._send_command('CVR',
@@ -416,30 +430,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_FLN(self, command):
         idx, network_id, account = self._parse_account(command)
-
-        contacts = self._client.address_book.contacts.\
-                search_by_network_id(network_id).\
-                search_by_account(account)
-
-        if len(contacts) == 0:
-            logger.warning("Contact (network_id=%d) %s not found" % \
-                    (network_id, account))
-
+        contacts = self._search_account(account, network_id)
         for contact in contacts:
             contact._server_property_changed("presence",
                     profile.Presence.OFFLINE)
 
     def _handle_NLN(self, command):
         idx, network_id, account = self._parse_account(command, 1)
-
-        contacts = self._client.address_book.contacts.\
-                search_by_network_id(network_id).\
-                search_by_account(account)
-
-        if len(contacts) == 0:
-            logger.warning("Contact (network_id=%d) %s not found" % \
-                    (network_id, account))
-
         presence = command.arguments[0]
         display_name = urllib.unquote(command.arguments[idx])
         idx += 1
@@ -456,10 +453,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if len(command.arguments) > idx:
             icon_url = command.arguments[idx]
 
+        contacts = self._search_account(account, network_id)
         for contact in contacts:
-            contact._server_property_changed("presence", presence)
+            # don't change local presence and capabilities
+            if contact is not self._client.profile:
+                contact._server_property_changed("presence", presence)
+                contact._server_property_changed("client-capabilities", capabilities)
             contact._server_property_changed("display-name", display_name)
-            contact._server_property_changed("client-capabilities", capabilities)
             contact._server_property_changed("msn-object", msn_object)
             if icon_url is not None:
                 contact._server_attribute_changed('icon_url', icon_url)
@@ -516,14 +516,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         else:
             ss = None
 
-        contacts = self._client.address_book.contacts.\
-                search_by_network_id(network_id).\
-                search_by_account(account)
 
-        if len(contacts) == 0:
-            logger.warning("Contact (network_id=%d) %s not found" % \
-                    (network_id, account))
 
+        contacts = self._search_account(account, network_id)
         for contact in contacts:
             contact._server_property_changed("current-media", cm)
             contact._server_property_changed("personal-message", pm)
@@ -618,15 +613,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_UBM(self, command):
         idx, network_id, account = self._parse_account(command)
-
-        contacts = self._client.address_book.contacts.\
-                search_by_network_id(network_id).\
-                search_by_account(account)
-
-        if len(contacts) == 0:
-            logger.warning("Contact (network_id=%d) %s not found" % \
-                    (network_id, account))
-        else:
+        contacts = self._search_account(account, network_id)
+        if len(contacts) > 0:
             contact = contacts[0]
             message = Message(contact, command.payload)
             self.emit("unmanaged-message-received", contact, message)

@@ -196,19 +196,34 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _handle_OUT(self, command):
         pass
     # --------- Invitation ---------------------------------------------------
-    def __participant_join(self, account, display_name, client_id):
-        if self._client.protocol_version >= 16:
-            if account.split(";")[0] == self._client.profile.account:
-                return # ignore our own user
+    def __parse_account(self, account):
+        """Parse account string and extract end-point info if available."""
+        if ';' in account:
+            account, guid = account.split(';', 1)
+            return account, guid[1:-1]
+        else:
+            return account, None
+
+    def __search_account(self, account, display_name):
+        """Search account in address book and make sure it's not ourself."""
+        if account == self._client.profile.account:
+            return self._client.profile
+
         contacts = self._client.address_book.contacts.\
                 search_by_account(account)
         if len(contacts) == 0:
-            contact = papyon.profile.Contact(id=0,
+            return papyon.profile.Contact(id=0,
                     network_id=papyon.profile.NetworkID.MSN,
                     account=account,
                     display_name=display_name)
         else:
-            contact = contacts[0]
+            return contacts[0]
+            
+    def __participant_join(self, account, display_name, client_id):
+        account, guid = self.__parse_account(account)
+        if account == self._client.profile.account:
+            return # ignore our own user
+        contact = self.__search_account(account, display_name)
         if contact in self.participants:
             return # ignore duplicate users
         contact._server_property_changed("client-capabilities", client_id)
@@ -247,15 +262,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _handle_MSG(self, command):
         account = command.arguments[0]
         display_name = urllib.unquote(command.arguments[1])
-        contacts = self._client.address_book.contacts.\
-                search_by_account(account)
-        if len(contacts) == 0:
-            contact = papyon.profile.Contact(id=0,
-                    network_id=papyon.profile.NetworkID.MSN,
-                    account=account,
-                    display_name=display_name)
-        else:
-            contact = contacts[0]
+        contact = self.__search_account(account, display_name)
         message = Message(contact, command.payload)
         self.emit("message-received", message)
 

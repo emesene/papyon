@@ -601,7 +601,7 @@ class Profile(gobject.GObject):
     def _server_property_changed(self, name, value):
         attr_name = "_" + name.lower().replace("-", "_")
         if attr_name == "_msn_object" and value is not None:
-            value = self.__pending_set_presence[2]
+            self.__pending_set_presence[2] = value
         old_value = getattr(self, attr_name)
         if value != old_value:
             setattr(self, attr_name, value)

@@ -85,7 +85,9 @@ class MessageBlob(object):
         if session_id is None:
             session_id = _generate_id()
         self.session_id = session_id
-        self.id = blob_id or _generate_id()
+        if blob_id is None:
+            blob_id = _generate_id()
+        self.id = blob_id
 
     def __del__(self):
         #if self.data is not None:

@@ -482,6 +482,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         type = int(command.arguments[1])
         self.emit("buddy-notification-received", type, command)
 
+    def _find_node(self, parent, name, default):
+        node = parent.find(name)
+        if node is not None and node.text is not None:
+            return node.text.encode("utf-8")
+        else:
+            return default
+
     def _handle_UBX(self, command): # contact infos
         if not command.payload:
             return
@@ -494,35 +501,40 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.error("Invalid XML data in received UBX command")
             return
 
-        cm = tree.find("./CurrentMedia")
-        if cm is not None and cm.text is not None:
-            parts = cm.text.split('\\0')
-            if parts[1] == 'Music' and parts[2] == '1':
-                cm = (parts[4].encode("utf-8"), parts[5].encode("utf-8"))
-            elif parts[2] == '0':
-                cm = None
-        else:
+        cm_parts = self._find_node(tree, "./CurrentMedia", "").split('\\0')
+        pm = self._find_node(tree, "./PSM", "")
+        ss = self._find_node(tree, "./SignatureSound", None)
+        mg = self._find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
+
+        if len(cm_parts) < 3:
+            cm = None
+        elif cm_parts[1] == 'Music' and cm_parts[2] == '1':
+            cm = (cm_parts[4].encode("utf-8"), cm_parts[5].encode("utf-8"))
+        elif cm_parts[2] == '0':
             cm = None
 
-        pm = tree.find("./PSM")
-        if pm is not None and pm.text is not None:
-            pm = pm.text.encode("utf-8")
-        else:
-            pm = ""
-
-        ss = tree.find("./SignatureSound")
-        if ss is not None and ss.text is not None:
-            ss = ss.text.encode("utf-8")
-        else:
-            ss = None
-
-
+        eps = tree.findall("./EndpointData")
+        end_points = {}
+        for ep in eps:
+            guid = ep.get("id").encode("utf-8")[1:-1]
+            caps = self._find_node(ep, "Capabilities", "0:0")
+            end_points[guid] = profile.EndPoint(guid, caps)
+        peps = tree.findall("./PrivateEndpointData")
+        for pep in peps:
+            guid = pep.get("id").encode("utf-8")[1:-1]
+            if guid not in end_points: continue
+            end_point = end_points[guid]
+            end_point.name = self._find_node(pep, "EpName", "")
+            end_point.idle = bool(self._find_node(pep, "Idle", "").lower() == "true")
+            end_point.client_type = int(self._find_node(pep, "ClientType", 0))
+            end_point.state = self._find_node(pep, "State", "")
 
         contacts = self._search_account(account, network_id)
         for contact in contacts:
             contact._server_property_changed("current-media", cm)
             contact._server_property_changed("personal-message", pm)
             contact._server_property_changed("signature-sound", ss)
+            contact._server_property_changed("end-points", end_points)
 
     def _handle_UUN(self, command): # UBN acknowledgment
         pass

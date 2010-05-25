@@ -108,6 +108,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
         self.participants = {}
+        self.end_points = {}
         self.__session_id = session_id
         self.__key = key
         self.__state = ProtocolState.CLOSED
@@ -221,6 +222,9 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             
     def __participant_join(self, account, display_name, client_id):
         account, guid = self.__parse_account(account)
+        if guid is not None:
+            places = self.end_points.setdefault(account, [])
+            places.append(guid)
         if account == self._client.profile.account:
             return # ignore our own user
         contact = self.__search_account(account, display_name)

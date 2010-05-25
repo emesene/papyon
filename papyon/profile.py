@@ -30,7 +30,7 @@ from papyon.util.decorator import rw_property
 
 import gobject
 
-__all__ = ['Profile', 'Contact', 'Group',
+__all__ = ['Profile', 'Contact', 'Group', 'EndPoint',
         'Presence', 'Membership', 'ContactType', 'Privacy', 'NetworkID', 'ClientCapabilities']
 
 
@@ -348,6 +348,11 @@ class Profile(gobject.GObject):
                 "",
                 gobject.PARAM_READABLE),
 
+            "end-points": (gobject.TYPE_PYOBJECT,
+                "End points",
+                "List of locations where the user is connected",
+                gobject.PARAM_READABLE),
+
             "personal-message": (gobject.TYPE_STRING,
                 "Personal message",
                 "The personal message that the user wants to display",
@@ -403,6 +408,7 @@ class Profile(gobject.GObject):
         self._current_media = None
         self._signature_sound = None
         self._end_point_name = ""
+        self._end_points = {}
 
         self._client_id = ClientCapabilities(10)
         self._client_id.supports_sip_invite = True
@@ -455,6 +461,10 @@ class Profile(gobject.GObject):
         """The user capabilities
             @rtype: ClientCapabilities"""
         return self._client_id
+
+    @property
+    def end_points(self):
+        return self._end_points
 
     @rw_property
     def display_name():
@@ -625,6 +635,11 @@ class Contact(gobject.GObject):
                 "",
                 gobject.PARAM_READWRITE),
 
+            "end-points": (gobject.TYPE_PYOBJECT,
+                "List of end points",
+                "The locations where this contact is connected (MPOP)",
+                gobject.PARAM_READABLE),
+
             "personal-message": (gobject.TYPE_STRING,
                 "Personal message",
                 "The personal message that the user wants to display",
@@ -686,6 +701,7 @@ class Contact(gobject.GObject):
         self._account = account
 
         self._display_name = display_name
+        self._end_points = {}
         self._presence = Presence.OFFLINE
         self._personal_message = ""
         self._current_media = None
@@ -758,6 +774,12 @@ class Contact(gobject.GObject):
         """Contact display name
             @rtype: utf-8 encoded string"""
         return self._display_name
+
+    @property
+    def end_points(self):
+        """List of contact's locations
+           @rtype: list of string"""
+        return self._end_points
 
     @property
     def personal_message(self):
@@ -942,3 +964,13 @@ class Group(gobject.GObject):
         name = pspec.name.lower().replace("-", "_")
         return getattr(self, name)
 gobject.type_register(Group)
+
+
+class EndPoint(object):
+    def __init__(self, id, caps):
+        self.id = id
+        self.capbilities = ClientCapabilities(client_id=caps)
+        self.name = ""
+        self.idle = False
+        self.state = ""
+        self.client_type = 0

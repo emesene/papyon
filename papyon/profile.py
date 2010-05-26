@@ -168,7 +168,7 @@ class ClientCapabilities(gobject.GObject):
 
     _EXTRA = {
             'supports_rtc_video': 0x00000010,
-            'supports_p2pv2': 0x00000020
+            'supports_p2pv2': 0x00000030
             }
 
     def __init__(self, msnc=0, client_id="0:0"):

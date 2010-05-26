@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import ApplicationID
+from papyon.util import debug
 from papyon.util.decorator import rw_property
 
 import struct
@@ -233,3 +234,21 @@ class MessageChunk(object):
         header.parse(data[:48])
         body = data[48:]
         return MessageChunk(header, body)
+
+    def __repr__(self):
+        string = "TLPv1 chunk 0x%x: " % self.id
+        string += "blob %i, " % self.blob_id
+        if self.session_id:
+            string += "session %d, " % self.session_id
+        if self.is_ack_chunk():
+            string += "ACK 0x%x 0x%x" % self.acked_id
+        elif self.is_nak_chunk():
+            string += "NAK 0x%x 0x%x" % self.acked_id
+        if self.size > 0:
+            if self.session_id:
+                string += "data [%d bytes]" % self.size
+            else:
+                string += "SLP Message"
+                string += "\n\t" + debug.escape_string(self.body).\
+                        replace("\r\n", "\\r\\n\n\t")
+        return string

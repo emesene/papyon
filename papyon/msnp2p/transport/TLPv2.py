@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import ApplicationID, PeerInfo
+from papyon.util import debug
 from papyon.util.decorator import rw_property
 from papyon.util.tlv import TLV
 
@@ -341,8 +342,23 @@ class MessageChunk(object):
         return str(self.header) + str(self.body)
 
     def __repr__(self):
-        return "<Message Chunk P2Pv2 : session_id=%x operation_code=%i" \
-               " chunk_size=%i id=%x>" % (self.header.session_id,
-                                          self.header.op_code,
-                                          self.header.chunk_size,
-                                          self.header.chunk_id)
+        string = "TLPv2 chunk 0x%x: " % self.id
+        string += "blob %i, " % self.blob_id
+        if self.session_id:
+            string += "session %d, " % self.session_id
+        if self.is_ack_chunk():
+            string += "ACK 0x%x, " % self.acked_id
+        if self.is_nak_chunk():
+            string += "NAK 0x%x, " % self.naked_id
+        if self.require_ack():
+            string += "RAK, "
+        if self.header.op_code & TLPFlag.SYN:
+            string += "SYN, "
+        if self.size > 0:
+            if self.session_id:
+                string += "data [%d bytes]" % self.size
+            else:
+                string += "SLP Message"
+                string += "\n\t" + debug.escape_string(self.body).\
+                        replace("\r\n", "\\r\\n\n\t")
+        return string

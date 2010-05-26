@@ -70,26 +70,12 @@ class Message(HTTPMessage):
         message = ''
         for header_name, header_value in self.headers.iteritems():
             message += '\t%s: %s\\r\\n\n' % (header_name, repr(header_value))
-        message += '\t\\r\\n\n'
         if self.headers['Content-Type'] != "application/x-msnmsgrp2p":
+            message += '\t\\r\\n\n'
             message += '\t' + debug.escape_string(self.body).\
                     replace("\r\n", "\\r\\n\n\t")
         else:
-            tlp_header = self.body[:48]
-            tlp_footer = self.body[-4:]
-            tlp_session_id = struct.unpack("<L", self.body[0:4])[0]
-            tlp_flags = struct.unpack("<L", self.body[28:32])[0]
-            body = self.body[48:-4]
-
-            message += "\t" + debug.hexify_string(tlp_header).replace("\r\n", "\n\t")
-
-            if tlp_flags == 0 or tlp_session_id == 0:
-                message += "\n\t" + debug.escape_string(body).\
-                        replace("\r\n", "\\r\\n\n\t")
-            elif len(body) > 0:
-                message += "\n\t" + "[%d bytes of data]" % len(body)
-            message += "\n\t" + debug.hexify_string(tlp_footer)
-
+            message += "\t[P2P message (%d bytes)]" % (len(self.body) - 4)
         return message.rstrip("\n\t")
 
     def __get_content_type(self):

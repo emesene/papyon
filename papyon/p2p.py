@@ -262,7 +262,7 @@ class MSNObjectStore(object):
                         self._incoming_session_transfer_completed)
         self._incoming_sessions[session] = handle_id
         try:
-            msn_object = MSNObject.parse(self._client, session._context)
+            msn_object = MSNObject.parse(self._client, session.context)
         except ParseError:
             session.reject()
             return
@@ -287,13 +287,14 @@ class MSNObjectStore(object):
         else:
             raise NotImplementedError
 
+        context = repr(msn_object)
         session = MSNObjectSession(self._client._p2p_session_manager,
-                peer, application_id)
+                peer, application_id, context=context)
         handle_id = session.connect("completed",
                 self._outgoing_session_transfer_completed)
         self._outgoing_sessions[session] = \
                 (handle_id, callback, errback, msn_object)
-        session.invite(repr(msn_object))
+        session.invite()
 
     def publish(self, msn_object):
         if msn_object._data is None:

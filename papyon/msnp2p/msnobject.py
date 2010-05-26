@@ -34,16 +34,23 @@ __all__ = ['MSNObjectSession']
 
 class MSNObjectSession(P2PSession):
     def __init__(self, session_manager, peer, peer_guid, application_id,
-            message=None):
+            message=None, context=None):
         P2PSession.__init__(self, session_manager, peer, peer_guid,
                 EufGuid.MSN_OBJECT, application_id, message)
 
+        self._context = None
         if message is not None:
             self._application_id = message.body.application_id
             try:
                 self._context = message.body.context.strip('\x00')
             except AttributeError:
                 raise SLPError("Incoming INVITE without context")
+        if context is not None:
+            self._context = context
+
+    @property
+    def context(self):
+        return self._context
 
     def accept(self, data_file):
         self._respond(200)
@@ -53,6 +60,6 @@ class MSNObjectSession(P2PSession):
     def reject(self):
         self._respond(603)
 
-    def invite(self, context):
-        self._invite(context)
+    def invite(self):
+        self._invite(self._context)
         return False

@@ -128,7 +128,7 @@ class BaseP2PTransport(gobject.GObject):
         self._pending_ack.discard(ack_id)
 
     def _add_pending_blob(self, ack_id, blob, callback, errback):
-        if blob.is_data_blob():
+        if blob.is_data_blob() and self.version == 1:
             self._pending_blob[ack_id] = (blob, callback, errback)
         elif callback:
             callback[0](*callback[1:])
@@ -191,14 +191,15 @@ class BaseP2PTransport(gobject.GObject):
         chunk.id = self._local_chunk_id
         self._local_chunk_id = chunk.next_id
 
-        if blob.is_complete():
-            queue.pop(0)
-            self._add_pending_blob(chunk.ack_id, blob, callback, errback)
-        self._queue_lock.release()
-
         if chunk.require_ack() :
             self._add_pending_ack(chunk.ack_id)
         self._send_chunk(chunk)
+
+        if blob.is_complete():
+            queue.pop(0)
+            self._add_pending_blob(chunk.ack_id, blob, callback, errback)
+
+        self._queue_lock.release()
         return True
 
 gobject.type_register(BaseP2PTransport)

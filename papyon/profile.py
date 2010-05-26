@@ -412,7 +412,8 @@ class Profile(gobject.GObject):
 
         self._client_id = ClientCapabilities(10)
         self._client_id.supports_sip_invite = True
-        #self.client_id.supports_tunneled_sip = True
+        self._client_id.supports_tunneled_sip = True
+        self._client_id.supports_p2pv2 = True
         self._client_id.connect("capability-changed", self._client_capability_changed)
 
         self._msn_object = None

@@ -287,14 +287,26 @@ class MSNObjectStore(object):
         else:
             raise NotImplementedError
 
-        context = repr(msn_object)
-        session = MSNObjectSession(self._client._p2p_session_manager,
-                peer, application_id, context=context)
-        handle_id = session.connect("completed",
-                self._outgoing_session_transfer_completed)
-        self._outgoing_sessions[session] = \
-                (handle_id, callback, errback, msn_object)
-        session.invite()
+        # send a request to all end points of the peer and
+        # cancel the other sessions when one of them answers
+        for end_point in peer.end_points.values():
+            if peer == self._client.profile and \
+               end_point.id == self._client.machine_guid:
+                continue
+
+            context = repr(msn_object)
+            session = MSNObjectSession(self._client._p2p_session_manager,
+                    peer, end_point.id, application_id, context=context)
+            handles = []
+            handles.append(session.connect("accepted",
+                self._on_session_answered))
+            handles.append(session.connect("rejected",
+                self._on_session_rejected))
+            handles.append(session.connect("completed",
+                self._outgoing_session_transfer_completed))
+            self._outgoing_sessions[session] = \
+                    (handles, callback, errback, msn_object)
+            session.invite()
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -303,8 +315,9 @@ class MSNObjectStore(object):
             self._published_objects.add(msn_object)
 
     def _outgoing_session_transfer_completed(self, session, data):
-        handle_id, callback, errback, msn_object = self._outgoing_sessions[session]
-        session.disconnect(handle_id)
+        handles, callback, errback, msn_object = self._outgoing_sessions[session]
+        for handle_id in handles:
+            session.disconnect(handle_id)
         msn_object._data = data
 
         callback[0](msn_object, *callback[1:])
@@ -314,6 +327,26 @@ class MSNObjectStore(object):
         handle_id = self._incoming_sessions[session]
         session.disconnect(handle_id)
         del self._incoming_sessions[session]
+
+    def _on_session_answered(self, answered_session):
+        for session in self._outgoing_sessions.keys():
+            if session is answered_session: continue
+            if session.peer != answered_session.peer: continue
+            if session.context != answered_session.context: continue
+            handles, cb, eb, msn_object = self._outgoing_sessions[session]
+            for handle_id in handles:
+                session.disconnect(handle_id)
+            session.cancel()
+            del self._outgoing_sessions[session]
+
+    def _on_session_rejected(self, session):
+        self._on_session_answered(session)
+        handles, callback, errback, msn_object = self._outgoing_sessions[session]
+        for handle_id in handles:
+            session.disconnect(handle_id)
+        if errback[0]:
+            errback[0](msn_object, *errback[1:])
+        del self._outgoing_sessions[session]
 
 
 class FileTransferManager(gobject.GObject):

@@ -63,3 +63,6 @@ class MSNObjectSession(P2PSession):
     def invite(self):
         self._invite(self._context)
         return False
+
+    def cancel(self):
+        self._close()

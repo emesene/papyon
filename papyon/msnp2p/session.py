@@ -267,6 +267,8 @@ class P2PSession(gobject.GObject):
                     elif message.status == 603:
                         self._on_session_rejected(message)
                         self.emit("rejected")
+                else:
+                    print "Unhandled response blob :", message
             return
 
         self._on_data_blob_received(blob)

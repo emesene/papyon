@@ -1,3 +1,11 @@
+papyon-0.4.8 (2010-05-27)
+=========================
+
+The "Purple Python" release
+
+Fixes:
+  * Fix contact not displaying because of a bad function name (fd.o #28278)
+
 papyon-0.4.7 (2010-05-20)
 =========================
 

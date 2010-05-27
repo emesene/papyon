@@ -154,6 +154,9 @@ class MessageChunk(object):
                 self.body == "\x00\x00\x00\x00" and
                 not self.header.flags & TLPFlag.FILE)
 
+    def is_signaling_chunk(self):
+        return (self.session_id == 0)
+
     def has_progressed(self):
         return self.header.flags & TLPFlag.EACH
 

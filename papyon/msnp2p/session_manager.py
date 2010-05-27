@@ -68,9 +68,7 @@ class P2PSessionManager(gobject.GObject):
         self._transport_manager.add_to_blacklist(session.id)
 
     def _on_chunk_transferred(self, chunk):
-        session_id = chunk.header.session_id
-        if session_id == 0:
-            return
+        session_id = chunk.session_id
         session = self._get_session(session_id)
         if session is None:
             return

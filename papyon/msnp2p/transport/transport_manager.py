@@ -56,7 +56,6 @@ class P2PTransportManager(gobject.GObject):
             SwitchboardP2PTransport.handle_peer(client, peer, peer_guid, self)
         self._transports = set()
         self._transport_signals = {}
-        self._signaling_blobs = {} # blob_id => blob
         self._data_blobs = {} # session_id => blob
         self._blacklist = set() # blacklist of session_id
 
@@ -64,8 +63,12 @@ class P2PTransportManager(gobject.GObject):
         assert transport not in self._transports, "Trying to register transport twice"
         self._transports.add(transport)
         signals = []
-        signals.append(transport.connect("chunk-received", self._on_chunk_received))
-        signals.append(transport.connect("chunk-sent", self._on_chunk_sent))
+        signals.append(transport.connect("chunk-received",
+            self._on_chunk_received))
+        signals.append(transport.connect("chunk-sent",
+            self._on_chunk_sent))
+        signals.append(transport.connect("signaling-blob-received",
+            self._on_blob_received))
         self._transport_signals[transport] = signals
 
     def _unregister_transport(self, transport):
@@ -86,41 +89,31 @@ class P2PTransportManager(gobject.GObject):
         session_id = chunk.session_id
         blob_id = chunk.blob_id
 
-        if session_id == 0: # signaling blob
-            if blob_id in self._signaling_blobs:
-                blob = self._signaling_blobs[blob_id]
-            else:
-                # create an in-memory blob
-                blob = MessageBlob(chunk.application_id, "",
-                    chunk.blob_size, session_id, chunk.blob_id)
-                self._signaling_blobs[blob_id] = blob
-        else: # data blob
-            if chunk.is_data_preparation_chunk():
-                return
-            if session_id in self._blacklist:
-                return
+        if chunk.is_data_preparation_chunk():
+            return
+        if session_id in self._blacklist:
+            return
 
-            if session_id in self._data_blobs:
-                blob = self._data_blobs[session_id]
-                if blob.transferred == 0:
-                    blob.id = chunk.blob_id
-            else:
-                # create an in-memory blob
-                blob = MessageBlob(chunk.application_id, "",
-                        chunk.blob_size, session_id, chunk.blob_id)
-                self._data_blobs[session_id] = blob
+        if session_id in self._data_blobs:
+            blob = self._data_blobs[session_id]
+            if blob.transferred == 0:
+                blob.id = chunk.blob_id
+        else:
+            # create an in-memory blob
+            blob = MessageBlob(chunk.application_id, "",
+                    chunk.blob_size, session_id, chunk.blob_id)
+            self._data_blobs[session_id] = blob
 
         blob.append_chunk(chunk)
         if blob.is_complete():
-            blob.data.seek(0, os.SEEK_SET)
             self.emit("blob-received", blob)
-            if session_id == 0:
-                del self._signaling_blobs[blob_id]
-            else:
-                del self._data_blobs[session_id]
+            del self._data_blobs[session_id]
 
     def _on_chunk_sent(self, transport, chunk):
         self.emit("chunk-transferred", chunk)
+
+    def _on_blob_received(self, transport, blob):
+        self.emit("blob-received", blob)
 
     def _on_blob_sent(self, transport, blob):
         self.emit("blob-sent", blob)

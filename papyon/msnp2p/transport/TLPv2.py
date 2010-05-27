@@ -270,6 +270,9 @@ class MessageChunk(object):
     def is_syn_request(self):
         return (self.header.op_code & TLPFlag.SYN) and not self.is_ack_chunk()
 
+    def is_signaling_chunk(self):
+        return (self.header.data_type == DLPType.SLP)
+
     def is_data_preparation_chunk(self):
         return (self.header.first and self.size == 4)
 
@@ -278,9 +281,6 @@ class MessageChunk(object):
 
     def has_progressed(self):
         return True
-
-    def contains_slp(self):
-        return (self.header.data_type == DLPType.SLP)
 
     def create_ack_chunk(self):
         header = TLPHeader()

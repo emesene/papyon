@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.transport.TLP import ControlBlob
+from papyon.msnp2p.transport.TLP import ControlBlob, MessageBlob
 
 import gobject
 import logging
@@ -40,6 +40,10 @@ class BaseP2PTransport(gobject.GObject):
                 (object,)),
 
             "chunk-sent": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "signaling-blob-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
             }
@@ -119,6 +123,7 @@ class BaseP2PTransport(gobject.GObject):
         self._data_blob_queue = []
         self._pending_blob = {} # ack_id : (blob, callback, errback)
         self._pending_ack = set()
+        self._signaling_blobs = {} # blob_id : blob
         self._queue_lock.release()
 
     def _add_pending_ack(self, ack_id):
@@ -154,9 +159,27 @@ class BaseP2PTransport(gobject.GObject):
         #FIXME: handle all the other flags (NAK...)
 
         if not chunk.is_control_chunk():
-            self.emit("chunk-received", chunk)
+            if chunk.is_signaling_chunk(): # signaling chunk
+                self._on_signaling_chunk_received(chunk)
+            else: # data chunk (buffered by the transport manager)
+                self.emit("chunk-received", chunk)
 
         self._process_send_queues()
+
+    def _on_signaling_chunk_received(self, chunk):
+        blob_id = chunk.blob_id
+        if blob_id in self._signaling_blobs:
+            blob = self._signaling_blobs[blob_id]
+        else:
+            # create an in-memory blob
+            blob = MessageBlob(chunk.application_id, "",
+                chunk.blob_size, chunk.session_id, blob_id)
+            self._signaling_blobs[blob_id] = blob
+
+        blob.append_chunk(chunk)
+        if blob.is_complete():
+            self.emit("signaling-blob-received", blob)
+            del self._signaling_blobs[blob_id]
 
     def _on_chunk_sent(self, chunk):
         self.emit("chunk-sent", chunk)

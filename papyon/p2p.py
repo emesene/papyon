@@ -65,7 +65,7 @@ class MSNObjectType(object):
     LOCATION = 14
     "Location"
 
-def __decode_shad(shad, warning=True):
+def _decode_shad(shad, warning=True):
     try:
         shad = base64.b64decode(shad)
     except TypeError:
@@ -74,11 +74,11 @@ def __decode_shad(shad, warning=True):
             parts = shad.split(' ')
 
             # Try the first part.
-            shad = __decode_shad(parts[0], False)
+            shad = _decode_shad(parts[0], False)
 
             # Try the second part.
             if shad is None:
-                shad = __decode_shad(parts[1], False)
+                shad = _decode_shad(parts[1], False)
 
         else:
             # Only display this warning if we're not in a nested call otherwise the
@@ -180,7 +180,7 @@ class MSNObject(object):
         friendly = base64.b64decode(xml.unescape(element["Friendly"]))
         shad = element.get("SHA1D", None)
         if shad is not None:
-            shad = __decode_shad(shad)
+            shad = _decode_shad(shad)
         shac = element.get("SHA1C", None)
         if shac is not None:
             try:

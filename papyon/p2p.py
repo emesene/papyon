@@ -30,6 +30,7 @@ from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
 from msnp2p import EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
+from msnp2p.constants import SLPCloseReason
 from profile import NetworkID, Contact, Profile
 
 import papyon.util.element_tree as ElementTree
@@ -405,6 +406,7 @@ class WebcamHandler(gobject.GObject):
         gobject.GObject.__init__(self)
         self._client = client
         self._sessions = []
+        self._handles = {} # session : (handles, callback, errback)
 
     def _can_handle_message (self, message):
         euf_guid = message.body.euf_guid
@@ -427,14 +429,78 @@ class WebcamHandler(gobject.GObject):
         self.emit("session-created", session, producer)
         return session
 
-    def invite(self, peer, producer=True):
-        print "Creating New Send Session"
+    def _invite(self, peer, peer_guid, producer, accept_cb, reject_cb):
+        session = WebcamSession(producer, self._client._p2p_session_manager,
+                peer, peer_guid, euf_guid)
+        self._connect_session(session, accept_cb, reject_cb)
+        self._sessions.append(session)
+        session.invite()
+
+    def _connect_session(self, session, accept_cb, reject_cb):
+        handles = []
+        handles.append(session.connect("accepted", self._on_session_accepted))
+        handles.append(session.connect("rejected", self._on_session_rejected))
+        self._handles[session] = (handles, accept_cb, reject_cb)
+
+    def _disconnect_session(self, session):
+        handles, accept_cb, reject_cb = self._handles[session]
+        for handle_id in handles:
+            session.disconnect(handle_id)
+        del self._handles[session]
+        return accept_cb, reject_cb
+
+    def _on_session_answered(self, answered_session, reason):
+        # cancel all sessions except the one we receive an answer for
+        for session in self._sessions:
+            if session is answered_session or \
+               session.peer != answered_session.peer or \
+               session.producer != answered_session.producer:
+                continue
+
+            self._disconnect_session(session)
+            session.end(reason=(reason, session.peer_guid))
+            self._sessions.remove(session)
+
+    def _on_session_accepted(self, session):
+        self._on_session_answered(session, SLPCloseReason.ACCEPTED)
+        accept_cb, reject_cb = self._disconnect_session(session)
+        if accept_cb:
+            accept_cb[0](session, *accept_cb[1:])
+
+    def _on_session_rejected(self, session):
+        self._on_session_answered(session, SLPCloseReason.DECLINED)
+        accept_cb, reject_cb = self._disconnect_session(session)
+        if reject_cb:
+            reject_cb[0](session, *reject_cb[1:])
+        self._sessions.remove(session)
+
+    ### Public API -----------------------------------------------------------
+
+    def invite(self, peer, producer=True, accept_cb=None, reject_cb=None):
+        """Invite a contact for a uni-directionnal webcam session
+           @param producer: if true, we want to send webcam
+           @param accept_cb: (function, *args) to call when the peer accepts
+           @param reject_cb: (function, *args) to call when the peer rejects
+
+           @note callbacks first argument will be the P2P session."""
+
         if producer:
             euf_guid = EufGuid.MEDIA_SESSION
         else:
             euf_guid = EufGuid.MEDIA_RECEIVE_ONLY
-        session = WebcamSession(producer, self._client._p2p_session_manager, \
-                                    peer, euf_guid)
-        self._sessions.append(session)
-        session.invite()
-        return session
+
+        # if there is no end point, the peer probably doesn't support MPOP
+        if len(peer.end_points) == 0:
+            self._invite(peer, None, producer, euf_guid, accept_cb, reject_cb)
+            return
+
+        # send a request to all end points and choose the first one answering
+        # (ignore end points not having a webcam if we want to receive)
+        for end_point in peer.end_points.values():
+            if peer == self._client.profile and \
+               end_point.id == self._client.machine_guid:
+                continue
+            if not producer and not end_point.capabilities.has_webcam:
+                continue
+            self._invite(peer, end_point.id, producer, euf_guid,
+                    accept_cb, reject_cb)

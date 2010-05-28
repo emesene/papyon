@@ -199,9 +199,9 @@ class P2PSession(gobject.GObject):
         body = SLPTransferResponseBody(session_id=self._id)
         self._respond_transreq(transreq, 603, body)
 
-    def _close(self, context=None):
+    def _close(self, context=None, reason=None):
         body = SLPSessionCloseBody(context=context, session_id=self._id,
-                s_channel_state=0)
+                reason=reason, s_channel_state=0)
         self._cseq = 0
         self._branch = "{%s}" % uuid.uuid4()
         message = SLPRequestMessage(SLPRequestMethod.BYE,

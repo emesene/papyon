@@ -56,6 +56,11 @@ class SLPRequestMethod(object):
     BYE = 'BYE'
     ACK = 'ACK'
 
+class SLPCloseReason(object):
+    ACCEPTED = 1
+    DECLINED = 2
+    ERROR = 3
+
 class PeerInfo(object):
     PROTOCOL_VERSION = 512
     IMPLEMENTATION_ID = 0

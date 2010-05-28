@@ -62,6 +62,10 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         self._session_id = self._generate_id(9999)
         self._xml_needed = False
 
+    @property
+    def producer(self):
+        return self._producer
+
     def invite(self):
         self._answered = True
         context = "{B8BE70DE-E2CA-4400-AE03-88FF85B9F4E8}"
@@ -80,12 +84,12 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         self._answered = True
         self._respond(603)
 
-    def end(self):
+    def end(self, reason=None):
         if not self._answered:
             self.reject()
         else:
             context = '\x74\x03\x00\x81'
-            self._close(context)
+            self._close(context, reason)
         self.dispose()
 
     def dispose(self):

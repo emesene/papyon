@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2009 Collabora Ltd.
+# Copyright (C) 2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -49,28 +49,32 @@ def get_proxies():
 
 class SIPClient(papyon.Client):
 
-    def __init__(self, account, password, peer, version):
+    def __init__(self, account, password, peer, producer, version):
         server = ('messenger.hotmail.com', 1863)
         papyon.Client.__init__(self, server, proxies = get_proxies(),
                 version=version)
 
         self.peer = peer
+        self.producer = producer
         self._event_handler = ClientEvents(self)
         gobject.idle_add(self.login, account, password)
 
     def invite(self):
         contact = self.address_book.contacts.search_by_account(self.peer)[0]
-        call = self.call_manager.create_call(contact)
+        call = self.webcam_handler.invite(contact, self.producer,
+                (self.on_call_accepted,))
+        return False
+
+    def on_call_accepted(self, call):
+        if producer:
+            direction = MediaStreamDirection.SENDING
+        else:
+            direction = MediaStreamDirection.RECEIVING
+
         self.call_handler = CallEvents(call)
         self.session_handler = MediaSessionHandler(call.media_session)
-        stream = call.media_session.create_stream("audio",
-                MediaStreamDirection.BOTH, True)
+        stream = call.media_session.create_stream("video", direction, True)
         call.media_session.add_stream(stream)
-        stream = call.media_session.create_stream("video",
-                MediaStreamDirection.BOTH, True)
-        call.media_session.add_stream(stream)
-        call.invite()
-        return False
 
 
 class ClientEvents(papyon.event.ClientEventInterface,
@@ -84,14 +88,13 @@ class ClientEvents(papyon.event.ClientEventInterface,
         if state == papyon.event.ClientState.CLOSED:
             self._client.quit()
         elif state == papyon.event.ClientState.OPEN:
-            self._client.profile.display_name = "Paypon (SIP test)"
+            self._client.profile.display_name = "Papyon (Webcam test)"
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
             gobject.timeout_add(2000, self._client.invite)
 
-    def on_invite_conference(self, call):
-        print "INVITED : call-id = %s" % call.id
+    def on_invite_webcam(self, call, producer):
         self.call_handler = CallEvents(call)
         self.session_handler = MediaSessionHandler(call.media_session)
 
@@ -129,8 +132,13 @@ if __name__ == "__main__":
     else:
         invite = sys.argv[4]
 
+    if len(sys.argv) < 6:
+        producer = bool(raw_input('Producer [yes/no]: ') == 'yes')
+    else:
+        producer = bool(sys.argv[5] == 'yes')
+
     logging.basicConfig(level=0)
 
     mainloop = gobject.MainLoop(is_running=True)
-    client = SIPClient(account, password, invite, version)
+    client = SIPClient(account, password, invite, producer, version)
     mainloop.run()

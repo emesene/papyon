@@ -97,9 +97,10 @@ class MediaSessionHandler(MediaSessionEventInterface):
         bus = self._pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_bus_message)
-        if self._session.type is MediaSessionType.WEBCAM_RECV or\
-           self._session.type is MediaSessionType.WEBCAM_SEND:
-            name = "fsmsnconference"
+        if self._session.type is MediaSessionType.WEBCAM_RECV:
+            name = "fsmsncamrecvconference"
+        elif self._session.type is MediaSessionType.WEBCAM_SEND:
+            name = "fsmsncamsendconference"
         else:
             name = "fsrtpconference"
         self._conference = gst.element_factory_make(name)
@@ -320,10 +321,6 @@ def make_video_source(name="videotestsrc"):
 
 def make_video_sink(async=False):
     "Make a bin with a video sink in it, that will be displayed on xid."
-    sink = gst.element_factory_make("filesink", "filesink")
-    sink.set_property("location", "/tmp/videosink.log")
-    return sink
-
     bin = gst.Bin("videosink")
     sink = gst.element_factory_make("ximagesink", "imagesink")
     sink.set_property("sync", async)
@@ -337,5 +334,5 @@ def make_video_sink(async=False):
     colorspace.link(sink)
     bin.add_pad(gst.GhostPad("sink", videoscale.get_pad("sink")))
     #sink.set_data("xid", xid) #Future work - proper gui place for imagesink ?
-    return bin.get_pad("sink")
+    return bin
 

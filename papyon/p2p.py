@@ -30,7 +30,7 @@ from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
 from msnp2p import EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
-from msnp2p.constants import SLPCloseReason
+from msnp2p.constants import SLPStatus
 from profile import NetworkID, Contact, Profile
 
 import papyon.util.element_tree as ElementTree
@@ -449,7 +449,7 @@ class WebcamHandler(gobject.GObject):
         del self._handles[session]
         return accept_cb, reject_cb
 
-    def _on_session_answered(self, answered_session, reason):
+    def _on_session_answered(self, answered_session, status):
         # cancel all sessions except the one we receive an answer for
         for session in self._sessions:
             if session is answered_session or \
@@ -458,17 +458,17 @@ class WebcamHandler(gobject.GObject):
                 continue
 
             self._disconnect_session(session)
-            session.end(reason=(reason, session.peer_guid))
+            session.end(reason=(status, session.peer_guid))
             self._sessions.remove(session)
 
     def _on_session_accepted(self, session):
-        self._on_session_answered(session, SLPCloseReason.ACCEPTED)
+        self._on_session_answered(session, SLPStatus.ACCEPTED)
         accept_cb, reject_cb = self._disconnect_session(session)
         if accept_cb:
             accept_cb[0](session, *accept_cb[1:])
 
     def _on_session_rejected(self, session):
-        self._on_session_answered(session, SLPCloseReason.DECLINED)
+        self._on_session_answered(session, SLPStatus.DECLINED)
         accept_cb, reject_cb = self._disconnect_session(session)
         if reject_cb:
             reject_cb[0](session, *reject_cb[1:])

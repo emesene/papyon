@@ -21,7 +21,7 @@
 
 from papyon.gnet.message.HTTP import HTTPMessage
 from papyon.msnp2p.exceptions import ParseError
-from papyon.msnp2p.constants import SLPContentType, SLPCloseReason
+from papyon.msnp2p.constants import SLPContentType, SLPStatus
 
 import base64
 import uuid
@@ -374,17 +374,17 @@ class SLPTransferResponseBody(SLPMessageBody):
 SLPMessageBody.register_content(SLPContentType.TRANSFER_RESPONSE, SLPTransferResponseBody)
 
 class SLPSessionCloseBody(SLPMessageBody):
-    def __init__(self, context=None, session_id=None, accepted_by=None,
-            declined_by=None, s_channel_state=None, capabilities_flags=None):
+    def __init__(self, context=None, session_id=None, reason=None,
+            s_channel_state=None, capabilities_flags=None):
         SLPMessageBody.__init__(self, SLPContentType.SESSION_CLOSE,
                 session_id, s_channel_state, capabilities_flags)
 
         if context is not None:
             self.add_header("Context",  base64.b64encode(context));
         if reason is not None:
-            if reason[0] == SLPCloseReason.ACCEPTED:
+            if reason[0] == SLPStatus.ACCEPTED:
                 self.add_header("AcceptedBy", "{%s}" % reason[1].upper())
-            elif reason[0] == SLPCloseReason.DECLINED:
+            elif reason[0] == SLPStatus.DECLINED:
                 self.add_header("DeclinedBy", "{%s}" % reason[1].upper())
 
     @property

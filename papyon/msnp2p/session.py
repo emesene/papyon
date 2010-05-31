@@ -178,6 +178,9 @@ class P2PSession(gobject.GObject):
         response.body = body
         self._send_p2p_data(response)
 
+        # close other end points so we are the only one answering
+        self._close_end_points(status_code)
+
     def _respond_transreq(self, transreq, status, body):
         self._cseq += 1
         response = SLPResponseMessage(status,
@@ -214,6 +217,39 @@ class P2PSession(gobject.GObject):
         message.body = body
         self._send_p2p_data(message)
         self._dispose()
+
+    def _close_end_points(self, status):
+        """Send BYE to other end points; this client already answered.
+            @param status: response we sent to the peer"""
+        if len(self._peer.end_points) > 0:
+            return # if the peer supports MPOP, let him do the work
+
+        for end_point in self._client.profile.end_points.keys():
+            if end_point == self._client.machine_guid:
+                continue
+            self._close_end_point(end_point, status)
+
+    def _close_end_point(self, end_point, status):
+        reason = (status, self._client.machine_guid)
+        body = SLPSessionCloseBody(session_id=self._id, reason=reason,
+                s_channel_state=0)
+        self._cseq = 0
+        self._branch = "{%s}" % uuid.uuid4()
+        message = SLPRequestMessage(SLPRequestMethod.BYE,
+                "MSNMSGR:" + self._client.profile.account,
+                to=self._client.profile.account,
+                frm=self._peer.account,
+                branch=self._branch,
+                cseq=self._cseq,
+                call_id=self._call_id,
+                on_behalf=self._peer.account)
+        message.body = body
+        data = str(message)
+        blob = MessageBlob(self._application_id,
+                data, len(data), 0, None)
+        self._session_manager._transport_manager.send(self._client.profile,
+                end_point.id, blob)
+
 
     def _dispose(self):
         logger.info("Session %s disposed" % self._id)

@@ -35,7 +35,8 @@ __all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage',
 class SLPMessage(HTTPMessage):
     STD_HEADERS = ["To", "From", "Via", "CSeq", "Call-ID", "Max-Forwards"]
 
-    def __init__(self, to="", frm="", branch="", cseq=0, call_id="", max_forwards=0):
+    def __init__(self, to="", frm="", branch="", cseq=0, call_id="",
+            max_forwards=0, on_behalf=""):
         HTTPMessage.__init__(self)
         self.add_header("To", "<msnmsgr:%s>" % to)
         self.add_header("From", "<msnmsgr:%s>" % frm)
@@ -45,6 +46,8 @@ class SLPMessage(HTTPMessage):
         if call_id:
             self.add_header("Call-ID", call_id)
         self.add_header("Max-Forwards", str(max_forwards))
+        if on_behalf:
+            self.add_header("On-Behalf", on_behalf)
 
         # Make the body a SLP Message wih "null" content type
         self.body = SLPNullBody()

@@ -54,8 +54,8 @@ class MSNObjectSession(P2PSession):
 
     def accept(self, data_file):
         self._respond(200)
-        self._send_p2p_data("\x00" * 4)
-        self._send_p2p_data(data_file)
+        self._send_data("\x00" * 4)
+        self._send_data(data_file)
 
     def reject(self):
         self._respond(603)

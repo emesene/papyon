@@ -83,15 +83,18 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
     def max_chunk_size(self):
         return 1250 # length of the chunk including the header but not the footer
 
-    def _send_chunk(self, chunk):
+    def can_send(self, peer, peer_guid, blob):
+        return (self._peer == peer and self._peer_guid == peer_guid)
+
+    def _send_chunk(self, peer, peer_guid, chunk):
         logger.debug(">>> %s" % repr(chunk))
         if self.version is 1:
             headers = {'P2P-Dest': self.peer.account}
         elif self.version is 2:
             headers = {'P2P-Src' : self._client.profile.account + ";{" +
                                    self._client.machine_guid + "}",
-                       'P2P-Dest': self.peer.account + ";{" +
-                                   self.peer_guid + "}"}
+                       'P2P-Dest': peer.account + ";{" +
+                                   peer_guid + "}"}
         content_type = 'application/x-msnmsgrp2p'
         body = str(chunk) + struct.pack('>L', chunk.application_id)
         self._send_message(content_type, body, headers,
@@ -109,7 +112,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
         chunk = MessageChunk.parse(version, message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         logger.debug("<<< %s" % repr(chunk))
-        self._on_chunk_received(chunk)
+        self._on_chunk_received(self._peer, self._peer_guid, chunk)
 
     def _on_contact_joined(self, contact):
         pass

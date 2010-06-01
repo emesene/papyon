@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.transport.TLP import ControlBlob, MessageBlob
+from papyon.msnp2p.transport.TLP import MessageBlob
 
 import gobject
 import logging
@@ -43,7 +43,11 @@ class BaseP2PTransport(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object,)),
 
-            "signaling-blob-received": (gobject.SIGNAL_RUN_FIRST,
+            "blob-received": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "blob-sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
             }
@@ -86,21 +90,20 @@ class BaseP2PTransport(gobject.GObject):
         else:
             return 1
 
-    def send(self, blob, callback=None, errback=None):
+    def can_send(self, peer, peer_guid, blob):
+        raise NotImplementedError
+
+    def send(self, peer, peer_guid, blob):
         self._queue_lock.acquire()
-        if blob.is_control_blob():
-            self._control_blob_queue.append((blob, callback, errback))
-        else:
-            self._data_blob_queue.append((blob, callback, errback))
+        self._data_blob_queue.append((peer, peer_guid, blob))
         self._queue_lock.release()
 
         if self._source is None:
-            self._source = gobject.timeout_add(200, self._process_send_queues)
-            self._process_send_queues()
+            self._source = gobject.timeout_add(200, self._process_send_queue)
+        self._process_send_queue()
 
     def cleanup(self, session_id):
         # remove this session's blobs from the data queue
-        # don't clean up the control queue as we still want the BYE to be sent
         self._queue_lock.acquire()
         canceled_blobs = []
         for blob in self._data_blob_queue:
@@ -113,13 +116,14 @@ class BaseP2PTransport(gobject.GObject):
     def close(self):
         self._transport_manager._unregister_transport(self)
 
-    def _send_chunk(self, chunk):
+    def _send_chunk(self, peer, peer_guid, chunk):
         raise NotImplementedError
 
-    # Helper methods
+    # Helper methods ---------------------------------------------------------
+
     def _reset(self):
         self._queue_lock.acquire()
-        self._control_blob_queue = []
+        self._first = True
         self._data_blob_queue = []
         self._pending_blob = {} # ack_id : (blob, callback, errback)
         self._pending_ack = set()
@@ -132,25 +136,22 @@ class BaseP2PTransport(gobject.GObject):
     def _del_pending_ack(self, ack_id):
         self._pending_ack.discard(ack_id)
 
-    def _add_pending_blob(self, ack_id, blob, callback, errback):
-        if blob.is_data_blob() and self.version == 1:
-            self._pending_blob[ack_id] = (blob, callback, errback)
-        elif callback:
-            callback[0](*callback[1:])
+    def _add_pending_blob(self, ack_id, blob):
+        if self.version == 1:
+            self._pending_blob[ack_id] = blob
+        else:
+            self.emit("blob-sent", blob)
 
     def _del_pending_blob(self, ack_id):
         if not ack_id in self._pending_blob:
             return
-        blob, callback, errback = self._pending_blob[ack_id]
-        del self._pending_blob[ack_id]
-        if callback:
-            callback[0](*callback[1:])
+        blob = self._pending_blob.pop(ack_id)
+        self.emit("blob-sent", blob)
 
-    def _on_chunk_received(self, chunk):
+    def _on_chunk_received(self, peer, peer_guid, chunk):
         if chunk.require_ack():
             ack_chunk = chunk.create_ack_chunk()
-            ack = ControlBlob(ack_chunk)
-            self.send(ack)
+            self.__send_chunk(peer, peer_guid, ack_chunk)
 
         if chunk.is_ack_chunk() or chunk.is_nak_chunk():
             self._del_pending_ack(chunk.acked_id)
@@ -164,7 +165,7 @@ class BaseP2PTransport(gobject.GObject):
             else: # data chunk (buffered by the transport manager)
                 self.emit("chunk-received", chunk)
 
-        self._process_send_queues()
+        self._process_send_queue()
 
     def _on_signaling_chunk_received(self, chunk):
         blob_id = chunk.blob_id
@@ -178,51 +179,45 @@ class BaseP2PTransport(gobject.GObject):
 
         blob.append_chunk(chunk)
         if blob.is_complete():
-            self.emit("signaling-blob-received", blob)
+            self.emit("blob-received", blob)
             del self._signaling_blobs[blob_id]
 
     def _on_chunk_sent(self, chunk):
         self.emit("chunk-sent", chunk)
-        if chunk in self._pending_blob:
-            blob, callback, errback = self._pending_blob.pop(chunk)
-            if callback:
-                callback[0](*callback[1:])
-        self._process_send_queues()
+        self._process_send_queue()
 
-    def _process_send_queues(self):
+    def _process_send_queue(self):
         if not self._queue_lock.acquire(False):
             return True
-        if len(self._control_blob_queue) > 0:
-            queue = self._control_blob_queue
-        elif len(self._data_blob_queue) > 0:
-            queue = self._data_blob_queue
-        else:
+        if len(self._data_blob_queue) == 0:
             self._queue_lock.release()
             if self._source is not None:
                 gobject.source_remove(self._source)
                 self._source = None
             return False
 
-        if self._local_chunk_id is None:
-            sync = True
-            self._local_chunk_id = random.randint(1000, MAX_INT32)
-        else:
-            sync = False
-
-        blob, callback, errback = queue[0]
+        sync = self._first
+        self._first = False
+        (peer, peer_guid, blob) = self._data_blob_queue[0]
         chunk = blob.get_chunk(self.version, self.max_chunk_size, sync)
+        self.__send_chunk(peer, peer_guid, chunk)
+
+        if blob.is_complete():
+            self._data_blob_queue.pop(0)
+            self._add_pending_blob(chunk.ack_id, blob)
+        self._queue_lock.release()
+        return True
+
+    def __send_chunk(self, peer, peer_guid, chunk):
+        # add local identifier to chunk
+        if self._local_chunk_id is None:
+            self._local_chunk_id = random.randint(1000, MAX_INT32)
         chunk.id = self._local_chunk_id
         self._local_chunk_id = chunk.next_id
 
         if chunk.require_ack() :
             self._add_pending_ack(chunk.ack_id)
-        self._send_chunk(chunk)
 
-        if blob.is_complete():
-            queue.pop(0)
-            self._add_pending_blob(chunk.ack_id, blob, callback, errback)
-
-        self._queue_lock.release()
-        return True
+        self._send_chunk(peer, peer_guid, chunk)
 
 gobject.type_register(BaseP2PTransport)

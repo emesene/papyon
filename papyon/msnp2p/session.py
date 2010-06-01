@@ -61,6 +61,7 @@ class P2PSession(gobject.GObject):
             application_id=0, message=None):
         gobject.GObject.__init__(self)
         self._session_manager = session_manager
+        self._transport_manager = session_manager._transport_manager
         self._client = session_manager._client
         self._peer = peer
         self._peer_guid = peer_guid
@@ -135,9 +136,8 @@ class P2PSession(gobject.GObject):
             return "%s;{%s}" % (self._peer.account, self._peer_guid)
         return self._peer.account
 
-    def set_receive_data_buffer(self, buffer, total_size):
-        blob = MessageBlob(self._application_id, buffer, total_size, self.id)
-        self._session_manager._transport_manager.register_writable_blob(blob)
+    def set_receive_data_buffer(self, buffer, size):
+        self._transport_manager.register_data_buffer(self.id, buffer, size)
 
     def _invite(self, context):
         body = SLPSessionRequestBody(self._euf_guid, self._application_id,
@@ -150,7 +150,7 @@ class P2PSession(gobject.GObject):
                 cseq=self._cseq,
                 call_id=self._call_id)
         message.body = body
-        self._send_p2p_data(message)
+        self._send_slp_message(message)
 
     def _transreq(self):
         self._cseq = 0
@@ -163,7 +163,7 @@ class P2PSession(gobject.GObject):
                 cseq=self._cseq,
                 call_id=self._call_id)
         message.body = body
-        self._send_p2p_data(message)
+        self._send_slp_message(message)
 
     def _respond(self, status_code):
         body = SLPSessionRequestBody(session_id=self._id, capabilities_flags=None,
@@ -176,7 +176,7 @@ class P2PSession(gobject.GObject):
             branch=self._branch,
             call_id=self._call_id)
         response.body = body
-        self._send_p2p_data(response)
+        self._send_slp_message(response)
 
         # close other end points so we are the only one answering
         self._close_end_points(status_code)
@@ -190,7 +190,7 @@ class P2PSession(gobject.GObject):
             branch=transreq.branch,
             call_id=self._call_id)
         response.body = body
-        self._send_p2p_data(response)
+        self._send_slp_message(response)
 
     def _accept_transreq(self, transreq, bridge, listening, nonce, local_ip,
             local_port, extern_ip, extern_port):
@@ -215,7 +215,7 @@ class P2PSession(gobject.GObject):
                 cseq=self._cseq,
                 call_id=self._call_id)
         message.body = body
-        self._send_p2p_data(message)
+        self._send_slp_message(message)
         self._dispose()
 
     def _close_end_points(self, status):
@@ -244,32 +244,21 @@ class P2PSession(gobject.GObject):
                 call_id=self._call_id,
                 on_behalf=self._peer.account)
         message.body = body
-        data = str(message)
-        blob = MessageBlob(self._application_id,
-                data, len(data), 0, None)
-        self._session_manager._transport_manager.send(self._client.profile,
-                end_point.id, blob)
-
+        self._transport_manager.send_slp_message(self._client.profile,
+                end_point.id, self._application_id, message)
 
     def _dispose(self):
         logger.info("Session %s disposed" % self._id)
         self._session_manager._transport_manager.cleanup(self._id)
         self._session_manager._unregister_session(self)
 
-    def _send_p2p_data(self, data_or_file):
-        if isinstance(data_or_file, SLPMessage):
-            session_id = 0
-            data = str(data_or_file)
-            total_size = len(data)
-        else:
-            session_id = self._id
-            data = data_or_file
-            total_size = None
+    def _send_slp_message(self, message):
+        self._transport_manager.send_slp_message(self.peer, self.peer_guid,
+                self._application_id, message)
 
-        blob = MessageBlob(self._application_id,
-                data, total_size, session_id, None)
-        self._session_manager._transport_manager.send(self.peer,
-                self.peer_guid, blob)
+    def _send_data(self, data):
+        self._transport_manager.send_data(self.peer, self.peer_guid,
+                self._application_id, self._id, data)
 
     def _on_blob_sent(self, blob):
         if blob.session_id == 0:

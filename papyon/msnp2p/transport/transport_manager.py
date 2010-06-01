@@ -67,8 +67,10 @@ class P2PTransportManager(gobject.GObject):
             self._on_chunk_received))
         signals.append(transport.connect("chunk-sent",
             self._on_chunk_sent))
-        signals.append(transport.connect("signaling-blob-received",
+        signals.append(transport.connect("blob-received",
             self._on_blob_received))
+        signals.append(transport.connect("blob-sent",
+            self._on_blob_sent))
         self._transport_signals[transport] = signals
 
     def _unregister_transport(self, transport):
@@ -78,9 +80,9 @@ class P2PTransportManager(gobject.GObject):
             transport.disconnect(signal)
         del self._transport_signals[transport]
 
-    def _get_transport(self, peer, peer_guid):
+    def _get_transport(self, peer, peer_guid, blob):
         for transport in self._transports:
-            if transport.peer == peer and transport.peer_guid == peer_guid:
+            if transport.can_send(peer, peer_guid, blob):
                 return transport
         return self._default_transport(peer, peer_guid)
 
@@ -118,22 +120,30 @@ class P2PTransportManager(gobject.GObject):
     def _on_blob_sent(self, transport, blob):
         self.emit("blob-sent", blob)
 
-    def send(self, peer, peer_guid, blob):
-        transport = self._get_transport(peer, peer_guid)
-        transport.send(blob, (self._on_blob_sent, transport, blob))
+    def send_slp_message(self, peer, peer_guid, application_id, message):
+        data = str(message)
+        blob = MessageBlob(application_id, data, len(data), 0, None)
+        transport = self._get_transport(peer, peer_guid, blob)
+        transport.send(peer, peer_guid, blob)
+
+    def send_data(self, peer, peer_guid, application_id, session_id, data):
+        blob = MessageBlob(application_id, data, None, session_id, None)
+        transport = self._get_transport(peer, peer_guid, blob)
+        transport.send(peer, peer_guid, blob)
+
+    def register_data_buffer(self, session_id, buffer, size):
+        if session_id in self._data_blobs:
+            logger.warning("registering already registered blob "\
+                    "with session_id=" + str(session_id))
+            return
+        blob = MessageBlob(0, buffer, size, session_id)
+        self._data_blobs[session_id] = blob
 
     def cleanup(self, session_id):
         if session_id in self._data_blobs:
             del self._data_blobs[session_id]
         for transport in self._transports:
             transport.cleanup(session_id)
-
-    def register_writable_blob(self, blob):
-        if blob.session_id in self._data_blobs:
-            logger.warning("registering already registered blob "\
-                    "with session_id=" + str(session_id))
-            return
-        self._data_blobs[blob.session_id] = blob
 
     def add_to_blacklist(self, session_id):
         # ignore data chunks received for this session_id:

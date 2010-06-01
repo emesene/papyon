@@ -140,7 +140,7 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         message_bytes = data.encode("utf-16-le") + "\x00\x00"
         id = (self._generate_id() << 8) | 0x80
         header = struct.pack("<LHL", id, 8, len(message_bytes))
-        self._send_p2p_data(header + message_bytes)
+        self._send_data(header + message_bytes)
 
     def send_binary_syn(self):
         self.send_data('syn')

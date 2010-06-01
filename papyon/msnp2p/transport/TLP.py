@@ -118,12 +118,6 @@ class MessageBlob(object):
     def is_complete(self):
         return self.transferred == self.total_size
 
-    def is_data_blob(self):
-        return not self.is_control_blob()
-
-    def is_control_blob(self):
-        return False
-
     def read_data(self):
         self.data.seek(0, os.SEEK_SET)
         data = self.data.read()
@@ -152,19 +146,3 @@ class MessageBlob(object):
         self.data.seek(0, os.SEEK_END)
         self.data.write(chunk.body)
         self.current_size = self.data.tell()
-
-
-class ControlBlob(MessageBlob):
-    def __init__(self, chunk):
-        MessageBlob.__init__(self, 0, None)
-        self.id = chunk.blob_id
-        self.chunk = chunk
-
-    def __repr__(self):
-        return "<ControlBlob id=%x session_id=%x>" % (self.id, self.session_id)
-
-    def get_chunk(self, version, max_size, sync=False):
-        return self.chunk
-    
-    def is_control_blob(self):
-        return True

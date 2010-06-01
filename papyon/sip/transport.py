@@ -129,7 +129,7 @@ class SIPTransport(SIPBaseTransport):
 
 class SIPTunneledTransport(SIPBaseTransport):
     """Default SIP transport with newer MSNP versions (>= 18). The messages
-       are base64 encoded and sent to the notication server using a UBX
+       are base64 encoded and sent to the notication server using a UBN
        command."""
 
     def __init__(self, protocol):
@@ -150,13 +150,12 @@ class SIPTunneledTransport(SIPBaseTransport):
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \
                 (call_id, data)
         data = data.replace("\r\n", "\n").replace("\n", "\r\n")
-        self._protocol.send_user_notification(data, contact,
+        self._protocol.send_user_notification(data, contact, None,
                 UserNotificationTypes.TUNNELED_SIP)
 
-    def on_notification_received(self, protocol, type, notification):
+    def on_notification_received(self, protocol, peer, peer_guid, type, message):
         if type is not UserNotificationTypes.TUNNELED_SIP:
             return
-        message = notification.payload
         try:
             doc = xml.dom.minidom.parseString(message)
             sip = doc.firstChild

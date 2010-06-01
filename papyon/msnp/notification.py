@@ -75,7 +75,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
             "buddy-notification-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object, object,)),
+                (object, object, object, object)),
 
             "mail-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -271,8 +271,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     (domain, user, membership, network_id)
             self._send_command("RML", payload=payload)
 
-    def send_user_notification(self, message, contact, type):
-        self._send_command("UUN", (contact.account, type), message)
+    def send_user_notification(self, message, contact, contact_guid, type,
+            callback=None, *cb_args):
+        account = contact.account
+        if contact_guid:
+            account += ';{' + contact_guid + '}'
+        arguments = (account, type)
+        self._send_command("UUN", arguments, message, True, callback, *cb_args)
 
     def send_unmanaged_message(self, contact, message):
         content_type = message.content_type[0]
@@ -290,22 +295,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         tr_id = self._send_command('URL', url_command_args)
         self._url_callbacks[tr_id] = callback
 
-    def _parse_account(self, command, idx=0):
-        if self._protocol_version >= 18:
-            temp = command.arguments[idx].split(":")
-            network_id = int(temp[0])
-            account = temp[1]
-        else:
-            account = command.arguments[idx]
-            idx += 1
-            network_id = int(command.arguments[idx])
-        idx += 1
-        return idx, network_id, account
-
-
-    # Handlers ---------------------------------------------------------------
-    # --------- Connection ---------------------------------------------------
-    def _search_account(self, account, network_id):
+    # Helpers ----------------------------------------------------------------
+    def __search_account(self, account, network_id=profile.NetworkID.MSN):
         if account == self._client.profile.account:
             return [self._client.profile]
 
@@ -319,6 +310,34 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         return contacts
 
+    def __parse_network_and_account(self, command, idx=0):
+        if self._protocol_version >= 18:
+            temp = command.arguments[idx].split(":")
+            network_id = int(temp[0])
+            account = temp[1]
+        else:
+            account = command.arguments[idx]
+            idx += 1
+            network_id = int(command.arguments[idx])
+        idx += 1
+        return idx, network_id, account
+
+    def __parse_account_and_guid(self, command, idx=0):
+        account = command.arguments[idx]
+        guid = None
+        if ';' in account:
+            account, guid = account.split(';', 1)
+        return idx + 1, account, guid [1:-1]
+
+    def __find_node(self, parent, name, default):
+        node = parent.find(name)
+        if node is not None and node.text is not None:
+            return node.text.encode("utf-8")
+        else:
+            return default
+
+    # Handlers ---------------------------------------------------------------
+    # --------- Connection ---------------------------------------------------
     def _handle_VER(self, command):
         self._protocol_version = int(command.arguments[0].lstrip('MSNP'))
         self._send_command('CVR',
@@ -429,14 +448,14 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._handle_NLN(command)
 
     def _handle_FLN(self, command):
-        idx, network_id, account = self._parse_account(command)
-        contacts = self._search_account(account, network_id)
+        idx, network_id, account = self.__parse_network_and_account(command)
+        contacts = self.__search_account(account, network_id)
         for contact in contacts:
             contact._server_property_changed("presence",
                     profile.Presence.OFFLINE)
 
     def _handle_NLN(self, command):
-        idx, network_id, account = self._parse_account(command, 1)
+        idx, network_id, account = self.__parse_network_and_account(command, 1)
         presence = command.arguments[0]
         display_name = urllib.unquote(command.arguments[idx])
         idx += 1
@@ -453,7 +472,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         if len(command.arguments) > idx:
             icon_url = command.arguments[idx]
 
-        contacts = self._search_account(account, network_id)
+        contacts = self.__search_account(account, network_id)
         for contact in contacts:
             # don't change local presence and capabilities
             if contact is not self._client.profile:
@@ -479,21 +498,18 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_UBN(self, command): # contact infos
         if not command.payload:
             return
+        print command.payload
+        idx, account, guid = self.__parse_account_and_guid(command)
+        contact = self.__search_account(account)[0]
         type = int(command.arguments[1])
-        self.emit("buddy-notification-received", type, command)
-
-    def _find_node(self, parent, name, default):
-        node = parent.find(name)
-        if node is not None and node.text is not None:
-            return node.text.encode("utf-8")
-        else:
-            return default
+        payload = command.payload
+        self.emit("buddy-notification-received", contact, guid, type, payload)
 
     def _handle_UBX(self, command): # contact infos
         if not command.payload:
             return
-
-        idx, network_id, account = self._parse_account(command)
+        print command.payload
+        idx, network_id, account = self.__parse_network_and_account(command)
 
         try:
             tree = ElementTree.fromstring(command.payload)
@@ -501,10 +517,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.error("Invalid XML data in received UBX command")
             return
 
-        cm_parts = self._find_node(tree, "./CurrentMedia", "").split('\\0')
-        pm = self._find_node(tree, "./PSM", "")
-        ss = self._find_node(tree, "./SignatureSound", None)
-        mg = self._find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
+        cm_parts = self.__find_node(tree, "./CurrentMedia", "").split('\\0')
+        pm = self.__find_node(tree, "./PSM", "")
+        ss = self.__find_node(tree, "./SignatureSound", None)
+        mg = self.__find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
 
         if len(cm_parts) < 3:
             cm = None
@@ -517,19 +533,19 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         end_points = {}
         for ep in eps:
             guid = ep.get("id").encode("utf-8")[1:-1]
-            caps = self._find_node(ep, "Capabilities", "0:0")
+            caps = self.__find_node(ep, "Capabilities", "0:0")
             end_points[guid] = profile.EndPoint(guid, caps)
         peps = tree.findall("./PrivateEndpointData")
         for pep in peps:
             guid = pep.get("id").encode("utf-8")[1:-1]
             if guid not in end_points: continue
             end_point = end_points[guid]
-            end_point.name = self._find_node(pep, "EpName", "")
-            end_point.idle = bool(self._find_node(pep, "Idle", "").lower() == "true")
-            end_point.client_type = int(self._find_node(pep, "ClientType", 0))
-            end_point.state = self._find_node(pep, "State", "")
+            end_point.name = self.__find_node(pep, "EpName", "")
+            end_point.idle = bool(self.__find_node(pep, "Idle", "").lower() == "true")
+            end_point.client_type = int(self.__find_node(pep, "ClientType", 0))
+            end_point.state = self.__find_node(pep, "State", "")
 
-        contacts = self._search_account(account, network_id)
+        contacts = self.__search_account(account, network_id)
         for contact in contacts:
             contact._server_property_changed("current-media", cm)
             contact._server_property_changed("personal-message", pm)
@@ -624,8 +640,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 self._client.mailbox._unread_mail_increased(delta)
 
     def _handle_UBM(self, command):
-        idx, network_id, account = self._parse_account(command)
-        contacts = self._search_account(account, network_id)
+        idx, network_id, account = self.__parse_network_and_account(command)
+        contacts = self.__search_account(account, network_id)
         if len(contacts) > 0:
             contact = contacts[0]
             message = Message(contact, command.payload)

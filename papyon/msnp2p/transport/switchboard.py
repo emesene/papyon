@@ -83,7 +83,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
     def max_chunk_size(self):
         return 1250 # length of the chunk including the header but not the footer
 
-    def can_send(self, peer, peer_guid, blob):
+    def can_send(self, peer, peer_guid, blob, bootstrap=False):
         return (self._peer == peer and self._peer_guid == peer_guid)
 
     def _send_chunk(self, peer, peer_guid, chunk):

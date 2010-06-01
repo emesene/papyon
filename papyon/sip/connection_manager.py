@@ -82,10 +82,10 @@ class SIPConnectionManager(gobject.GObject):
         call = connection.create_call(peer=peer)
         return call
 
-    def on_notification_received(self, protocol, type, notification):
+    def on_notification_received(self, protocol, peer, peer_guid, type, msg):
         if type is not UserNotificationTypes.SIP_INVITE:
             return
-        args = notification.payload.split()
+        args = msg.split()
         if len(args) == 3 and args[0] == "INVITE":
             # Register to the server so we can take the call
             connection = self.get_connection(False, args[1])

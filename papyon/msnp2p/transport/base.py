@@ -90,7 +90,7 @@ class BaseP2PTransport(gobject.GObject):
         else:
             return 1
 
-    def can_send(self, peer, peer_guid, blob):
+    def can_send(self, peer, peer_guid, blob, bootstrap=False):
         raise NotImplementedError
 
     def send(self, peer, peer_guid, blob):

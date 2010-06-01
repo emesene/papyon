@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.transport.switchboard import *
+from papyon.msnp2p.transport.notification import *
 from papyon.msnp2p.transport.TLP import MessageBlob
 
 import gobject
@@ -58,6 +59,7 @@ class P2PTransportManager(gobject.GObject):
         self._transport_signals = {}
         self._data_blobs = {} # session_id => blob
         self._blacklist = set() # blacklist of session_id
+        uun_transport = NotificationP2PTransport(client, self)
 
     def _register_transport(self, transport):
         assert transport not in self._transports, "Trying to register transport twice"
@@ -121,10 +123,7 @@ class P2PTransportManager(gobject.GObject):
         self.emit("blob-sent", blob)
 
     def send_slp_message(self, peer, peer_guid, application_id, message):
-        data = str(message)
-        blob = MessageBlob(application_id, data, len(data), 0, None)
-        transport = self._get_transport(peer, peer_guid, blob)
-        transport.send(peer, peer_guid, blob)
+        self.send_data(peer, peer_guid, application_id, 0, str(message))
 
     def send_data(self, peer, peer_guid, application_id, session_id, data):
         blob = MessageBlob(application_id, data, None, session_id, None)

@@ -91,6 +91,7 @@ import papyon.service.Spaces as Spaces
 from papyon.util.decorator import rw_property
 from papyon.transport import *
 from papyon.switchboard_manager import SwitchboardManager
+from papyon.media import RTCActivityManager
 from papyon.msnp2p import P2PSessionManager
 from papyon.p2p import MSNObjectStore, FileTransferManager, WebcamHandler
 from papyon.sip import SIPConnectionManager
@@ -146,6 +147,7 @@ class Client(EventsDispatcher):
         self._p2p_session_manager.register_handler(self._webcam_handler)
 
         self._call_manager = SIPConnectionManager(self, self._protocol)
+        self._rtc_activity_manager = RTCActivityManager(self, self._protocol)
 
         self._msn_object_store = MSNObjectStore(self)
         self._p2p_session_manager.register_handler(self._msn_object_store)
@@ -203,6 +205,12 @@ class Client(EventsDispatcher):
         """The files transfer manager
             @type: L{FileTransferManager<papyon.p2p.FileTransferManager>}"""
         return self._ft_manager
+
+    @property
+    def rtc_activity_manager(self):
+        """The RTC activity manager
+            @type: L{RTCActivityManager<papyon.media.RTCActivityManager>}"""
+        return self._rtc_activity_manager
 
     @property
     def oim_box(self):

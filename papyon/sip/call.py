@@ -19,7 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.event import EventsDispatcher
-from papyon.media import MediaCall, MediaSessionType
+from papyon.media import MediaCall, MediaSessionType, RTCActivity
 from papyon.profile import Presence
 from papyon.service.SingleSignOn import *
 from papyon.sip.constants import *
@@ -203,7 +203,7 @@ class SIPBaseCall(gobject.GObject):
             handler()
 
 
-class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
+class SIPCall(SIPBaseCall, MediaCall, RTCActivity, EventsDispatcher):
     """Represent a SIP dialog between two end points. A call must be initiated
        by sending or receiving an INVITE request. It is disposed when
        receiving or by sending a CANCEL or BYE request.
@@ -216,6 +216,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
                 or MediaSessionType.SIP
         SIPBaseCall.__init__(self, connection, client, id)
         MediaCall.__init__(self, session_type)
+        RTCActivity.__init__(self, client, connection.tunneled)
         EventsDispatcher.__init__(self)
 
         self._incoming = (id is not None)
@@ -314,6 +315,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         self.start_timeout("ack", 5)
         self._answer_sent = True
         self.answer(200)
+        self._accept_activity()
 
     def reject(self, status=603):
         if self.answered:
@@ -324,6 +326,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         self._rejected = True
         self._answer_sent = True
         self.answer(status)
+        self._decline_activity()
 
     def reaccept(self):
         if not self.media_session.ready:
@@ -388,6 +391,7 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
         self._state = "DISCONNECTED"
         self._dispatch("on_call_ended")
         self._connection.remove_call(self)
+        self._dispose_activity()
 
     def on_invite_received(self, invite):
         self._invite = invite
@@ -525,6 +529,12 @@ class SIPCall(SIPBaseCall, MediaCall, EventsDispatcher):
 
     def on_turn_relays_discovered(self, turn_client, relays):
         logger.debug("Discovered %i TURN relays" % len(relays))
+
+    def on_activity_accepted(self):
+        self.force_dispose()
+
+    def on_activity_declined(self):
+        self.force_dispose()
 
 
 class SIPRegistration(SIPBaseCall):

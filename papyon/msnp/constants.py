@@ -38,5 +38,5 @@ class UserNotificationTypes(object):
     P2P_DATA = 3
     CLOSED_CONVERSATION = 5
     RESYNCHRONIZE = 6
-    SIP_PROGESS = 11
+    RTC_ACTIVITY = 11
     TUNNELED_SIP = 12

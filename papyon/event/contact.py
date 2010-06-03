@@ -82,7 +82,7 @@ class ContactEventInterface(BaseEventInterface):
 
     def on_contact_msn_object_changed(self, contact):
         """Called when the MSNObject of a contact changes.
-            @param contact: the contact whose presence changed
+            @param contact: the contact whose msn object changed
             @type contact: L{Contact<papyon.profile.Contact>}
 
             @see: L{MSNObjectStore<papyon.p2p.MSNObjectStore>},

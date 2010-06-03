@@ -116,6 +116,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
         self.__invitations = {}
 
+        client.profile.connect("end-point-added", self._on_end_point_added)
+
     # Properties ------------------------------------------------------------
     def __get_state(self):
         return self.__state
@@ -321,3 +323,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         logger.info("Disconnected")
         self._state = ProtocolState.CLOSED
 
+    def _on_end_point_added(self, profile, end_point):
+        if self.state != ProtocolState.OPEN:
+            return
+        logger.info("New end point connected, re-invite local user")
+        self.invite_user(profile)

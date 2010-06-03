@@ -341,6 +341,16 @@ class Profile(gobject.GObject):
 
         @undocumented: __gsignals__, __gproperties__, do_get_property"""
 
+    __gsignals__ =  {
+            "end-point-added": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+
+            "end-point-removed": (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            }
+
     __gproperties__ = {
             "display-name": (gobject.TYPE_STRING,
                 "Friendly name",
@@ -466,6 +476,8 @@ class Profile(gobject.GObject):
 
     @property
     def end_points(self):
+        """The user end points
+            @rtype: EndPoint"""
         return self._end_points
 
     @rw_property
@@ -593,6 +605,14 @@ class Profile(gobject.GObject):
             return self._personal_message, self._current_media
         return locals()
 
+    def _diff_end_points(self, old_eps, new_eps):
+        added_eps = set(new_eps.keys()) - set(old_eps.keys())
+        removed_eps = set(old_eps.keys()) - set(new_eps.keys())
+        for ep in added_eps:
+            self.emit("end-point-added", new_eps[ep])
+        for ep in removed_eps:
+            self.emit("end-point-removed", old_eps[ep])
+
     def request_profile_url(self, callback):
         self._ns_client.send_url_request(('PROFILE', '0x0409'), callback)
 
@@ -608,6 +628,8 @@ class Profile(gobject.GObject):
         if value != old_value:
             setattr(self, attr_name, value)
             self.notify(name)
+        if attr_name == "_end_points":
+            self._diff_end_points(old_value, value)
 
     def do_get_property(self, pspec):
         name = pspec.name.lower().replace("-", "_")
@@ -976,3 +998,11 @@ class EndPoint(object):
         self.idle = False
         self.state = ""
         self.client_type = 0
+
+    def __eq__(self, endpoint):
+        return (self.id == endpoint.id and
+                self.capabilities == endpoint.capabilities and
+                self.name == endpoint.name and
+                self.idle == endpoint.idle and
+                self.state == endpoint.state and
+                self.client_type == endpoint.client_type)

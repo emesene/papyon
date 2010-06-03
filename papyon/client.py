@@ -313,6 +313,12 @@ class Client(EventsDispatcher):
     ### private:
     def __connect_profile_signals(self):
         """Connect profile signals"""
+        def event(contact, *args):
+            event_name = args[-1]
+            event_args = args[:-1]
+            method_name = "on_profile_%s" % event_name.replace("-", "_")
+            self._dispatch(method_name, *event_args)
+
         def property_changed(profile, pspec):
             method_name = "on_profile_%s_changed" % pspec.name.replace("-", "_")
             self._dispatch(method_name)
@@ -322,6 +328,12 @@ class Client(EventsDispatcher):
         self.profile.connect("notify::personal-message", property_changed)
         self.profile.connect("notify::current-media", property_changed)
         self.profile.connect("notify::msn-object", property_changed)
+        self.profile.connect("notify::end-points", property_changed)
+
+        def connect_signal(name):
+            self.profile.connect(name, event, name)
+        connect_signal("end-point-added")
+        connect_signal("end-point-removed")
 
     def __connect_mailbox_signals(self):
         """Connect mailbox signals"""
@@ -354,6 +366,7 @@ class Client(EventsDispatcher):
         contact.connect("notify::current-media", property_changed)
         contact.connect("notify::msn-object", property_changed)
         contact.connect("notify::client-capabilities", property_changed)
+        contact.connect("notify::end-points", property_changed)
 
         def connect_signal(name):
             contact.connect(name, event, name)

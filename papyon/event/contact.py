@@ -89,3 +89,8 @@ class ContactEventInterface(BaseEventInterface):
                 L{MSNObject<papyon.p2p.MSNObject>}"""
         pass
 
+    def on_contact_end_points_changed(self, contact):
+        """Called when the end points of a contact change.
+            @param contact: the contact whose end points changed
+            @type contact: L{Contact<papyon.profile.Contact>}"""
+        pass

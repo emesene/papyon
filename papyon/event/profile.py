@@ -55,3 +55,15 @@ class ProfileEventInterface(BaseEventInterface):
     def on_profile_msn_object_changed(self):
         """Called when the MSNObject changes."""
         pass
+
+    def on_profile_end_points_changed(self):
+        """Called when end points change."""
+        pass
+
+    def on_profile_end_point_added(self, end_point):
+        """Called when a new end point connects."""
+        pass
+
+    def on_profile_end_point_removed(self, end_point):
+        """Called when an end point disconnects."""
+        pass

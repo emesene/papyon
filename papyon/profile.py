@@ -993,7 +993,7 @@ gobject.type_register(Group)
 class EndPoint(object):
     def __init__(self, id, caps):
         self.id = id
-        self.capbilities = ClientCapabilities(client_id=caps)
+        self.capabilities = ClientCapabilities(client_id=caps)
         self.name = ""
         self.idle = False
         self.state = ""

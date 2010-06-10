@@ -95,6 +95,9 @@ class P2PTransportManager(gobject.GObject):
                     session_id, chunk.header.blob_id)
                 self._signaling_blobs[blob_id] = blob
         else: # data blob
+            if chunk.is_data_preparation_chunk():
+                return
+
             if session_id in self._data_blobs:
                 blob = self._data_blobs[session_id]
                 if blob.transferred == 0:

@@ -232,10 +232,7 @@ class P2PSession(gobject.GObject):
                         self._on_session_rejected(message)
             return
 
-        if blob.total_size == 4 and data == ('\x00' * 4):
-            self._on_data_preparation_blob_received(blob)
-        else:
-            self._on_data_blob_received(blob)
+        self._on_data_blob_received(blob)
 
     def _on_data_chunk_transferred(self, chunk):
         if chunk.has_progressed():

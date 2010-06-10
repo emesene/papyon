@@ -127,6 +127,11 @@ class MessageChunk(object):
     def is_nonce_chunk(self):
         return self.header.flags & TLPFlag.KEY
 
+    def is_data_preparation_chunk(self):
+        return (self.header.chunk_size == 4 and self.header.blob_size == 4 and
+                self.body == "\x00\x00\x00\x00" and
+                not self.header.flags & TLPFlag.FILE)
+
     def has_progressed(self):
         return self.header.flags & TLPFlag.EACH
 

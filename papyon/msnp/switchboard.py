@@ -161,7 +161,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
-        self._send_command('MSG',
+        return self._send_command('MSG',
                 (ack,),
                 message,
                 True,
@@ -260,10 +260,10 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.emit("message-received", message)
 
     def _handle_ACK(self, command):
-        self.emit("message-delivered", command)
+        self.emit("message-delivered", command.transaction_id)
 
     def _handle_NAK(self, command):
-        self.emit("message-undelivered", command)
+        self.emit("message-undelivered", command.transaction_id)
 
     def _error_handler(self, error):
         """Handles errors

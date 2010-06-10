@@ -46,6 +46,7 @@ class SwitchboardClient(object):
 
         self._pending_invites = set(contacts)
         self._pending_messages = []
+        self._delivery_callbacks = {}
 
         if self._client.protocol_version >= 16:
             self._pending_invites.add(self._client.profile)
@@ -77,8 +78,10 @@ class SwitchboardClient(object):
                 lambda sb, contact: self.__on_user_left(contact))
         self.switchboard.connect("user-invitation-failed",
                 lambda sb, contact: self.__on_user_invitation_failed(contact))
+        self.switchboard.connect("message-delivered",
+                lambda sb, trid: self.__on_message_delivered(trid))
         self.switchboard.connect("message-undelivered",
-                lambda sb, command: self.__on_message_undelivered(command))
+                lambda sb, trid: self.__on_message_undelivered(trid))
         logger.info("New switchboard attached")
         def process_pending_queues():
             self._process_pending_queues()
@@ -149,7 +152,13 @@ class SwitchboardClient(object):
         self._on_error(ConversationErrorType.CONTACT_INVITE,
                 ContactInviteError.NOT_AVAILABLE)
 
-    def __on_message_undelivered(self, command):
+    def __on_message_delivered(self, transaction_id):
+        if transaction_id in self._delivery_callbacks:
+            callback, cb_args = self._delivery_callbacks.pop(transaction_id)
+            if callback:
+                callback(*cb_args)
+
+    def __on_message_undelivered(self, transaction_id):
         self._on_error(ConversationErrorType.MESSAGE,
                 MessageError.DELIVERY_FAILED)
 
@@ -169,7 +178,14 @@ class SwitchboardClient(object):
 
         if not self.switchboard.inviting:
             for message, ack, callback, cb_args in self._pending_messages:
-                self.switchboard.send_message(message, ack, callback, cb_args)
+                # if ack type is FULL or MSNC, wait for ACK before calling back
+                if ack in (msnp.MessageAcknowledgement.FULL,
+                           msnp.MessageAcknowledgement.MSNC):
+                    transaction_id = self.switchboard.send_message(message, ack)
+                    self._delivery_callbacks[transaction_id] = (callback, cb_args)
+                else:
+                    self.switchboard.send_message(message, ack, callback, cb_args)
+
             self._pending_messages = []
 
     def _request_switchboard(self):

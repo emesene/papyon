@@ -134,16 +134,28 @@ class XMLResponse(object):
             self.tree = None
 
     def __getitem__(self, name):
-        return self.tree[name]
+        if self.tree:
+            return self.tree[name]
+        else:
+            raise KeyError(name)
 
     def find(self, path):
-        return self.tree.find(path)
+        if self.tree:
+            return self.tree.find(path)
+        else:
+            return None
 
     def findall(self, path):
-        return self.tree.findall(path)
-    
+        if self.tree:
+            return self.tree.findall(path)
+        else:
+            return []
+
     def findtext(self, path, type=None):
-        return self.tree.findtext(path, type)
+        if self.tree:
+            return self.tree.findtext(path, type)
+        else:
+            return ""
 
     def is_valid(self):
         return self.tree is not None

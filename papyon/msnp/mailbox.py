@@ -97,9 +97,10 @@ class Mailbox(gobject.GObject):
         self.notify("unread-mail-count")
 
     def _unread_mail_decreased(self, delta):
-        self._unread_mail_count -= delta
-        self.emit("unread-mail-count-changed", self._unread_mail_count, False)
-        self.notify("unread-mail-count")
+        if self._unread_mail_count > 0:
+            self._unread_mail_count -= delta
+            self.emit("unread-mail-count-changed", self._unread_mail_count, False)
+            self.notify("unread-mail-count")
 
     def _initial_set(self, unread_number):
         if unread_number > 0:

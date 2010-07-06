@@ -173,7 +173,8 @@ class MSNObject(object):
         try:
             element = ElementTree.parse(data).getroot().attrib
         except:
-            raise ParseError('Invalid MSNObject')
+            logger.warning('Invalid MSNObject: %s' % xml_data)
+            return
 
         creator = element["Creator"]
         size = int(element["Size"])

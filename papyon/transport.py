@@ -468,7 +468,14 @@ class HTTPPollConnection(BaseTransport):
             self.emit("command-sent", command)
 
     def __extract_command(self, data):
-        first, rest = data.split('\r\n', 1)
+        try:
+            first, rest = data.split('\r\n', 1)
+        except ValueError:
+            logger.warning('Unable to extract a command: %s' % data)
+            self.__error = True
+            self.emit("connection-failure", None)
+            return []
+
         cmd = msnp.Command()
         cmd.parse(first.strip())
         if cmd.name in msnp.Command.INCOMING_PAYLOAD or \

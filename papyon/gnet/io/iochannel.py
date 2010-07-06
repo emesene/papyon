@@ -96,7 +96,14 @@ class GIOChannelClient(AbstractClient):
             return
         else:
             host = resolve_response.answer[0][1]
-        err = self._transport.connect_ex((host, port))
+
+        # Even though connect_ex *shouldn't* raise an exception,
+        # sometimes it does, which is just great.
+        try:
+            err = self._transport.connect_ex((host, port))
+        except socket.error, e:
+            err = e.errno
+
         self._watch_set_cond(gobject.IO_PRI | gobject.IO_IN | gobject.IO_OUT |
                 gobject.IO_HUP | gobject.IO_ERR | gobject.IO_NVAL,
                 lambda chan, cond: self._post_open())

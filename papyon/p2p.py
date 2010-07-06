@@ -179,8 +179,17 @@ class MSNObject(object):
         creator = element["Creator"]
         size = int(element["Size"])
         type = int(element["Type"])
-        location = xml.unescape(element["Location"])
-        friendly = base64.b64decode(xml.unescape(element["Friendly"]))
+
+        if "Location" in element:
+            location = xml.unescape(element["Location"])
+        else:
+            location = "0"
+
+        if "Friendly" in element:
+            friendly = base64.b64decode(xml.unescape(element["Friendly"]))
+        else:
+            friendly = base64.b64decode('AAA=')
+
         shad = element.get("SHA1D", None)
         if shad is not None:
             shad = _decode_shad(shad)

@@ -110,7 +110,7 @@ class GIOChannelClient(AbstractClient):
         if err in (0, EINPROGRESS, EALREADY, EWOULDBLOCK, EISCONN):
             return
         elif err in (EHOSTUNREACH, EHOSTDOWN, ECONNREFUSED, ECONNABORTED,
-                ENETUNREACH, ENETDOWN):
+                ENETUNREACH, ENETDOWN, EBADFD):
             self.emit("error", IoError.CONNECTION_FAILED)
             self._transport.close()
 

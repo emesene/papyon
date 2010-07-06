@@ -83,7 +83,14 @@ class SocketClient(GIOChannelClient):
         if cond & gobject.IO_OUT:
             if len(self._outgoing_queue) > 0: # send next item
                 item = self._outgoing_queue[0]
-                item.sent(self._channel.write(item.read()))
+
+                # Deal with broken pipe from the socket.
+                try:
+                    item.sent(self._channel.write(item.read()))
+                except gobject.GError:
+                    self.emit("error", IoError.CONNECTION_FAILED)
+                    return True
+
                 if item.is_complete(): # sent item
                     self.emit("sent", item.buffer, item.size)
                     item.callback()

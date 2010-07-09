@@ -1,3 +1,13 @@
+papyon-0.4.9 (2010-07-09)
+=========================
+
+Fixes:
+  * Deal with Location and Friendly being missing from MSNObjects (fd.o#28854)
+  * ...and more miscellaneous fixes too specific for here.
+
+Enhancements:
+  * Added file transfer support (switchboard only).
+
 papyon-0.4.8 (2010-05-27)
 =========================
 

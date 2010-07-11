@@ -72,7 +72,7 @@ class HostnameResolver(object):
             addresses = ((socket.AF_INET, result[0][4][0]),)
         self._emit_response(callback, (status, cname, expires, addresses))
 
-    @async
+    #@async
     def _emit_response(self, callback, response):
         callback[0](HostnameResponse(response), *callback[1:])
         return False

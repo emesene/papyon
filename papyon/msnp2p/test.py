@@ -10,6 +10,7 @@ import papyon.util.string_io as StringIO
 
 import logging
 import gobject
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -41,9 +42,9 @@ class ClientEvents(papyon.event.ClientEventInterface):
             path = self._client.msn_object_path
             f = open(path, 'r')
             old_pos = f.tell()
-            f.seek(0, 2)
+            f.seek(0, os.SEEK_END)
             size = f.tell()
-            f.seek(old_pos,0)
+            f.seek(old_pos, os.SEEK_SET)
             msn_object = \
                 papyon.p2p.MSNObject(self._client.profile,
                                     size, papyon.p2p.MSNObjectType.DISPLAY_PICTURE,

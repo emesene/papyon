@@ -41,6 +41,7 @@ import urllib
 import base64
 import hashlib
 import logging
+import os
 
 __all__ = ['MSNObjectType', 'MSNObject', 'MSNObjectStore',
            'FileTransferManager', 'WebcamHandler']
@@ -157,9 +158,9 @@ class MSNObject(object):
             return
 
         old_pos = data.tell()
-        data.seek(0, 2)
+        data.seek(0, os.SEEK_END)
         self._size = data.tell()
-        data.seek(old_pos, 0)
+        data.seek(old_pos, os.SEEK_SET)
 
         self.__data = data
         self._checksum_sha = self.__compute_checksum()
@@ -207,12 +208,12 @@ class MSNObject(object):
 
     def __compute_data_hash(self, data):
         digest = hashlib.sha1()
-        data.seek(0, 0)
+        data.seek(0, os.SEEK_SET)
         read_data = data.read(1024)
         while len(read_data) > 0:
             digest.update(read_data)
             read_data = data.read(1024)
-        data.seek(0, 0)
+        data.seek(0, os.SEEK_SET)
         return digest.digest()
 
     def __compute_checksum(self):

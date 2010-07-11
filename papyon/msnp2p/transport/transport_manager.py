@@ -24,6 +24,7 @@ from papyon.msnp2p.transport.TLP import MessageBlob
 import gobject
 import struct
 import logging
+import os
 
 __all__ = ['P2PTransportManager']
 
@@ -111,7 +112,7 @@ class P2PTransportManager(gobject.GObject):
 
         blob.append_chunk(chunk)
         if blob.is_complete():
-            blob.data.seek(0, 0)
+            blob.data.seek(0, os.SEEK_SET)
             self.emit("blob-received", blob)
             if session_id == 0:
                 del self._signaling_blobs[blob_id]

@@ -23,6 +23,7 @@ import papyon.util.string_io as StringIO
 import struct
 import random
 import logging
+import os
 
 __all__ = ['MessageBlob']
 
@@ -195,9 +196,9 @@ class MessageBlob(object):
                     data = StringIO.StringIO()
 
             if total_size is None:
-                data.seek(0, 2) # relative to the end
+                data.seek(0, os.SEEK_END) # relative to the end
                 total_size = data.tell()
-                data.seek(0, 0)
+                data.seek(0, os.SEEK_SET)
         else:
             total_size = 0
 
@@ -247,16 +248,16 @@ class MessageBlob(object):
         return False
 
     def read_data(self):
-        self.data.seek(0, 0)
+        self.data.seek(0, os.SEEK_SET)
         data = self.data.read()
-        self.data.seek(0, 0)
+        self.data.seek(0, os.SEEK_SET)
         return data
 
     def get_chunk(self, max_size):
         blob_offset = self.transferred
 
         if self.data is not None:
-            self.data.seek(blob_offset, 0)
+            self.data.seek(blob_offset, os.SEEK_SET)
             data = self.data.read(max_size - TLPHeader.SIZE)
             assert len(data) > 0, "Trying to read more data than available"
         else:
@@ -283,9 +284,9 @@ class MessageBlob(object):
         assert self.data is not None, "Trying to write to a Read Only blob"
         assert self.session_id == chunk.header.session_id, "Trying to append a chunk to the wrong blob"
         assert self.id == chunk.header.blob_id, "Trying to append a chunk to the wrong blob"
-        self.data.seek(chunk.header.blob_offset, 0)
+        self.data.seek(chunk.header.blob_offset, os.SEEK_SET)
         self.data.write(chunk.body)
-        self.data.seek(0, 2)
+        self.data.seek(0, os.SEEK_END)
         self.current_size = self.data.tell()
 
 

@@ -113,7 +113,7 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         self._dispatch("on_call_rejected", message)
 
     def _on_data_blob_received(self, blob):
-        blob.data.seek(0, 0)
+        blob.data.seek(0, os.SEEK_SET)
         data = blob.data.read()
         data = unicode(data[10:], "utf-16-le").rstrip("\x00")
 

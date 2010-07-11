@@ -30,6 +30,7 @@ import base64
 import logging
 import random
 import uuid
+import os
 
 __all__ = ['P2PSession']
 
@@ -246,12 +247,12 @@ class P2PSession(gobject.GObject):
 
     def _on_data_blob_sent(self, blob):
         logger.info("Session data transfer completed")
-        blob.data.seek(0, 0)
+        blob.data.seek(0, os.SEEK_SET)
         self.emit("completed", blob.data)
 
     def _on_data_blob_received(self, blob):
         logger.info("Session data transfer completed")
-        blob.data.seek(0, 0)
+        blob.data.seek(0, os.SEEK_SET)
         self.emit("completed", blob.data)
         self._close()
 

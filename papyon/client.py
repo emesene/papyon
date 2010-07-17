@@ -465,6 +465,7 @@ class Client(EventsDispatcher):
             self.address_book.connect(name, event, name)
 
         connect_signal("contact-added")
+        connect_signal("contact-pending")
         connect_signal("contact-deleted")
         connect_signal("contact-blocked")
         connect_signal("contact-unblocked")

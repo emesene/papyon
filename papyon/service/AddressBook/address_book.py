@@ -139,6 +139,10 @@ class AddressBook(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object,)),
 
+            "contact-pending"         : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                 (object,)),
+
             "contact-deleted"         : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                  (object,)),
@@ -265,10 +269,14 @@ class AddressBook(gobject.GObject):
             contact = profile.Contact(None, network_id, account, account)
         return contact
 
-    def check_pending_invitations(self):
+    def check_pending_invitations(self, done_cb=None, failed_cb=None):
+        def callback(memberships):
+            self.__update_memberships(memberships)
+            self.__common_callback('contact-pending', done_cb,
+                    self.contacts.search_by_memberships(Membership.PENDING))
         cp = scenario.CheckPendingInviteScenario(self._sharing,
-                 (self.__update_memberships,),
-                 (self.__common_errback, None))
+                 (callback,),
+                 (self.__common_errback, failed_cb))
         cp()
 
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True,

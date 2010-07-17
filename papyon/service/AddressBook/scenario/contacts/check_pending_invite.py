@@ -44,5 +44,10 @@ class CheckPendingInviteScenario(BaseScenario):
 
     def __membership_findall_errback(self, error_code):
         errcode = AddressBookError.UNKNOWN
+        if error_code == 'FullSyncRequired':
+            self.__sharing.FindMembership((self.__membership_findall_callback,),
+                    (self.__membership_findall_errback,),
+                    self._scenario, ['Messenger'], False)
+            return
         self.errback(errcode)
 

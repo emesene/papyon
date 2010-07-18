@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2009 Collabora Ltd.
+# Copyright (C) 2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,4 +18,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from call_manager import SIPCallManager
+# MS-Keep-Alive: UAC;hop-hop=yes
+# http://msdn.microsoft.com/en-us/library/cc431508%28v=office.12%29.aspx
+
+from papyon.sip.extensions.base import SIPExtension
+
+class MSKeepAliveExtension(SIPExtension):
+
+    def __init__(self, client, core):
+        SIPExtension.__init__(self, client, core)
+
+    def extend_request(self, message):
+        message.add_header("MS-Keep-Alive", "UAC;hop-hop=yes")

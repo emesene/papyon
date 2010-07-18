@@ -49,9 +49,7 @@ class RTCActivityManager(object):
     def unregister(self, activity):
         self._activities.remove(activity)
 
-    def get_transport(self, tunneled=True):
-        if not tunneled:
-            return None
+    def get_transport(self):
         return self._transport
 
     def _get_activity(self, id):
@@ -75,19 +73,20 @@ class RTCActivityManager(object):
             if activity:
                 activity.on_activity_declined()
 
+        #FIXME handle BYE on timeout
+
 
 class RTCActivity(object):
     """RTC activity such as a video or audio call (not sure if there is any
        other type of activity). Used to communicate between end points about
        the status of an activity (accepted, declined..) in a MPOP context."""
 
-    def __init__(self, client, tunneled=True):
-        logger.info("New RTC activity %s." % self.id)
+    def __init__(self, client):
+        logger.info("New RTC activity.")
         self._client = client
         self._manager = client.rtc_activity_manager
         self._manager.register(self)
-        self._transport = self._manager.get_transport(tunneled)
-        self._tunneled = tunneled
+        self._transport = self._manager.get_transport()
 
     @property
     def id(self):

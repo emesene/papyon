@@ -273,7 +273,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def send_user_notification(self, message, contact, contact_guid, type,
             callback=None, *cb_args):
-        account = contact.account
+        account = contact
         if contact_guid:
             account += ';{' + contact_guid + '}'
         arguments = (account, type)
@@ -327,7 +327,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         guid = None
         if ';' in account:
             account, guid = account.split(';', 1)
-        return idx + 1, account, guid [1:-1]
+            guid = guid [1:-1]
+        return idx + 1, account, guid
 
     def __find_node(self, parent, name, default):
         node = parent.find(name)

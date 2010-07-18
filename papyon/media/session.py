@@ -207,6 +207,8 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             if self.ready:
                 self.emit("ready")
 
+        return True
+
     def on_stream_prepared(self, stream):
         if self.prepared:
             logger.debug("All media streams are prepared")

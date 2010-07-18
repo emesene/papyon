@@ -36,6 +36,10 @@ class SDPMessage(MediaSessionMessage):
         MediaSessionMessage.__init__(self, session, body)
 
     @property
+    def type(self):
+        return "application/sdp"
+
+    @property
     def ip(self):
         if self._ip == "" and len(self._descriptions) > 0:
             return self._descriptions[0].ip

@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2009 Collabora Ltd.
+# Copyright (C) 2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,4 +18,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from call_manager import SIPCallManager
+from papyon.sip.message import SIPResponse, SIPRequest
+
+class SIPExtension(object):
+
+    def __init__(self, client, core):
+        self._client = client
+        self._core = core
+
+    def extend(self, message):
+        if type(message) is SIPResponse:
+            self.extend_response(message)
+        elif type(message) is SIPRequest:
+            self.extend_request(message)
+
+    def extend_response(self, reponse):
+        pass
+
+    def extend_request(self, request):
+        pass

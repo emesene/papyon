@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2009 Collabora Ltd.
+# Copyright (C) 2009-2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -104,3 +104,19 @@ RESPONSE_CODES = {
 
 SIP_INSTANCE = "0E04CFC3-0272-5A5C-B7C3-6FBE8DA71EAD"
 USER_AGENT = "papyon/0.1"
+
+T1 = 0.5 # seconds
+T2 = 4   # seconds
+
+TIMER_A = T1
+TIMER_B = 64 * T1 # INVITE timer
+TIMER_F = 64 * T1 # non-INVITE timer
+TIMER_H = 64 * T1
+
+class SIPTransactionError(object):
+    TIMEOUT = 1
+    TRANSPORT_ERROR = 2
+
+class SIPMode(object):
+    CLIENT = "UAC"
+    SERVER = "UAS"

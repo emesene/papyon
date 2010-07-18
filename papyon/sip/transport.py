@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2009 Collabora Ltd.
+# Copyright (C) 2009-2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 from papyon.gnet.constants import *
 from papyon.gnet.io import *
 from papyon.msnp.constants import *
-from papyon.sip.message import SIPMessageParser
+from papyon.sip.message import SIPResponse, SIPRequest, SIPMessageParser, SIPVia
 
 import base64
 import gobject
@@ -39,6 +39,18 @@ class SIPBaseTransport(gobject.GObject):
             ([object]))
     }
 
+    @property
+    def protocol(self):
+        raise NotImplementedError
+
+    @property
+    def ip(self):
+        raise NotImplementedError
+
+    @property
+    def port(self):
+        raise NotImplementedError
+
     def __init__(self):
         gobject.GObject.__init__(self)
         self._parser = SIPMessageParser()
@@ -48,83 +60,17 @@ class SIPBaseTransport(gobject.GObject):
         self.emit("message-received", message)
 
     def send(self, message):
+        if type(message) is SIPRequest:
+            message.add_header("Via", SIPVia(self.protocol, self.ip, self.port))
+            message.add_header("Max-Forwards", 70)
+        self._send(message)
+
+    def _send(self, message):
         raise NotImplementedError
 
     def log_message(self, prefix, message):
         for line in message.splitlines():
             logger.debug(prefix + " " + line)
-
-
-class SIPTransport(SIPBaseTransport):
-    """Default transport on older MSNP versions. The messages are sent over a
-       typical SSL TCP connection."""
-
-    def __init__(self, host, port):
-        SIPBaseTransport.__init__(self)
-        self._client = SSLTCPClient(host, port)
-        self._client.connect("received", self.on_received)
-        self._client.connect("notify::status", self.on_status_changed)
-        self._alive_src = None
-        self._closing = False
-        self._msg_queue = []
-
-    @property
-    def protocol(self):
-        return "tls"
-
-    def send(self, message):
-        data = str(message)
-        if self._client.status == IoStatus.OPEN:
-            self.log_message(">>", data)
-            self._send(data)
-        else:
-            self._msg_queue.append(message)
-            self._open()
-
-    def _open(self):
-        if self._client.status == IoStatus.OPEN:
-            return
-        self._close()
-        self._closing = False
-        self._client.open()
-        self._start_keep_alive()
-
-    def _close(self):
-        if self._client.status == IoStatus.CLOSED:
-            return
-        self._stop_keep_alive()
-        self._closing = True
-        self._client.close()
-
-    def _send(self, data):
-        self._client.send(data)
-
-    def _start_keep_alive(self):
-        self._alive_src = gobject.timeout_add(5000, self._on_keep_alive)
-
-    def _stop_keep_alive(self):
-        if self._alive_src is not None:
-            gobject.source_remove(self._alive_src)
-            self._alive_src = None
-
-    def _on_keep_alive(self):
-        if self._client.status == IoStatus.OPEN:
-            self._send("\r\n\r\n\r\n\r\n")
-            return True
-        else:
-            return False
-
-    def on_received(self, client, chunk, len):
-        self.log_message("<<", chunk)
-        self._parser.append(chunk)
-
-    def on_status_changed(self, client, param):
-        if self._client.status == IoStatus.OPEN:
-            while self._msg_queue:
-                self.send(self._msg_queue.pop(0))
-        elif self._client.status == IoStatus.CLOSED:
-            if not self._closing:
-                self._open()
 
 
 class SIPTunneledTransport(SIPBaseTransport):
@@ -142,9 +88,27 @@ class SIPTunneledTransport(SIPBaseTransport):
     def protocol(self):
         return "tcp"
 
-    def send(self, message):
-        call_id = message.call.id
-        contact = message.call.peer
+    @property
+    def ip(self):
+        return "127.0.0.1"
+
+    @property
+    def port(self):
+        return 50390
+
+    def _send(self, message):
+        call_id = message.call_id
+        if type(message) is SIPResponse:
+            contact = message.From.uri.replace("sip:", "")
+        else:
+            contact = message.To.uri.replace("sip:", "")
+        #FIXME hack
+        guid = None
+        if ";mepid=" in contact:
+            contact, guid = contact.split(";mepid=")
+            guid = "%s-%s-%s-%s-%s" % (guid[0:8], guid[8:12], guid[12:16],
+                    guid[16:20], guid[20:32])
+            guid = guid.lower()
         self.log_message(">>", str(message))
         data = base64.b64encode(str(message))
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \

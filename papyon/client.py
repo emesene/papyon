@@ -94,7 +94,7 @@ from papyon.switchboard_manager import SwitchboardManager
 from papyon.media import RTCActivityManager
 from papyon.msnp2p import P2PSessionManager
 from papyon.p2p import MSNObjectStore, FileTransferManager, WebcamHandler
-from papyon.sip import SIPConnectionManager
+from papyon.sip import SIPCallManager
 from papyon.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
 from papyon.event import ClientState, ClientErrorType, \
@@ -146,7 +146,7 @@ class Client(EventsDispatcher):
         self._webcam_handler = WebcamHandler(self)
         self._p2p_session_manager.register_handler(self._webcam_handler)
 
-        self._call_manager = SIPConnectionManager(self, self._protocol)
+        self._call_manager = SIPCallManager(self)
         self._rtc_activity_manager = RTCActivityManager(self, self._protocol)
 
         self._msn_object_store = MSNObjectStore(self)
@@ -196,8 +196,8 @@ class Client(EventsDispatcher):
 
     @property
     def call_manager(self):
-        """The SIP connection manager
-            @type: L{SIPConnectionManager<papyon.sip.SIPConnectionManager>}"""
+        """The SIP call manager
+            @type: L{SIPCallManager<papyon.sip.SIPCallManager>}"""
         return self._call_manager
 
     @property
@@ -528,7 +528,7 @@ class Client(EventsDispatcher):
         def invite_received(call_manager, call):
             self._dispatch("on_invite_conference", call)
 
-        self._call_manager.connect("invite-received", invite_received)
+        self._call_manager.connect("incoming-call", invite_received)
 
     def __connect_ft_manager_signals(self):
         """Connect File Transfer Manager signals"""

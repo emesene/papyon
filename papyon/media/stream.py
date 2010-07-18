@@ -248,6 +248,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
         if self._local_candidates_prepared:
             return
+        logger.debug("Media stream %s is prepared" % self.name)
         self._local_candidates_prepared = True
         if self.prepared:
             self.emit("prepared")

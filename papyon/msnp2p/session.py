@@ -46,6 +46,9 @@ class P2PSession(gobject.GObject):
             "accepted" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 ()),
+            "rejected" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
             "completed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -62,6 +65,7 @@ class P2PSession(gobject.GObject):
 
         self._euf_guid = euf_guid
         self._application_id = application_id
+        self._completed = False
 
         if message is not None:
             self._id = message.body.session_id
@@ -94,6 +98,10 @@ class P2PSession(gobject.GObject):
     @property
     def incoming(self):
         return self._incoming
+
+    @property
+    def completed(self):
+        return self._completed
 
     @property
     def call_id(self):
@@ -231,6 +239,7 @@ class P2PSession(gobject.GObject):
                         self.emit("accepted")
                     elif message.status is 603:
                         self._on_session_rejected(message)
+                        self.emit("rejected")
             return
 
         self._on_data_blob_received(blob)
@@ -248,11 +257,13 @@ class P2PSession(gobject.GObject):
     def _on_data_blob_sent(self, blob):
         logger.info("Session data transfer completed")
         blob.data.seek(0, os.SEEK_SET)
+        self._completed = True
         self.emit("completed", blob.data)
 
     def _on_data_blob_received(self, blob):
         logger.info("Session data transfer completed")
         blob.data.seek(0, os.SEEK_SET)
+        self._completed = True
         self.emit("completed", blob.data)
         self._close()
 

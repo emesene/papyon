@@ -21,11 +21,18 @@
 from papyon.msnp2p.constants import EufGuid
 from papyon.msnp2p.session import P2PSession
 
+import gobject
 import struct
 
 __all__ = ['FileTransferSession']
 
 class FileTransferSession(P2PSession):
+
+    __gsignals__ = {
+            "canceled" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ())
+    }
 
     def __init__(self, session_manager, peer, application_id, message=None):
         P2PSession.__init__(self, session_manager, peer,
@@ -88,3 +95,8 @@ class FileTransferSession(P2PSession):
         context += struct.pack("550s", filename)
         context += "\xFF" * 4
         return context
+
+    def _on_bye_received(self, message):
+        if not self.completed:
+            self.emit("canceled")
+        self._dispose()

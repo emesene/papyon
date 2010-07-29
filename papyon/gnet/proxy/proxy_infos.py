@@ -98,7 +98,7 @@ class ProxyInfos(object):
     def __get_type(self):
         return self._type
     def __set_type(self, type):
-        assert(type in ('http', 'https', 'socks4', 'socks5'))
+        assert(type in ('http', 'https', 'socks', 'socks4', 'socks5'))
         self._type = type
     type = property(__get_type, __set_type, doc="Proxy type.")
 

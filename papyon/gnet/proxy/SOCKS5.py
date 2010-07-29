@@ -98,6 +98,7 @@ class SOCKS5Proxy(AbstractProxy):
 
     def _post_open(self):
         AbstractProxy._post_open(self)
+        self._delimiter_parser.enable()
         self._send_nego_msg()
         
     # Public API
@@ -258,13 +259,13 @@ class SOCKS5Proxy(AbstractProxy):
                 self._parse_domain_name_length(response)
             elif (self._state == SOCKS5Proxy.STATE_RECV_IPV4_ADDR or
                   self._state == SOCKS5Proxy.STATE_RECV_DOMAINNAME):
-                del self._delimiter_parser
+                self._delimiter_parser.disable()
                 self._transport._watch_remove() # HACK: ok this is ugly !
                 self._client._proxy_open()
         except Exception, err:
             logger.error("Handshake failed")
             logger.exception(err)
-            del self._delimiter_parser
+            self._delimiter_parser.disable()
             self.close()
             self.emit("error", IoError.PROXY_CONNECTION_FAILED)
         return False

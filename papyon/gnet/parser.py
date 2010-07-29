@@ -43,10 +43,24 @@ class AbstractParser(gobject.GObject):
             @type transport: an object derived from
                 L{io.AbstractClient}"""
         gobject.GObject.__init__(self)
-        if connect_signals:
-            transport.connect("received", self._on_received)
-            transport.connect("notify::status", self._on_status_change)
         self._transport = transport
+        self._reset_state()
+        self._handles = []
+        if connect_signals:
+            self.enable()
+
+    def enable(self):
+        if self._handles:
+            self.disable()
+        self._handles.append(self._transport.connect("received",
+            self._on_received))
+        self._handles.append(self._transport.connect("notify::status",
+            self._on_status_change))
+
+    def disable(self):
+        for handle in self._handles:
+            self._transport.disconnect(handle)
+        self._handles = []
         self._reset_state()
 
     def _reset_state(self):

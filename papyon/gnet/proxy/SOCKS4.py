@@ -72,6 +72,7 @@ class SOCKS4Proxy(AbstractProxy):
         proxy_protocol += user
         proxy_protocol += struct.pack('B', 0)
 
+        self._delimiter_parser.enable()
         self._transport.send(proxy_protocol)
         
     # Public API
@@ -113,7 +114,7 @@ class SOCKS4Proxy(AbstractProxy):
         assert(version == 0)
         if self.status == IoStatus.OPENING:
             if response_code == 90:
-                del self._delimiter_parser
+                self._delimiter_parser.disable()
                 self._transport._watch_remove() # HACK: ok this is ugly !
                 self._client._proxy_open()
             elif response_code == 91:

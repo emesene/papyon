@@ -64,7 +64,7 @@ class SSLSocketClient(GIOChannelClient):
             return False
         if self._status == IoStatus.OPENING:
             try:
-                self._transport.do_handshake()
+                self._transport.set_connect_state()
             except (OpenSSL.WantX509LookupError,
                     OpenSSL.WantReadError, OpenSSL.WantWriteError):
                 return True

@@ -59,14 +59,12 @@ class SOCKS4Proxy(AbstractProxy):
 
     def _post_open(self):
         AbstractProxy._post_open(self)
-        host = self._client.get_property("host")
-        port = self._client.get_property("port")
         user = self._proxy.user
 
         proxy_protocol  = struct.pack('!BBH', SOCKS4Proxy.PROTOCOL_VERSION,
-                SOCKS4Proxy.CONNECT_COMMAND, port)
+                SOCKS4Proxy.CONNECT_COMMAND, self.port)
 
-        for part in host.split('.'):
+        for part in self.host.split('.'):
            proxy_protocol += struct.pack('B', int(part))
 
         proxy_protocol += user

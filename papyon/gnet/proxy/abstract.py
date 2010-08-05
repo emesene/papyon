@@ -31,7 +31,7 @@ class AbstractProxy(AbstractClient):
         self._client.connect("sent", self._on_client_sent)
         self._client.connect("received", self._on_client_received)
         self._client.connect("notify::status", self._on_client_status)
-        AbstractClient.__init__(self, self._proxy.host, self._proxy.port)
+        AbstractClient.__init__(self, client.host, client.port)
 
     def _on_client_status(self, client, param):
         status = client.get_property("status")

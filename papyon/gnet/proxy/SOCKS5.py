@@ -182,23 +182,20 @@ class SOCKS5Proxy(AbstractProxy):
         return True
 
     def _send_connect_msg(self):
-        host = self._client.get_property("host")
-        port = self._client.get_property("port")
-
         msg = struct.pack('!BBB', SOCKS5Proxy.VERSION,
                 SOCKS5Proxy.CMD_CONNECT, SOCKS5Proxy.RESERVED)
         try:
-            addr = socket.inet_aton(host)
+            addr = socket.inet_aton(self.host)
             msg += struct.pack('!BI', SOCKS5Proxy.ATYP_IPV4, addr)
         except:
-            if len(host) > SOCKS5Proxy.MAX_LEN:
+            if len(self.host) > SOCKS5Proxy.MAX_LEN:
                 raise Exception
-            msg += struct.pack('!BB', SOCKS5Proxy.ATYP_DOMAINNAME, len(host))
-            msg += host
+            msg += struct.pack('!BB', SOCKS5Proxy.ATYP_DOMAINNAME, len(self.host))
+            msg += self.host
 
-        msg += struct.pack('!H', port)
+        msg += struct.pack('!H', self.port)
 
-        logger.info("Connection request to %s:%u" % (host, port))
+        logger.info("Connection request to %s:%u" % (self.host, self.port))
         self._state = SOCKS5Proxy.STATE_CONN
         self._delimiter_parser.delimiter = SOCKS5Proxy.CONN_REPLY_LEN
         self._transport.send(msg)

@@ -47,9 +47,7 @@ class HTTPConnectProxy(AbstractProxy):
 
     def _post_open(self):
         AbstractProxy._post_open(self)
-        host = self._client.get_property("host")
-        port = self._client.get_property("port")
-        proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (host, port)
+        proxy_protocol  = 'CONNECT %s:%s HTTP/1.1\r\n' % (self.host, self.port)
         proxy_protocol += 'Proxy-Connection: Keep-Alive\r\n'
         proxy_protocol += 'Pragma: no-cache\r\n'
         proxy_protocol += 'User-Agent: %s/%s\r\n' % (GNet.NAME, GNet.VERSION)

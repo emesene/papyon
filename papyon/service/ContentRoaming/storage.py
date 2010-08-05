@@ -144,8 +144,7 @@ class Storage(SOAPService):
         http_headers["Proxy-Connection"] = "Keep-Alive"
         http_headers["Connection"] = "Keep-Alive"
         
-        proxy = self._proxies.get(scheme, None)
-        transport = ProtocolFactory(scheme, host, port, proxy=proxy)
+        transport = ProtocolFactory(scheme, host, port, proxies=self._proxies)
         transport.connect("response-received", request_callback)
         transport.connect("request-sent", self._request_handler)
         transport.connect("error", errback[0], *errback[1:])

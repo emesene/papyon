@@ -19,7 +19,7 @@
 
 from papyon.gnet.constants import *
 from papyon.gnet.io import SSLTCPClient
-from papyon.gnet.proxy.HTTPConnect import HTTPConnectProxy
+from papyon.gnet.proxy.factory import ProxyFactory
 from papyon.gnet.parser import HTTPParser
 from HTTP import HTTP
 
@@ -27,7 +27,7 @@ __all__ = ['HTTPS']
 
 class HTTPS(HTTP):
     """HTTP protocol client class."""
-    def __init__(self, host, port=443, proxy=None):
+    def __init__(self, host, port=443, proxies={}):
         """Connection initialization
         
             @param host: the host to connect to.
@@ -36,25 +36,17 @@ class HTTPS(HTTP):
             @param port: the port number to connect to
             @type port: integer
 
-            @param proxy: proxy that we can use to connect
-            @type proxy: L{gnet.proxy.ProxyInfos}"""
-        HTTP.__init__(self, host, port)
-        assert(proxy is None or proxy.type == 'https')
-        self.__proxy = proxy
+            @param proxies: proxies that we can use to connect
+            @type proxies: L{gnet.proxy.ProxyInfos}"""
+        HTTP.__init__(self, host, port, proxies)
 
     def _setup_transport(self):
         if self._transport is None:
-            transport = SSLTCPClient(self._host, self._port)
-            if self.__proxy is not None:
-                print 'Using proxy : ', repr(self.__proxy)
-                self._transport = HTTPConnectProxy(transport, self.__proxy)
-            else:
-                self._transport = transport
-            self._http_parser = HTTPParser(self._transport)
-            self._http_parser.connect("received", self._on_response_received)
-            self._transport.connect("notify::status", self._on_status_change)
-            self._transport.connect("error", self._on_error)
-            self._transport.connect("sent", self._on_request_sent)
+            self._transport = SSLTCPClient(self._host, self._port)
+            if self._proxies:
+                self._transport = ProxyFactory(self._transport, self._proxies,
+                        preferred='https')
+            self._setup_parser()
         
         if self._transport.get_property("status") != IoStatus.OPEN:
             self._transport.open()

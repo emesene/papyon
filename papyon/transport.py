@@ -357,20 +357,15 @@ class HTTPPollConnection(BaseTransport):
         self._target_server = server
         server = ("gateway.messenger.hotmail.com", 80)
         BaseTransport.__init__(self, server, server_type, proxies)
-        self._setup_transport()
+        self._setup_transport(server[0], server[1], proxies)
         
         self._command_queue = []
         self._waiting_for_response = False # are we waiting for a response
         self._session_id = None
         self.__error = False
 
-    def _setup_transport(self):
-        server = self.server
-        proxies = self.proxies
-        if 'http' in proxies:
-            transport = gnet.protocol.HTTP(server[0], server[1], proxies['http'])
-        else:
-            transport = gnet.protocol.HTTP(server[0], server[1])
+    def _setup_transport(self, host, port, proxies):
+        transport = gnet.protocol.HTTP(host, port, self.proxies)
         transport.connect("response-received", self.__on_received)
         transport.connect("request-sent", self.__on_sent)
         transport.connect("error", self.__on_error)

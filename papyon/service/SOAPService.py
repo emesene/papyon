@@ -270,9 +270,8 @@ class SOAPService(object):
             transport = trans[0]
             trans[1].append((request_id, callback, errback, user_data))
         else:
-            proxy = self._proxies.get(scheme, None)
             transport = papyon.gnet.protocol.ProtocolFactory(scheme,
-                    host, port, proxy=proxy)
+                    host, port, proxies=self._proxies)
             handler_id = [transport.connect("response-received",
                     self._response_handler),
                 transport.connect("request-sent", self._request_handler),

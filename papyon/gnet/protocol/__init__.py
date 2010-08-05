@@ -22,14 +22,14 @@
 from HTTP import *
 from HTTPS import *
 
-def ProtocolFactory(protocol, host, port=None, proxy=None):
+def ProtocolFactory(protocol, host, port=None, proxies={}):
     if protocol == "http":
         klass = HTTP
     elif protocol == "https":
         klass = HTTPS
     
     if port is None:
-        return klass(host, proxy=proxy)
+        return klass(host, proxies=proxies)
     else:
-        return klass(host, port, proxy=proxy)
+        return klass(host, port, proxies=proxies)
 

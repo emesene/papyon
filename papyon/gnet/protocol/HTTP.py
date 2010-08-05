@@ -22,6 +22,7 @@ from papyon.gnet.proxy import ProxyInfos
 from papyon.gnet.message.HTTP import HTTPRequest
 from papyon.gnet.io import TCPClient
 from papyon.gnet.parser import HTTPParser
+from papyon.gnet.proxy.factory import ProxyFactory
 
 import gobject
 import base64
@@ -47,7 +48,7 @@ class HTTP(gobject.GObject):
                 (object,)), # HTTPRequest
             }
 
-    def __init__(self, host, port=80, proxy=None):
+    def __init__(self, host, port=80, proxies={}):
         """Connection initialization
         
             @param host: the host to connect to.
@@ -56,13 +57,13 @@ class HTTP(gobject.GObject):
             @param port: the port number to connect to
             @type port: integer
 
-            @param proxy: proxy that we can use to connect
-            @type proxy: L{gnet.proxy.ProxyInfos}"""
+            @param proxies: proxies that we can use to connect
+            @type proxies: L{gnet.proxy.ProxyInfos}"""
         gobject.GObject.__init__(self)
-        assert(proxy is None or proxy.type == 'http') # TODO: add support for other proxies (socks4 and 5)
         self._host = host
         self._port = port
-        self.__proxy = proxy
+        self._proxies = proxies
+        self.__http_proxy = None
         self._transport = None
         self._http_parser = None
         self._outgoing_queue = []
@@ -76,18 +77,27 @@ class HTTP(gobject.GObject):
 
     def _setup_transport(self):
         if self._transport is None:
-            if self.__proxy is not None:
-                self._transport = TCPClient(self.__proxy.host, self.__proxy.port)
+            if self._proxies and 'http' in self._proxies:
+                self.__http_proxy = self._proxies['http']
+            if self.__http_proxy:
+                self._transport = TCPClient(self.__http_proxy.host,
+                        self.__http_proxy.port)
             else:
                 self._transport = TCPClient(self._host, self._port)
-            self._http_parser = HTTPParser(self._transport)
-            self._http_parser.connect("received", self._on_response_received)
-            self._transport.connect("notify::status", self._on_status_change)
-            self._transport.connect("error", self._on_error)
-            self._transport.connect("sent", self._on_request_sent)
+                if self._proxies:
+                    self._transport = ProxyFactory(self._transport,
+                            self._proxies)
+            self._setup_parser()
         
         if self._transport.get_property("status") != IoStatus.OPEN:
             self._transport.open()
+
+    def _setup_parser(self):
+        self._http_parser = HTTPParser(self._transport)
+        self._http_parser.connect("received", self._on_response_received)
+        self._transport.connect("notify::status", self._on_status_change)
+        self._transport.connect("error", self._on_error)
+        self._transport.connect("sent", self._on_request_sent)
 
     def _on_status_change(self, transport, param):
         if transport.get_property("status") == IoStatus.OPEN:
@@ -148,10 +158,10 @@ class HTTP(gobject.GObject):
             user_agent = GNet.NAME, GNet.VERSION, platform.system(), platform.machine()
             headers['User-Agent'] = "%s/%s (%s %s)" % user_agent
 
-        if self.__proxy is not None:
+        if self.__http_proxy is not None:
             url = 'http://%s:%d%s' % (self._host, self._port, resource)
-            if self.__proxy.user:
-                auth = self.__proxy.user + ':' + self.__proxy.password
+            if self.__http_proxy.user:
+                auth = self.__http_proxy.user + ':' + self.__http_proxy.password
                 credentials = base64.encodestring(auth).strip()
                 headers['Proxy-Authorization'] = 'Basic ' + credentials
         else:

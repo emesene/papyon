@@ -71,6 +71,7 @@ class HTTPConnectProxy(AbstractProxy):
     def close(self):
         """Close the connection."""
         self._client._proxy_closed()
+        self._transport.close()
 
     def send(self, buffer, callback=None, *args):
         self._client.send(buffer, callback, *args)
@@ -95,7 +96,7 @@ class HTTPConnectProxy(AbstractProxy):
         if self.status == IoStatus.OPENING:
             if response.status == 200:
                 del self._http_parser
-                self._transport._watch_remove() # HACK: ok this is ugly !
+                self._transport.disable()
                 self._client._proxy_open()
             elif response.status == 100:
                 return True

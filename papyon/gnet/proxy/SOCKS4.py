@@ -86,7 +86,9 @@ class SOCKS4Proxy(AbstractProxy):
 
     def close(self):
         """Close the connection."""
+        self._delimiter_parser.disable()
         self._client._proxy_closed()
+        self._transport.close()
 
     def send(self, buffer, callback=None, *args):
         self._client.send(buffer, callback, *args)
@@ -113,7 +115,7 @@ class SOCKS4Proxy(AbstractProxy):
         if self.status == IoStatus.OPENING:
             if response_code == 90:
                 self._delimiter_parser.disable()
-                self._transport._watch_remove() # HACK: ok this is ugly !
+                self._transport.disable()
                 self._client._proxy_open()
             elif response_code == 91:
                 self.close()

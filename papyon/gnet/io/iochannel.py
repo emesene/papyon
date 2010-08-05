@@ -160,6 +160,13 @@ class GIOChannelClient(AbstractClient):
         self._transport.close()
         self._status = IoStatus.CLOSED
 
+    def disable(self):
+        # Disable the channel without actually closing the socket
+        # Rationnale: some other client might have the ownership of the socket
+        if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
+            return
+        self._watch_remove()
+
     def send(self, buffer, callback=None, *args):
         assert(self._status == IoStatus.OPEN), self._status
         self._outgoing_queue.append(OutgoingPacket(buffer, len(buffer),

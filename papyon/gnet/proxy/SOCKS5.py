@@ -114,6 +114,7 @@ class SOCKS5Proxy(AbstractProxy):
 
     def close(self):
         """Close the connection."""
+        self._delimiter_parser.disable()
         self._client._proxy_closed()
         self._transport.close()
 
@@ -257,12 +258,11 @@ class SOCKS5Proxy(AbstractProxy):
             elif (self._state == SOCKS5Proxy.STATE_RECV_IPV4_ADDR or
                   self._state == SOCKS5Proxy.STATE_RECV_DOMAINNAME):
                 self._delimiter_parser.disable()
-                self._transport._watch_remove() # HACK: ok this is ugly !
+                self._transport.disable()
                 self._client._proxy_open()
         except Exception, err:
             logger.error("Handshake failed")
             logger.exception(err)
-            self._delimiter_parser.disable()
             self.close()
             self.emit("error", IoError.PROXY_CONNECTION_FAILED)
         return False

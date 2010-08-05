@@ -30,6 +30,8 @@ inside HTTP POST requests.
 The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
 
+from gnet.proxy.factory import ProxyFactory
+
 import gnet
 import gnet.protocol
 import msnp
@@ -225,10 +227,7 @@ class DirectConnection(BaseTransport):
     def __init__(self, server, server_type=ServerType.NOTIFICATION, proxies={}):
         BaseTransport.__init__(self, server, server_type, proxies)
 
-        transport = gnet.io.TCPClient(server[0], server[1])
-        transport.connect("notify::status", self.__on_status_change)
-        transport.connect("error", self.__on_error)
-
+        transport = self._setup_transport(server[0], server[1], proxies)
         receiver = gnet.parser.DelimiterParser(transport)
         receiver.connect("received", self.__on_received)
 
@@ -241,6 +240,14 @@ class DirectConnection(BaseTransport):
         self.__png_timeout = None
 
     __init__.__doc__ = BaseTransport.__init__.__doc__
+
+    def _setup_transport(self, host, port, proxies):
+        transport = gnet.io.TCPClient(host, port)
+        if proxies:
+            transport = ProxyFactory(transport, proxies)
+        transport.connect("notify::status", self.__on_status_change)
+        transport.connect("error", self.__on_error)
+        return transport
 
     ### public commands
 

@@ -27,9 +27,9 @@ from papyon.service.OfflineIM.constants import *
 from papyon.profile import NetworkID
 
 from papyon.util.decorator import throttled
+from papyon.util.encoding import decode_rfc2047_string
 
 import papyon.util.element_tree as ElementTree
-import papyon.util.encoding.decode_rfc2047_string as decode_rfc2047_string
 import papyon.util.string_io as StringIO
 import papyon.util.guid as guid
 import papyon.util.iso8601 as iso8601

@@ -29,6 +29,7 @@ from papyon.profile import NetworkID
 from papyon.util.decorator import throttled
 
 import papyon.util.element_tree as ElementTree
+import papyon.util.encoding.decode_rfc2047_string as decode_rfc2047_string
 import papyon.util.string_io as StringIO
 import papyon.util.guid as guid
 import papyon.util.iso8601 as iso8601
@@ -270,13 +271,7 @@ class OfflineMessagesBox(gobject.GObject):
 
             # Get the name of the sender
             name = m.findtext('./N');
-            # Decode it according to RFC 2047
-            from email.header import decode_header
-            parts = decode_header(name)
-            name = ''
-            for part in parts:
-                name += part[0].decode(part[1]) if part[1] else part[0]
-
+            name = decode_rfc2047_string(name)
             date = m.find('./RT')
             if date is not None:
                 date = date.text

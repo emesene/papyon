@@ -32,6 +32,7 @@ import papyon
 from papyon.gnet.message.HTTP import HTTPMessage
 from papyon.util.queue import PriorityQueue, LastElementQueue
 from papyon.util.decorator import throttled
+from papyon.util.encoding import decode_rfc2047_string
 import papyon.util.element_tree as ElementTree
 import papyon.profile as profile
 import papyon.service.SingleSignOn as SSO
@@ -590,9 +591,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             #New mail
             m = HTTPMessage()
             m.parse(message.body)
-            name = m.get_header('From')
+            name = decode_rfc2047_string(m.get_header('From'))
             address = m.get_header('From-Addr')
-            subject = m.get_header('Subject')
+            subject = decode_rfc2047_string(m.get_header('Subject'))
             message_url = m.get_header('Message-URL')
             post_url = m.get_header('Post-URL')
             post_id = m.get_header('id')

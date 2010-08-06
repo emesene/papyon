@@ -18,6 +18,7 @@
 #
 
 import base64
+from email.header import decode_header
 
 def fix_b64_padding(string):
     while True:
@@ -26,4 +27,12 @@ def fix_b64_padding(string):
             break
         except:
             string += "="
+    return string
+
+def decode_rfc2047_string(string):
+    # Decode it according to RFC 2047
+    parts = decode_header(string)
+    string = ''
+    for part in parts:
+        string += part[0].decode(part[1]) if part[1] else part[0]
     return string

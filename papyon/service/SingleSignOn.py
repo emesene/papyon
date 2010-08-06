@@ -115,6 +115,10 @@ class RequireSecurityTokens(object):
 
 class SingleSignOn(SOAPService):
     def __init__(self, username, password, proxies=None):
+        # Passwords can only be up to 16 characters in length
+        if len(password) > 16:
+            password = password[0:16]
+
         self.__credentials = (username, password)
         self.__storage = {}
 

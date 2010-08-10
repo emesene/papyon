@@ -18,7 +18,10 @@
 #
 
 import base64
-from email.header import decode_header
+import email.quoprimime
+import email.base64mime
+import re
+
 
 def fix_b64_padding(string):
     while True:
@@ -29,10 +32,49 @@ def fix_b64_padding(string):
             string += "="
     return string
 
+
+# Match encoded-word strings in the form =?charset?q?Hello_World?=
+ecre = re.compile(r'''
+  =\?                   # literal =?
+  (?P<charset>[^?]*?)   # non-greedy up to the next ? is the charset
+  \?                    # literal ?
+  (?P<encoding>[qb])    # either a "q" or a "b", case insensitive
+  \?                    # literal ?
+  (?P<encoded>.*?)      # non-greedy up to the next ?= is the encoded string
+  \?=                   # literal ?=
+  (?=[ \t]|$)           # whitespace or the end of the string
+  ''', re.VERBOSE | re.IGNORECASE | re.MULTILINE)
+
 def decode_rfc2047_string(string):
-    # Decode it according to RFC 2047
-    parts = decode_header(string)
-    string = ''
-    for part in parts:
-        string += part[0].decode(part[1]) if part[1] else part[0]
-    return string
+    """ Decode it according to RFC 2047. This code has been adapted from
+        Python code (email.header.decode_header), except we don't strip the
+        unencoded parts and we decode all the parts instead of just returning
+        the encoded parts and charsets. """
+    # If no encoding, just return the string
+    if not ecre.search(string):
+        return string
+
+    decoded = ""
+
+    try:
+        for line in string.splitlines():
+            parts = ecre.split(line)
+            while parts:
+                unenc = parts.pop(0)
+                # don't append single spaces between encoded words to the result
+                if not decoded or not parts or unenc != ' ':
+                    decoded += unenc
+                if parts:
+                    charset, encoding = [s.lower() for s in parts[0:2]]
+                    encoded = parts[2]
+                    dec = encoded
+                    if encoding == 'q':
+                        dec = email.quoprimime.header_decode(encoded)
+                    elif encoding == 'b':
+                        dec = email.base64mime.decode(encoded)
+
+                    decoded += dec.decode(charset) if charset else dec
+                del parts[0:3]
+    except:
+        return string
+    return decoded

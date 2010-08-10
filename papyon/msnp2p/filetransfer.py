@@ -90,7 +90,7 @@ class FileTransferSession(P2PSession):
         self._filename = unicode(context[20:570], "utf-16-le").rstrip("\x00")
 
     def build_context(self):
-        filename = self._filename.decode('ascii').encode('utf-16_le')
+        filename = self._filename.encode('utf-16_le')
         context = struct.pack("<5I", 574, 2, self._size, 0, int(self._has_preview))
         context += struct.pack("550s", filename)
         context += "\xFF" * 4

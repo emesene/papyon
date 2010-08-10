@@ -79,6 +79,18 @@ class BaseP2PTransport(gobject.GObject):
             self._source = gobject.timeout_add(200, self._process_send_queues)
             self._process_send_queues()
 
+    def cleanup(self, session_id):
+        # remove this session's blobs from the data queue
+        # don't clean up the control queue as we still want the BYE to be sent
+        self._queue_lock.acquire()
+        canceled_blobs = []
+        for blob in self._data_blob_queue:
+            if blob[0].session_id == session_id:
+                canceled_blobs.append(blob)
+        for blob in canceled_blobs:
+            self._data_blob_queue.remove(blob)
+        self._queue_lock.release()
+
     def close(self):
         self._transport_manager._unregister_transport(self)
 

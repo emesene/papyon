@@ -132,6 +132,12 @@ class P2PTransportManager(gobject.GObject):
         transport = self._get_transport(peer)
         transport.send(blob, (self._on_blob_sent, transport, blob))
 
+    def cleanup(self, session_id):
+        if session_id in self._data_blobs:
+            del self._data_blobs[session_id]
+        for transport in self._transports:
+            transport.cleanup(session_id)
+
     def register_writable_blob(self, blob):
         if blob.session_id in self._data_blobs:
             logger.warning("registering already registered blob "\

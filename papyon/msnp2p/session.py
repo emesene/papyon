@@ -192,6 +192,8 @@ class P2PSession(gobject.GObject):
         self._dispose()
 
     def _dispose(self):
+        logger.info("Session %s disposed" % self._id)
+        self._session_manager._transport_manager.cleanup(self._id)
         self._session_manager._unregister_session(self)
 
     def _send_p2p_data(self, data_or_file, is_file=False):

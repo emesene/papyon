@@ -22,6 +22,7 @@ from papyon.msnp2p.transport.TLP import TLPFlag, MessageChunk, ControlBlob
 
 import gobject
 import logging
+import threading
 import weakref
 
 __all__ = ['BaseP2PTransport']
@@ -47,6 +48,7 @@ class BaseP2PTransport(gobject.GObject):
         self._source = None
 
         self._transport_manager._register_transport(self)
+        self._queue_lock = threading.Lock()
         self._reset()
 
     @property
@@ -66,10 +68,12 @@ class BaseP2PTransport(gobject.GObject):
         raise NotImplementedError
 
     def send(self, blob, callback=None, errback=None):
+        self._queue_lock.acquire()
         if blob.is_control_blob():
             self._control_blob_queue.append((blob, callback, errback))
         else:
             self._data_blob_queue.append((blob, callback, errback))
+        self._queue_lock.release()
 
         if self._source is None:
             self._source = gobject.timeout_add(200, self._process_send_queues)
@@ -83,10 +87,12 @@ class BaseP2PTransport(gobject.GObject):
 
     # Helper methods
     def _reset(self):
+        self._queue_lock.acquire()
         self._control_blob_queue = []
         self._data_blob_queue = []
         self._pending_blob = {} # last_chunk : (blob, callback, errback)
         self._pending_ack = {} # blob_id : [blob_offset1, blob_offset2 ...]
+        self._queue_lock.release()
 
     def _add_pending_ack(self, blob_id, chunk_id=0):
         if blob_id not in self._pending_ack:
@@ -129,11 +135,14 @@ class BaseP2PTransport(gobject.GObject):
         self._process_send_queues()
 
     def _process_send_queues(self):
+        if not self._queue_lock.acquire(False):
+            return True
         if len(self._control_blob_queue) > 0:
             queue = self._control_blob_queue
         elif len(self._data_blob_queue) > 0:
             queue = self._data_blob_queue
         else:
+            self._queue_lock.release()
             if self._source is not None:
                 gobject.source_remove(self._source)
                 self._source = None
@@ -144,6 +153,7 @@ class BaseP2PTransport(gobject.GObject):
         if blob.is_complete():
             queue.pop(0)
             self._pending_blob[chunk] = (blob, callback, errback)
+        self._queue_lock.release()
 
         if chunk.require_ack() :
             self._add_pending_ack(chunk.header.blob_id, chunk.header.dw1)

@@ -61,9 +61,11 @@ class P2PSessionManager(gobject.GObject):
 
     def _register_session(self, session):
         self._sessions[session.id] = session
+        self._transport_manager.remove_from_blacklist(session.id)
 
     def _unregister_session(self, session):
         del self._sessions[session.id]
+        self._transport_manager.add_to_blacklist(session.id)
 
     def _on_chunk_transferred(self, chunk):
         session_id = chunk.header.session_id

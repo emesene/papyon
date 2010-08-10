@@ -59,6 +59,7 @@ class P2PTransportManager(gobject.GObject):
         self._transport_signals = {}
         self._signaling_blobs = {} # blob_id => blob
         self._data_blobs = {} # session_id => blob
+        self._blacklist = set() # blacklist of session_id
 
     def _register_transport(self, transport):
         assert transport not in self._transports, "Trying to register transport twice"
@@ -98,6 +99,8 @@ class P2PTransportManager(gobject.GObject):
         else: # data blob
             if chunk.is_data_preparation_chunk():
                 return
+            if session_id in self._blacklist:
+                return
 
             if session_id in self._data_blobs:
                 blob = self._data_blobs[session_id]
@@ -135,5 +138,13 @@ class P2PTransportManager(gobject.GObject):
                     "with session_id=" + str(session_id))
             return
         self._data_blobs[blob.session_id] = blob
+
+    def add_to_blacklist(self, session_id):
+        # ignore data chunks received for this session_id:
+        # we want to ignore chunks received shortly after closing a session
+        self._blacklist.add(session_id)
+
+    def remove_from_blacklist(self, session_id):
+        self._blacklist.discard(session_id)
 
 gobject.type_register(P2PTransportManager)

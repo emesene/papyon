@@ -28,7 +28,6 @@ from papyon.util.timer import Timer
 
 import gobject
 import logging
-import traceback
 
 __all__ = ['SIPCall']
 
@@ -184,9 +183,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
                 NetworkID.MSN)
 
     def _dispose(self):
-        #FIXME something wrong when ending call..this is never called
         logger.info("Call has been ended")
-        traceback.print_stack()
         MediaCall.dispose(self)
         self.stop_all_timeout()
         self.emit("ended")
@@ -209,8 +206,10 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         if dialog_to_keep not in self._dialogs:
             return False
         self._dialogs.remove(dialog_to_keep)
+        handles = self._handles.pop(dialog_to_keep)
         self._remove_all_dialogs()
         self._dialogs = [dialog_to_keep]
+        self._handles[dialog_to_keep] = handles
         return True
 
     def _remove_all_dialogs(self):

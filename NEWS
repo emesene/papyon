@@ -1,3 +1,18 @@
+papyon-0.5.0 (2010-08-12)
+=========================
+
+Fixes:
+  * Multiple fixes to file-transfer support
+  * Crop password to first 16 characters (fdo #27613)
+  * Decode name and subject in new email notifications (fdo #27987)
+  * Use timeout_add_seconds instead of timeout_add where possible
+
+Enhancements:
+  * Added MPOP support (Multiple Points of Presence)
+  * Added back video-conference support through tunneled SIP
+  * Added P2Pv2 support
+  * Added SOCKS5 proxy implementation and improved proxy support globally.
+
 papyon-0.4.9 (2010-07-09)
 =========================
 

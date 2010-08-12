@@ -404,7 +404,7 @@ def match_request_to_transaction(request, transaction, match_method=True):
     if request.code == "ACK" or not match_method:
         if request.cseq.number != transaction.request.cseq.number:
             return False
-    elif not request.match_header("CSeq"):
+    elif not request.match_header("CSeq", transaction.request):
         return False
 
     if request.code != "ACK" and request.to.tag != transaction.request.to.tag:

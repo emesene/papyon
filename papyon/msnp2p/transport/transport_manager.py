@@ -108,8 +108,8 @@ class P2PTransportManager(gobject.GObject):
 
         blob.append_chunk(chunk)
         if blob.is_complete():
-            self.emit("blob-received", blob)
             del self._data_blobs[session_id]
+            self.emit("blob-received", blob)
 
     def _on_chunk_sent(self, transport, chunk):
         self.emit("chunk-transferred", chunk)

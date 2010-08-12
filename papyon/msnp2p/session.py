@@ -291,11 +291,11 @@ class P2PSession(gobject.GObject):
             elif isinstance(message, SLPResponseMessage):
                 if isinstance(message.body, SLPSessionRequestBody):
                     if message.status == 200:
-                        self._on_session_accepted()
                         self.emit("accepted")
+                        self._on_session_accepted()
                     elif message.status == 603:
-                        self._on_session_rejected(message)
                         self.emit("rejected")
+                        self._on_session_rejected(message)
                 else:
                     print "Unhandled response blob :", message
             return

@@ -227,8 +227,8 @@ class P2PSession(gobject.GObject):
         if len(self._peer.end_points) > 0:
             return # if the peer supports MPOP, let him do the work
 
-        for end_point in self._client.profile.end_points.keys():
-            if end_point == self._client.machine_guid:
+        for end_point in self._client.profile.end_points.values():
+            if end_point.id == self._client.machine_guid:
                 continue
             self._close_end_point(end_point, status)
 

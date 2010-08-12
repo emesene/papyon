@@ -149,6 +149,9 @@ class BaseP2PTransport(gobject.GObject):
         self.emit("blob-sent", blob)
 
     def _on_chunk_received(self, peer, peer_guid, chunk):
+        if chunk.is_data_preparation_chunk():
+            return
+
         if chunk.require_ack():
             ack_chunk = chunk.create_ack_chunk()
             self.__send_chunk(peer, peer_guid, ack_chunk)

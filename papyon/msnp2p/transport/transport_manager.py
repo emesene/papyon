@@ -93,8 +93,6 @@ class P2PTransportManager(gobject.GObject):
         session_id = chunk.session_id
         blob_id = chunk.blob_id
 
-        if chunk.is_data_preparation_chunk():
-            return
         if session_id in self._blacklist:
             return
 

@@ -110,7 +110,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         if not self.media_session.prepared:
             self._pending_invite = True
             return
-        logger.info("Send call invitation to %s", self._peer.account)
+        logger.info("Send call invitation to %s" % self._peer.account)
         offer = SDPMessage(session=self.media_session)
         self._pending_invite = False
         self._invite = self._core.invite(self._id, self.peer_uri, offer)

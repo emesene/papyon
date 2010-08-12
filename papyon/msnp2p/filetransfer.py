@@ -80,8 +80,8 @@ class FileTransferSession(P2PSession):
 
     def send(self, data):
         self._data = data
-        self._send_p2p_data("\x00" * 4)
-        self._send_p2p_data(self._data, True)
+        self._send_data("\x00" * 4)
+        self._send_data(self._data)
 
     def _parse_context(self, context):
         info = struct.unpack("<5I", context[0:20])

@@ -136,7 +136,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         raise AttributeError, "unknown property %s" % pspec.name
 
     # Public API -------------------------------------------------------------
-    @throttled(2000, LastElementQueue())
+    @throttled(2, LastElementQueue())
     def set_presence(self, presence, client_id=0, msn_object=None):
         """Publish the new user presence.
 
@@ -153,7 +153,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._send_command('CHG',
                     (presence, str(client_id), urllib.quote(str(msn_object))))
 
-    @throttled(2000, LastElementQueue())
+    @throttled(2, LastElementQueue())
     def set_display_name(self, display_name):
         """Sets the new display name
 
@@ -162,7 +162,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('PRP',
                 ('MFN', urllib.quote(display_name)))
 
-    @throttled(2000, LastElementQueue())
+    @throttled(2, LastElementQueue())
     def set_personal_message(self, personal_message='', current_media=None,
             signature_sound=None):
         """Sets the new personal message
@@ -192,7 +192,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             self._client.profile._server_property_changed("current-media",
                 current_media)
 
-    @throttled(2000, LastElementQueue())
+    @throttled(2, LastElementQueue())
     def set_end_point_name(self, name="Papyon", idle=False):
         ep = '<EndpointData>'\
                 '<Capabilities>%s</Capabilities>'\
@@ -214,7 +214,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('OUT')
         self._transport.lose_connection()
 
-    @throttled(7600, list())
+    @throttled(7, list())
     def request_switchboard(self, priority, callback, *callback_args):
         self.__switchboard_callbacks.add((callback, callback_args), priority)
         self._send_command('XFR', ('SB',))

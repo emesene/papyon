@@ -38,14 +38,14 @@ class ClientEvents(papyon.event.ClientEventInterface):
             for contact in self._client.address_book.contacts:
                 print contact
             #self._client.profile.personal_message = "Testing papyon, and freeing the pandas!"
-            gobject.timeout_add(5000, self._client.start_conversation)
+            gobject.timeout_add_seconds(5, self._client.start_conversation)
 
     def on_client_error(self, error_type, error):
         print "ERROR :", error_type, " ->", error
 
 class AnnoyingConversation(papyon.event.ConversationEventInterface):
     def on_conversation_user_joined(self, contact):
-        gobject.timeout_add(5000, self.annoy_user)
+        gobject.timeout_add_seconds(5, self.annoy_user)
 
     def annoy_user(self):
         msg = "Let's free the pandas ! (testing papyon)"

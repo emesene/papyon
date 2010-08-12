@@ -114,7 +114,7 @@ class SIPRegistration(gobject.GObject):
             self._state = "REGISTERED"
             self.emit("registered")
             timeout = int(response.get_header("Expires", 30))
-            self._src = gobject.timeout_add(timeout * 1000, self._on_expire)
+            self._src = gobject.timeout_add_seconds(timeout, self._on_expire)
             if self._pending_unregister:
                 self.unregister()
         else:

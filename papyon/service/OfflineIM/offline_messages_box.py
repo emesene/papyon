@@ -298,7 +298,7 @@ class OfflineMessagesBox(gobject.GObject):
         fm.message_ids = [m.id for m in messages]
         fm()
 
-    @throttled(1000, list())
+    @throttled(1, list())
     def send_message(self, recipient, message):
         if recipient.network_id == NetworkID.EXTERNAL:
             return

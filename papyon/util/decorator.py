@@ -99,12 +99,12 @@ class throttled(object):
         def process_queue():
             if len(self._queue) != 0:
                 func, args, kwargs = self._queue.pop(0)
-                self._last_call_time = time.time() * 1000
+                self._last_call_time = time.time()
                 func(*args, **kwargs)
             return False
 
         def new_function(*args, **kwargs):
-            now = time.time() * 1000
+            now = time.time()
             if self._last_call_time is None or \
                     now - self._last_call_time >= self._min_delay:
                 self._last_call_time = now
@@ -113,7 +113,7 @@ class throttled(object):
                 self._queue.append((func, args, kwargs))
                 last_call_delta = now - self._last_call_time
                 process_queue_timeout = int(self._min_delay * len(self._queue) - last_call_delta)
-                gobject.timeout_add(process_queue_timeout, process_queue)
+                gobject.timeout_add_seconds(process_queue_timeout, process_queue)
 
         new_function.__name__ = func.__name__
         new_function.__doc__ = func.__doc__

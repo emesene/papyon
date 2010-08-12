@@ -299,7 +299,7 @@ class DirectConnection(BaseTransport):
 
     def __handle_ping_reply(self, command):
         timeout = int(command.arguments[0])
-        self.__png_timeout = gobject.timeout_add(timeout * 1000, self.enable_ping)
+        self.__png_timeout = gobject.timeout_add_seconds(timeout, self.enable_ping)
 
     ### callbacks
     def __on_status_change(self, transport, param):
@@ -373,7 +373,7 @@ class HTTPPollConnection(BaseTransport):
 
     def establish_connection(self):
         logger.debug('<-> Connecting to %s:%d' % self.server)
-        self._polling_source_id = gobject.timeout_add(5000, self._poll)
+        self._polling_source_id = gobject.timeout_add_seconds(5, self._poll)
         self.emit("connection-success")
 
     def lose_connection(self):

@@ -92,7 +92,7 @@ class ClientEvents(papyon.event.ClientEventInterface,
             self._client.profile.presence = papyon.Presence.ONLINE
             for contact in self._client.address_book.contacts:
                 print contact
-            gobject.timeout_add(2000, self._client.invite)
+            gobject.timeout_add_seconds(2, self._client.invite)
 
     def on_invite_webcam(self, call, producer):
         self.call_handler = CallEvents(call)

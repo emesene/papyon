@@ -115,6 +115,7 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
 
     def _on_session_rejected(self, message):
         self._dispatch("on_call_rejected", message)
+        self.dispose()
 
     def _on_data_blob_received(self, blob):
         blob.data.seek(0, os.SEEK_SET)

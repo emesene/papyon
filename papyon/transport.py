@@ -244,7 +244,7 @@ class DirectConnection(BaseTransport):
     def _setup_transport(self, host, port, proxies):
         transport = gnet.io.TCPClient(host, port)
         if proxies:
-            transport = ProxyFactory(transport, proxies)
+            transport = ProxyFactory(transport, proxies, 'direct')
         transport.connect("notify::status", self.__on_status_change)
         transport.connect("error", self.__on_error)
         return transport

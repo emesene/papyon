@@ -21,16 +21,19 @@ from HTTPConnect import *
 from SOCKS4 import *
 from SOCKS5 import *
 
-def ProxyFactory(client, proxies, preferred=None):
-    if preferred == 'https' and 'https' in proxies:
-        proxy = HTTPConnectProxy(client, proxies['https'])
-    elif 'socks' in proxies:
+def ProxyFactory(client, proxies, preferred='direct'):
+    if not proxies or preferred not in proxies or not proxies[preferred]:
+        return client
+
+    proxy = proxies[preferred]
+    if proxy.type == 'http':
+        return HTTPConnectProxy(client, proxy)
+    elif proxy.type == 'https':
+        return HTTPConnectProxy(client, proxy)
+    elif proxy.type in ('socks', 'socks5'):
         # FIXME we assume "socks://" is a SOCKS5 proxy
-        proxy = SOCKS5Proxy(client, proxies['socks'])
-    elif 'socks5' in proxies:
-        proxy = SOCKS5Proxy(client, proxies['socks5'])
-    elif 'socks4' in proxies:
-        proxy = SOCKS4Proxy(client, proxies['socks4'])
+        return SOCKS5Proxy(client, proxy)
+    elif proxy.type == 'socks4':
+        return SOCKS4Proxy(client, proxies['socks4'])
     else:
-        proxy = client
-    return proxy
+        return client

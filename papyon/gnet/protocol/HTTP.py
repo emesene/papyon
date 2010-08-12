@@ -77,8 +77,10 @@ class HTTP(gobject.GObject):
 
     def _setup_transport(self):
         if self._transport is None:
-            if self._proxies and 'http' in self._proxies:
-                self.__http_proxy = self._proxies['http']
+            if self._proxies and self._proxies.get('http', None):
+                if self._proxies['http'].type == 'http':
+                    self.__http_proxy = self._proxies['http']
+
             if self.__http_proxy:
                 self._transport = TCPClient(self.__http_proxy.host,
                         self.__http_proxy.port)
@@ -86,7 +88,7 @@ class HTTP(gobject.GObject):
                 self._transport = TCPClient(self._host, self._port)
                 if self._proxies:
                     self._transport = ProxyFactory(self._transport,
-                            self._proxies)
+                            self._proxies, 'http')
             self._setup_parser()
         
         if self._transport.get_property("status") != IoStatus.OPEN:

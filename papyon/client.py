@@ -122,6 +122,7 @@ class Client(EventsDispatcher):
 
             @param proxies: proxies that we can use to connect
             @type proxies: {type: string => L{gnet.proxy.ProxyInfos}}
+            @note the key should be 'http', 'https' or 'direct'
 
             @param transport_class: the transport class to use for the network
                     connection

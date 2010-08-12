@@ -240,12 +240,38 @@ class MSNObject(object):
         return dump
 
 
-class MSNObjectStore(object):
+class P2PSessionHandler(gobject.GObject):
 
     def __init__(self, client):
+        gobject.GObject.__init__(self)
         self._client = client
-        self._outgoing_sessions = {} # session => (handle_id, callback, errback)
-        self._incoming_sessions = {}
+        self._sessions = []
+        self._handles = {} # session : handles
+
+    def _add_session(self, session):
+        self._connect_session(session)
+        self._sessions.append(session)
+
+    def _connect_session(self, session):
+        handles = []
+        handles.append(session.connect("disposed", self._on_session_disposed))
+        self._handles[session] = handles
+
+    def _disconnect_session(self, session):
+        handles = self._handles.pop(session)
+        for handle_id in handles:
+            session.disconnect(handle_id)
+
+    def _on_session_disposed(self, session):
+        self._disconnect_session(session)
+        self._sessions.remove(session)
+
+
+class MSNObjectStore(P2PSessionHandler):
+
+    def __init__(self, client):
+        P2PSessionHandler.__init__(self, client)
+        self._callbacks = {} # session => (callback, errback, msn_object)
         self._published_objects = set()
 
     def _can_handle_message (self, message):
@@ -258,56 +284,66 @@ class MSNObjectStore(object):
     def _handle_message(self, peer, guid, message):
         session = MSNObjectSession(self._client._p2p_session_manager,
                 peer, guid, message.body.application_id, message)
-
-        handle_id = session.connect("completed",
-                        self._incoming_session_transfer_completed)
-        self._incoming_sessions[session] = handle_id
         try:
             msn_object = MSNObject.parse(self._client, session.context)
         except ParseError:
+            logger.error("Error while parsing MSN object from request")
             session.reject()
             return
+
+        self._add_session(session)
+        self._callbacks[session] = (None, None, msn_object)
+
         for obj in self._published_objects:
             if obj._data_sha == msn_object._data_sha:
                 session.accept(obj._data)
                 return session
-        session.reject()
+        logger.warning("Unknown MSN object, another end point might have")
+
+    def _connect_session(self, session):
+        P2PSessionHandler._connect_session(self, session)
+        self._handles[session].append(session.connect("completed",
+            self._on_session_completed))
+        self._handles[session].append(session.connect("rejected",
+            self._on_session_completed))
+
+    def _on_session_completed(self, session, data):
+        if session in self._callbacks:
+            callback, errback, msn_object = self._callbacks[session]
+            if callback:
+                msn_object._data = data
+                callback[0](msn_object, *callback[1:])
+
+    def _on_session_rejected(self, session):
+        if session in self._callbacks:
+            callback, errback, msn_object = self._callbacks[session]
+            if errback:
+                errback[0](msn_object, *errback[1:])
+
+    ### Public API
 
     def request(self, msn_object, callback, errback=None, peer=None):
         if msn_object._data is not None:
             callback[0](msn_object, *callback[1:])
+            return
 
         if peer is None:
             peer = self._client.address_book.search_contact(msn_object._creator,
                     NetworkID.MSN)
 
         if msn_object._type == MSNObjectType.CUSTOM_EMOTICON:
-            application_id = ApplicationID.CUSTOM_EMOTICON_TRANSFER
+            app_id = ApplicationID.CUSTOM_EMOTICON_TRANSFER
         elif msn_object._type == MSNObjectType.DISPLAY_PICTURE:
-            application_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
+            app_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
         else:
             raise NotImplementedError
 
-        # send a request to all end points of the peer and
-        # cancel the other sessions when one of them answers
-        for end_point in peer.end_points.values():
-            if peer == self._client.profile and \
-               end_point.id == self._client.machine_guid:
-                continue
-
-            context = repr(msn_object)
-            session = MSNObjectSession(self._client._p2p_session_manager,
-                    peer, end_point.id, application_id, context=context)
-            handles = []
-            handles.append(session.connect("accepted",
-                self._on_session_answered))
-            handles.append(session.connect("rejected",
-                self._on_session_rejected))
-            handles.append(session.connect("completed",
-                self._outgoing_session_transfer_completed))
-            self._outgoing_sessions[session] = \
-                    (handles, callback, errback, msn_object)
-            session.invite()
+        context = repr(msn_object)
+        session = MSNObjectMetaSession(self._client, peer, app_id, context)
+        self._add_session(session)
+        self._callbacks[session] = (callback, errback, msn_object)
+        session.invite()
+        return session
 
     def publish(self, msn_object):
         if msn_object._data is None:
@@ -315,42 +351,8 @@ class MSNObjectStore(object):
         else:
             self._published_objects.add(msn_object)
 
-    def _outgoing_session_transfer_completed(self, session, data):
-        handles, callback, errback, msn_object = self._outgoing_sessions[session]
-        for handle_id in handles:
-            session.disconnect(handle_id)
-        msn_object._data = data
 
-        callback[0](msn_object, *callback[1:])
-        del self._outgoing_sessions[session]
-
-    def _incoming_session_transfer_completed(self, session, data):
-        handle_id = self._incoming_sessions[session]
-        session.disconnect(handle_id)
-        del self._incoming_sessions[session]
-
-    def _on_session_answered(self, answered_session):
-        for session in self._outgoing_sessions.keys():
-            if session is answered_session: continue
-            if session.peer != answered_session.peer: continue
-            if session.context != answered_session.context: continue
-            handles, cb, eb, msn_object = self._outgoing_sessions[session]
-            for handle_id in handles:
-                session.disconnect(handle_id)
-            session.cancel()
-            del self._outgoing_sessions[session]
-
-    def _on_session_rejected(self, session):
-        self._on_session_answered(session)
-        handles, callback, errback, msn_object = self._outgoing_sessions[session]
-        for handle_id in handles:
-            session.disconnect(handle_id)
-        if errback[0]:
-            errback[0](msn_object, *errback[1:])
-        del self._outgoing_sessions[session]
-
-
-class FileTransferManager(gobject.GObject):
+class FileTransferManager(P2PSessionHandler):
 
     __gsignals__ = {
             "transfer-requested" : (gobject.SIGNAL_RUN_FIRST,
@@ -359,42 +361,29 @@ class FileTransferManager(gobject.GObject):
     }
 
     def __init__(self, client):
-        gobject.GObject.__init__(self)
-        self._client = client
-        self._sessions = {}
+        P2PSessionHandler.__init__(self, client)
 
     def _can_handle_message(self, message):
         euf_guid = message.body.euf_guid
         return (euf_guid == EufGuid.FILE_TRANSFER)
 
-    def _handle_message(self, peer, message):
+    def _handle_message(self, peer, guid, message):
         session = FileTransferSession(self._client._p2p_session_manager,
-                peer, message.body.application_id, message)
-        self._connect_session(session)
+                peer, guid, message)
+        self._add_session(session)
         self.emit("transfer-requested", session)
         return session
 
+    ### Public API
+
     def send(self, peer, filename, size):
-        session = FileTransferSession(self._client._p2p_session_manager,
-                peer, ApplicationID.FILE_TRANSFER)
+        session = FileTransferMetaSession(self._client, peer)
+        self._add_session(session)
         session.invite(filename, size)
-        self._connect_session(session)
         return session
 
-    def _on_transfer_completed(self, session, data):
-        self._disconnect_session(session)
-        del self._sessions[session]
 
-    def _connect_session(self, session):
-        handle_id = session.connect("completed", self._on_transfer_completed)
-        self._sessions[session] = handle_id
-
-    def _disconnect_session(self, session):
-        handle_id = self._sessions[session]
-        session.disconnect(handle_id)
-
-
-class WebcamHandler(gobject.GObject):
+class WebcamHandler(P2PSessionHandler):
 
     __gsignals__ = {
             "session-created" : (gobject.SIGNAL_RUN_FIRST,
@@ -403,10 +392,7 @@ class WebcamHandler(gobject.GObject):
     }
 
     def __init__(self, client):
-        gobject.GObject.__init__(self)
-        self._client = client
-        self._sessions = []
-        self._handles = {} # session : (handles, callback, errback)
+        P2PSessionHandler.__init__(self, client)
 
     def _can_handle_message (self, message):
         euf_guid = message.body.euf_guid
@@ -425,82 +411,220 @@ class WebcamHandler(gobject.GObject):
 
         session = WebcamSession(producer, self._client._p2p_session_manager, \
                                     peer, guid, message.body.euf_guid, message)
-        self._sessions.append(session)
+        self._add_session(session)
         self.emit("session-created", session, producer)
         return session
 
-    def _invite(self, peer, peer_guid, producer, accept_cb, reject_cb):
-        session = WebcamSession(producer, self._client._p2p_session_manager,
-                peer, peer_guid, euf_guid)
-        self._connect_session(session, accept_cb, reject_cb)
-        self._sessions.append(session)
-        session.invite()
+    ### Public API
 
-    def _connect_session(self, session, accept_cb, reject_cb):
+    def invite(self, peer, producer=True):
+        """Invite a contact for a uni-directionnal webcam session
+           @param producer: if true, we want to send webcam"""
+
+        session = WebcamMetaSession(self._client, peer, producer)
+        self._add_session(session)
+        session.invite()
+        return session
+
+
+class P2PMetaSession(gobject.GObject):
+    """ A P2PMetaSession is used to wrap multiple outgoing p2p sessions
+        together. This way, we can send a invite to each end point of a peer
+        and still have only one session object for methods and signals. """
+
+    __gsignals__ = {
+            "accepted" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+            "rejected" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+            "completed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "progressed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            "disposed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ())
+    }
+
+    def __init__(self, client, peer, *args):
+        gobject.GObject.__init__(self)
+        self._sessions = []
+        self._handles = {}
+
+        if len(peer.end_points) == 0:
+            session = self._create_session(client, peer, None, *args)
+            self._add_session(session)
+        for end_point in peer.end_points.values():
+            if peer == client.profile and end_point.id == client.machine_guid:
+                continue
+            session = self._create_session(client, peer, end_point.id, *args)
+            self._add_session(session)
+
+    @property
+    def session(self):
+        if len(self._sessions) > 0:
+            return self._sessions[0]
+        return None
+
+    def __getattr__(self, name):
+        if self.session:
+            return getattr(self.session, name)
+        raise AttributeError
+
+    def _connect_session(self, session):
         handles = []
-        handles.append(session.connect("accepted", self._on_session_accepted))
-        handles.append(session.connect("rejected", self._on_session_rejected))
-        self._handles[session] = (handles, accept_cb, reject_cb)
+        handles.append(session.connect("accepted",
+            self._on_session_accepted))
+        handles.append(session.connect("rejected",
+            self._on_session_rejected))
+        handles.append(session.connect("completed",
+            self._on_session_completed))
+        handles.append(session.connect("progressed",
+            self._on_session_progressed))
+        handles.append(session.connect("disposed",
+            self._on_session_disposed))
+        self._handles[session] = handles
 
     def _disconnect_session(self, session):
-        handles, accept_cb, reject_cb = self._handles[session]
-        for handle_id in handles:
-            session.disconnect(handle_id)
-        del self._handles[session]
-        return accept_cb, reject_cb
+        handles = self._handles.pop(session)
+        for handle in handles:
+            session.disconnect(handle)
 
-    def _on_session_answered(self, answered_session, status):
-        # cancel all sessions except the one we receive an answer for
+    def _add_session(self, session):
+        if session is None:
+            return
+        self._connect_session(session)
+        self._sessions.append(session)
+
+    def _remove_all(self):
         for session in self._sessions:
-            if session is answered_session or \
-               session.peer != answered_session.peer or \
-               session.producer != answered_session.producer:
-                continue
-
             self._disconnect_session(session)
-            session.end(reason=(status, session.peer_guid))
-            self._sessions.remove(session)
+        self._sessions = []
+
+    def _cancel_all(self):
+        for session in self._sessions:
+            self._cancel_session(session)
+        self._remove_all()
+
+    def _keep_session(self, session_to_keep):
+        if session_to_keep not in self._sessions:
+            return False
+        self._sessions.remove(session_to_keep)
+        handles = self._handles.pop(session_to_keep)
+        self._cancel_all()
+        self._sessions = [session_to_keep]
+        self._handles[session_to_keep] = handles
 
     def _on_session_accepted(self, session):
-        self._on_session_answered(session, SLPStatus.ACCEPTED)
-        accept_cb, reject_cb = self._disconnect_session(session)
-        if accept_cb:
-            accept_cb[0](session, *accept_cb[1:])
+        self._keep_session(session)
+        self.emit("accepted")
 
     def _on_session_rejected(self, session):
-        self._on_session_answered(session, SLPStatus.DECLINED)
-        accept_cb, reject_cb = self._disconnect_session(session)
-        if reject_cb:
-            reject_cb[0](session, *reject_cb[1:])
-        self._sessions.remove(session)
+        self._keep_session(session)
+        self.emit("rejected")
 
-    ### Public API -----------------------------------------------------------
+    def _on_session_completed(self, session, data):
+        print "completed"
+        self.emit("completed", data)
 
-    def invite(self, peer, producer=True, accept_cb=None, reject_cb=None):
-        """Invite a contact for a uni-directionnal webcam session
-           @param producer: if true, we want to send webcam
-           @param accept_cb: (function, *args) to call when the peer accepts
-           @param reject_cb: (function, *args) to call when the peer rejects
+    def _on_session_progressed(self, session, data):
+        self.emit("progressed", data)
 
-           @note callbacks first argument will be the P2P session."""
+    def _on_session_disposed(self, disposed_session):
+        print "remove all"
+        self._remove_all()
+        print "disposed"
+        self.emit("disposed")
+
+
+class FileTransferMetaSession(P2PMetaSession):
+
+    __gsignals__ = {
+            "canceled" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ())
+    }
+
+    def __init__(self, client, peer):
+        P2PMetaSession.__init__(self, client, peer)
+
+    def _create_session(self, client, peer, guid):
+        session = FileTransferSession(client._p2p_session_manager, peer, guid)
+        return session
+
+    def _connect_session(self, session):
+        P2PMetaSession._connect_session(self, session)
+        self._handles[session].append(session.connect("canceled",
+            self._on_session_canceled))
+
+    def _cancel_session(self, session):
+        session.cancel()
+
+    def _on_session_canceled(self, canceled_session):
+        self.emit("canceled")
+
+    def invite(self, filename, size):
+        for session in self._sessions:
+            session.invite(filename, size)
+
+    def cancel(self):
+        for session in self._sessions:
+            session.cancel()
+
+
+class MSNObjectMetaSession(P2PMetaSession):
+
+    def __init__(self, client, peer, application_id, context):
+        P2PMetaSession.__init__(self, client, peer, application_id, context)
+
+    def _create_session(self, client, peer, guid, application_id, context):
+        session = MSNObjectSession(client._p2p_session_manager, peer, guid,
+                application_id, context=context)
+        return session
+
+    def _cancel_session(self, session):
+        session.cancel()
+
+    def invite(self):
+        for session in self._sessions:
+            session.invite()
+
+    def cancel(self):
+        for session in self._sessions:
+            session.cancel()
+
+
+class WebcamMetaSession(P2PMetaSession):
+
+    def __init__(self, client, peer, producer):
+        P2PMetaSession.__init__(self, client, peer, producer)
+
+    def _create_session(self, client, peer, guid, producer):
+        if guid and peer.end_points[guid]:
+            has_webcam = peer.end_points[guid].capabilities.has_webcam
+            if not producer and not has_webcam:
+                return None
 
         if producer:
             euf_guid = EufGuid.MEDIA_SESSION
         else:
             euf_guid = EufGuid.MEDIA_RECEIVE_ONLY
 
-        # if there is no end point, the peer probably doesn't support MPOP
-        if len(peer.end_points) == 0:
-            self._invite(peer, None, producer, euf_guid, accept_cb, reject_cb)
-            return
+        session = WebcamSession(client._p2p_session_manager, peer, guid,
+                producer, euf_guid)
+        return session
 
-        # send a request to all end points and choose the first one answering
-        # (ignore end points not having a webcam if we want to receive)
-        for end_point in peer.end_points.values():
-            if peer == self._client.profile and \
-               end_point.id == self._client.machine_guid:
-                continue
-            if not producer and not end_point.capabilities.has_webcam:
-                continue
-            self._invite(peer, end_point.id, producer, euf_guid,
-                    accept_cb, reject_cb)
+    def _cancel_session(self, session):
+        session.end()
+
+    def invite(self):
+        for session in self._sessions:
+            session.invite()
+
+    def end(self, reason=None):
+        for session in self._sessions:
+            session.end(reason)

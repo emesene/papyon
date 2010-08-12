@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.constants import EufGuid
+from papyon.msnp2p.constants import ApplicationID, EufGuid
 from papyon.msnp2p.session import P2PSession
 
 import gobject
@@ -34,9 +34,9 @@ class FileTransferSession(P2PSession):
                 ())
     }
 
-    def __init__(self, session_manager, peer, application_id, message=None):
-        P2PSession.__init__(self, session_manager, peer,
-                EufGuid.FILE_TRANSFER, application_id, message)
+    def __init__(self, session_manager, peer, guid, message=None):
+        P2PSession.__init__(self, session_manager, peer, guid,
+                EufGuid.FILE_TRANSFER, ApplicationID.FILE_TRANSFER, message)
         self._filename = ""
         self._size = 0
         self._has_preview = False

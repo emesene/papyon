@@ -54,7 +54,10 @@ class P2PSession(gobject.GObject):
                 (object,)),
             "progressed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,))
+                (object,)),
+            "disposed" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ())
     }
 
     def __init__(self, session_manager, peer, peer_guid=None, euf_guid="",
@@ -251,6 +254,7 @@ class P2PSession(gobject.GObject):
         logger.info("Session %s disposed" % self._id)
         self._session_manager._transport_manager.cleanup(self._id)
         self._session_manager._unregister_session(self)
+        self.emit("disposed")
 
     def _send_slp_message(self, message):
         self._transport_manager.send_slp_message(self.peer, self.peer_guid,

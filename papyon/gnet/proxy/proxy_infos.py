@@ -115,6 +115,3 @@ class ProxyInfos(object):
             auth = '%s:%s' % (self.user, "*" * len(self.password))
             host = auth + '@' + host
         return self.type + '://' + host + '/'
-
-ProxyFactory = ProxyInfos.from_string
-

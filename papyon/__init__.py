@@ -40,5 +40,5 @@ import event
 import sip
 
 import gnet.proxy
-Proxy = gnet.proxy.ProxyFactory
+Proxy = gnet.proxy.ProxyInfos.from_string
 ProxyInfos = gnet.proxy.ProxyInfos

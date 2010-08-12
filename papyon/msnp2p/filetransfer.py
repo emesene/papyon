@@ -45,7 +45,7 @@ class FileTransferSession(P2PSession):
         self._data = None
 
         if message is not None:
-            self.parse_context(message.body.context)
+            self._parse_context(message.body.context)
 
     @property
     def filename(self):
@@ -66,7 +66,7 @@ class FileTransferSession(P2PSession):
     def invite(self, filename, size):
         self._filename = filename
         self._size = size
-        context = self.build_context()
+        context = self._build_context()
         self._invite(context)
 
     def accept(self):
@@ -83,13 +83,13 @@ class FileTransferSession(P2PSession):
         self._send_p2p_data("\x00" * 4)
         self._send_p2p_data(self._data, True)
 
-    def parse_context(self, context):
+    def _parse_context(self, context):
         info = struct.unpack("<5I", context[0:20])
         self._size = info[2]
         self._has_preview = not bool(info[4])
         self._filename = unicode(context[20:570], "utf-16-le").rstrip("\x00")
 
-    def build_context(self):
+    def _build_context(self):
         filename = self._filename.encode('utf-16_le')
         context = struct.pack("<5I", 574, 2, self._size, 0, int(self._has_preview))
         context += struct.pack("550s", filename)

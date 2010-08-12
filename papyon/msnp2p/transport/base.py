@@ -107,7 +107,7 @@ class BaseP2PTransport(gobject.GObject):
         self._queue_lock.acquire()
         canceled_blobs = []
         for blob in self._data_blob_queue:
-            if blob[0].session_id == session_id:
+            if blob[2].session_id == session_id:
                 canceled_blobs.append(blob)
         for blob in canceled_blobs:
             self._data_blob_queue.remove(blob)

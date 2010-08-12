@@ -331,12 +331,12 @@ class P2PSession(gobject.GObject):
         pass
 
     def _on_bye_received(self, message):
-        pass
+        self._dispose()
 
     def _on_session_accepted(self):
         pass
 
     def _on_session_rejected(self, message):
-        pass
+        self._dispose()
 
 gobject.type_register(P2PSession)

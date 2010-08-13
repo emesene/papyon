@@ -20,7 +20,7 @@
 import base64
 import urlparse
 
-__all__ = ['ProxyInfos', 'ProxyFactory']
+__all__ = ['ProxyInfos']
 
 class ProxyInfos(object):
     """Contain informations needed to make use of a proxy.

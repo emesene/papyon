@@ -23,6 +23,7 @@ from papyon.gnet.resolver import *
 from abstract import AbstractClient
 
 import gobject
+import socket
 from errno import *
 
 __all__ = ['GIOChannelClient']

@@ -514,6 +514,6 @@ class SIPDialog(gobject.GObject, Timer):
         next_time = min(time * 2, T2)
         self.start_timeout("accept", time, next_time)
 
-    def on_ack_timeout(self, response):
+    def on_ack_timeout(self):
         self._state = "CONFIRMED"
         self.end()

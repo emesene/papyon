@@ -278,7 +278,8 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         if self._pending_invite:
             self.invite()
         elif self._incoming:
-            self.accept()
+            offer = SDPMessage(session=self.media_session)
+            self._dialog.update_local_offer(offer)
 
     def on_media_session_ready(self, session):
         offer = SDPMessage(session=self.media_session)

@@ -92,11 +92,13 @@ class SIPCore(gobject.GObject):
             return self._transport.send(message)
         return self._transaction_layer.send(message)
 
-    def answer(self, request, status, extra_headers={}):
+    def answer(self, request, status, tag=None, extra_headers={}, content=None):
         """Create response with given status and send to transaction layer."""
-        response = self.create_response(request, status)
+        response = self.create_response(request, status, tag=tag)
         for (name, value) in extra_headers:
             response.add_header(name, value)
+        if content is not None:
+            response.set_content(content)
         return self.send(response)
 
     # Public API -------------------------------------------------------------
@@ -121,8 +123,8 @@ class SIPCore(gobject.GObject):
 
     def establish_UAS_dialog(self, request, status):
         # 12.1.1 UAS behavior (Creation of a Dialog)
-        response = self.create_response(request, status)
-        self_tag = response.to.tag
+        self_tag = self._generate_tag()
+        response = self.create_response(request, status, tag=self_tag)
         response.clone_headers("Record-Route", request)
         #response.add_header("Contact", SIPContact(None, self.self_uri, None))
         request.transaction.send(response)
@@ -141,6 +143,7 @@ class SIPCore(gobject.GObject):
     def _create_dialog(self, request, response, mode):
         dialog = SIPDialog(self, request, response, mode)
         key = (dialog.call_id, dialog.local_tag, dialog.remote_tag)
+        logger.info("Create dialog id=%s, local_tag=%s, remote_tag=%s" % key)
         handle = dialog.connect("disposed", self._on_dialog_disposed)
         self._dialogs[key] = dialog
         self._dialog_handles[dialog] = handle
@@ -194,7 +197,7 @@ class SIPCore(gobject.GObject):
         request.add_header("CSeq", SIPCSeq(cseq, code))
         return request
 
-    def create_response(self, request, status):
+    def create_response(self, request, status, tag=None):
         """ Create a response outside of a dialog """
         # 8.2.6 Generating the Response (UAS Behavior)
         response = SIPResponse(status)
@@ -215,7 +218,9 @@ class SIPCore(gobject.GObject):
 
         # Add To tag if missing
         if not response.to.tag:
-            response.to.tag = self._generate_tag()
+            if tag is None:
+                tag = self._generate_tag()
+            response.to.tag = tag
 
         return response
 

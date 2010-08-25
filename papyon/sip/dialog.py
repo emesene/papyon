@@ -328,10 +328,11 @@ class SIPDialog(gobject.GObject, Timer):
         self._pending_outgoing_requests.append(request)
         self._core.send(request)
 
-    def answer(self, request, status):
+    def answer(self, request, status, extra_headers={}, content=None):
         if request in self._pending_incoming_requests and status >= 200:
             self._pending_incoming_requests.remove(request)
-        return self._core.answer(request, status)
+        return self._core.answer(request, status, tag=self._local_tag,
+                extra_headers=extra_headers, content=content)
 
     def handle_response(self, response):
         # 12.2.1 UAC Behavior (Requests within a Dialog)
@@ -503,7 +504,7 @@ class SIPDialog(gobject.GObject, Timer):
     def on_accept_timeout(self, time=T1):
         if self._state not in ("INVITED", "REINVITED"):
             return
-        self.answer(self._last_request, 200, self._local_offer)
+        self.answer(self._last_request, 200, content=self._local_offer)
 
         # [...] an interval that starts at T1 seconds and doubles for each
         # retransmission until it reaches T2 seconds (Section 13.3.1.4)

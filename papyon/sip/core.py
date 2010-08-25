@@ -25,6 +25,7 @@ from papyon.sip.message import SIPRequest, SIPResponse, SIPContact, SIPCSeq, SIP
 from papyon.sip.transaction import SIPTransactionLayer
 from papyon.sip.transport import SIPTunneledTransport
 from papyon.util.decorator import rw_property
+from papyon.util.timer import Timer
 
 import gobject
 import logging
@@ -34,7 +35,7 @@ __all__ = ['SIPCore']
 
 logger = logging.getLogger('papyon.sip.core')
 
-class SIPCore(gobject.GObject):
+class SIPCore(gobject.GObject, Timer):
     """ The set of processing functions required at a UAS and a UAC that
         resides above the transaction and transport layers.
         
@@ -66,6 +67,8 @@ class SIPCore(gobject.GObject):
 
     def __init__(self, client):
         gobject.GObject.__init__(self)
+        Timer.__init__(self)
+
         self._client = client
         self._transport = SIPTunneledTransport(client._protocol)
         self._transaction_layer = SIPTransactionLayer(self._transport)

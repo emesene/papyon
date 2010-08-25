@@ -89,6 +89,7 @@ class SIPDialog(gobject.GObject, Timer):
         self._initial_request = request
         self._last_request = request
 
+        self._incoming = False
         self._pending_incoming_requests = []
         self._pending_outgoing_requests = []
         self._local_offer = None
@@ -204,7 +205,7 @@ class SIPDialog(gobject.GObject, Timer):
         if self._state == "CONFIRMED":
             self.stop_timeout("accept")
             self.stop_timeout("ack")
-            if self._pending_local_offer:
+            if self._pending_local_offer and not self._incoming:
                 self.reinvite()
         elif self._state == "ENDED":
             for request in self._pending_incoming_requests:
@@ -224,7 +225,7 @@ class SIPDialog(gobject.GObject, Timer):
         self._local_offer = offer
         if self._pending_accept:
             self.accept()
-        else:
+        elif not self._incoming:
             self.reinvite()
 
     def accept_remote_offer(self):
@@ -273,6 +274,7 @@ class SIPDialog(gobject.GObject, Timer):
             self._pending_incoming_requests.append(request)
         if response.record_route:
             self._route_set = response.record_route.route_set
+        self._incoming = True
         self._local_cseq = None
         self._remote_cseq = request.cseq.number
         self._call_id = request.call_id
@@ -284,6 +286,7 @@ class SIPDialog(gobject.GObject, Timer):
     def _build_UAC_dialog(self, request, response):
         # 12.1.2 UAC behavior (Creation of Dialog)
         self._state = "INVITING"
+        self._incoming = False
         self._pending_outgoing_requests.append(request)
         if response.record_route:
             self._route_set = response.record_route.route_set.reverse()

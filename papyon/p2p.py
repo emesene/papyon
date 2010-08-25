@@ -109,7 +109,7 @@ class MSNObject(object):
 
         if shad is None:
             if data is None:
-                raise NotImplementedError
+                raise ValueError
             shad = self.__compute_data_hash(data)
         self._data_sha = shad
         self.__data = data
@@ -185,8 +185,13 @@ class MSNObject(object):
                 logger.warning("Invalid SHA1C in MSNObject: %s" % shac)
                 shac = None
 
-        result = MSNObject(creator, size, type, location, friendly, shad, shac)
-        result._repr = xml_data
+        try:
+            result = MSNObject(creator, size, type, location, friendly, shad, shac)
+            result._repr = xml_data
+        except ValueError:
+            logger.warning("Invalid MSNObject")
+            return None
+
         return result
 
     def __compute_data_hash(self, data):

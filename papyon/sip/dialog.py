@@ -318,7 +318,8 @@ class SIPDialog(gobject.GObject, Timer):
             cseq = self._local_cseq
 
         request = SIPRequest(code, self._remote_target)
-        request.add_header("Route", SIPRoute(route))
+        if route:
+            request.add_header("Route", SIPRoute(route))
         request.add_header("To", SIPContact(None, self._remote_uri, self._remote_tag))
         request.add_header("From", SIPContact(None, self._local_uri, self._local_tag))
         request.add_header("Call-ID", self._call_id)

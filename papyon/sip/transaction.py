@@ -120,7 +120,6 @@ class SIPTransactionLayer(gobject.GObject):
                 self.emit("request-received", msg)
 
     def _on_request_received(self, transaction, request):
-        print "transaction layer received request"
         self.emit("request-received", request)
 
     def _on_response_received(self, transaction, response):
@@ -259,7 +258,6 @@ class SIPClientTransaction(SIPTransaction):
 
     def _on_response_received(self, response):
         response.request = self.request
-        print "transaction %s" % repr(response.request)
         if response.status/100 == 1: # provisional response
             if self._state == "TRYING":
                 self._state = "PROCEEDING"

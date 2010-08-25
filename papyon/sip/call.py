@@ -57,10 +57,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
 
         self._incoming = (invite is not None)
         self._ringing = False
-        self._answer_sent = False
-        self._answer_received = False
         self._pending_invite = False
-        self._pending_accept = False
         self._pending_cancel = False
 
         self._dialogs = []
@@ -280,7 +277,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
     def on_media_session_prepared(self, session):
         if self._pending_invite:
             self.invite()
-        elif self._incoming and self._pending_accept:
+        elif self._incoming:
             self.accept()
 
     def on_media_session_ready(self, session):

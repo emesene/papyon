@@ -23,14 +23,24 @@ import email.base64mime
 import re
 
 
+PADDING = ('', '=', '==', 'A', 'A=', 'A==')
+
 def fix_b64_padding(string):
-    while True:
+    for pad in PADDING:
         try:
-            base64.b64decode(string)
-            break
+            base64.b64decode(string + pad)
+            return string + pad
         except:
-            string += "="
+            continue
     return string
+
+def b64_decode(string):
+    for pad in PADDING:
+        try:
+            return base64.b64decode(string + pad)
+        except:
+            continue
+    raise TypeError
 
 
 # Match encoded-word strings in the form =?charset?q?Hello_World?=

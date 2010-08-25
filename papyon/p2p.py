@@ -33,6 +33,7 @@ from msnp2p.exceptions import ParseError
 from msnp2p.constants import SLPStatus
 from profile import NetworkID, Contact, Profile
 
+from papyon.util.encoding import b64_decode
 import papyon.util.element_tree as ElementTree
 import papyon.util.string_io as StringIO
 
@@ -68,30 +69,6 @@ class MSNObjectType(object):
     "Saved state property"
     LOCATION = 14
     "Location"
-
-def _decode_shad(shad, warning=True):
-    try:
-        shad = base64.b64decode(shad)
-    except TypeError:
-        # See fd.o#27672 for details on this workaround.
-        if ' ' in shad:
-            parts = shad.split(' ')
-
-            # Try the first part.
-            shad = _decode_shad(parts[0], False)
-
-            # Try the second part.
-            if shad is None:
-                shad = _decode_shad(parts[1], False)
-
-        else:
-            # Only display this warning if we're not in a nested call otherwise the
-            # warning will be confusing.
-            if warning:
-                logger.warning("Invalid SHA1D in MSNObject: %s" % shad)
-            shad = None
-
-    return shad
 
 class MSNObject(object):
     "Represents an MSNObject."
@@ -188,17 +165,22 @@ class MSNObject(object):
             location = "0"
 
         if "Friendly" in element:
-            friendly = base64.b64decode(xml.unescape(element["Friendly"]))
+            friendly = b64_decode(xml.unescape(element["Friendly"]))
         else:
-            friendly = base64.b64decode('AAA=')
+            friendly = '\x00\x00'
 
         shad = element.get("SHA1D", None)
         if shad is not None:
-            shad = _decode_shad(shad)
+            try:
+                shad = b64_decode(shad)
+            except TypeError:
+                logger.warning("Invalid SHA1D in MSNObject: %s" % shad)
+                shad = None
+
         shac = element.get("SHA1C", None)
         if shac is not None:
             try:
-                shac = base64.b64decode(shac)
+                shac = b64_decode(shac)
             except TypeError:
                 logger.warning("Invalid SHA1C in MSNObject: %s" % shac)
                 shac = None

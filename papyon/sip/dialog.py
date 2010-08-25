@@ -508,7 +508,9 @@ class SIPDialog(gobject.GObject, Timer):
     def on_accept_timeout(self, time=T1):
         if self._state not in ("INVITED", "REINVITED"):
             return
-        self.answer(self._last_request, 200, content=self._local_offer)
+        header = ("Contact", SIPContact(None, self._local_uri, self._local_tag))
+        self.answer(self._last_request, 200, content=self._local_offer,
+                extra_headers=[header])
 
         # [...] an interval that starts at T1 seconds and doubles for each
         # retransmission until it reaches T2 seconds (Section 13.3.1.4)

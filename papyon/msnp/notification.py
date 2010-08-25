@@ -520,6 +520,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         cm_parts = self.__find_node(tree, "./CurrentMedia", "").split('\\0')
         pm = self.__find_node(tree, "./PSM", "")
+        rmu = self.__find_node(tree, "./RMU", "")
         ss = self.__find_node(tree, "./SignatureSound", None)
         mg = self.__find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
 

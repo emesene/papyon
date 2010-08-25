@@ -523,12 +523,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         ss = self.__find_node(tree, "./SignatureSound", None)
         mg = self.__find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
 
-        if len(cm_parts) < 3:
+        if len(cm_parts) < 3 or cm_parts[2] == '0':
             cm = None
         elif cm_parts[1] == 'Music' and cm_parts[2] == '1':
-            cm = (cm_parts[4].encode("utf-8"), cm_parts[5].encode("utf-8"))
-        elif cm_parts[2] == '0':
-            cm = None
+            cm = (cm_parts[4], cm_parts[5])
 
         eps = tree.findall("./EndpointData")
         end_points = {}

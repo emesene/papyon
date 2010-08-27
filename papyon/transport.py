@@ -447,7 +447,7 @@ class HTTPPollConnection(BaseTransport):
                     self._session_id = value
                 elif key == 'GW-IP':
                     self.server = (value, self.server[1])
-                    self._setup_transport()
+                    self._setup_transport(value, self.server[1], self.proxies)
                 elif key == 'Session'and value == 'close':
                     #self.lose_connection()
                     pass

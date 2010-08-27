@@ -365,10 +365,12 @@ class HTTPPollConnection(BaseTransport):
         self.__error = False
 
     def _setup_transport(self, host, port, proxies):
+        handles = []
         transport = gnet.protocol.HTTP(host, port, proxies)
-        transport.connect("response-received", self.__on_received)
-        transport.connect("request-sent", self.__on_sent)
-        transport.connect("error", self.__on_error)
+        handles.append(transport.connect("response-received", self.__on_received))
+        handles.append(transport.connect("request-sent", self.__on_sent))
+        handles.append(transport.connect("error", self.__on_error))
+        self._transport_handles = handles
         self._transport = transport
 
     def establish_connection(self):
@@ -387,6 +389,16 @@ class HTTPPollConnection(BaseTransport):
         if server:
             self._target_server = server
         self.emit("connection-reset")
+
+    def change_gateway(self, server):
+        if self.server == server:
+            return
+        logger.debug('<-> Changing gateway to %s:%d' % server)
+        self.server = server
+        for handle in self._transport_handles:
+            self._transport.disconnect(handle)
+        self._transport.close()
+        self._setup_transport(server[0], server[1], self.proxies)
 
     def send_command(self, command, increment=True, callback=None, *cb_args):
         self._command_queue.append((command, increment, callback, cb_args))
@@ -446,8 +458,7 @@ class HTTPPollConnection(BaseTransport):
                 if key == 'SessionID':
                     self._session_id = value
                 elif key == 'GW-IP':
-                    self.server = (value, self.server[1])
-                    self._setup_transport(value, self.server[1], self.proxies)
+                    self.change_gateway((value, self.server[1]))
                 elif key == 'Session'and value == 'close':
                     #self.lose_connection()
                     pass

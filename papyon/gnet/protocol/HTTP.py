@@ -171,3 +171,7 @@ class HTTP(gobject.GObject):
         request  = HTTPRequest(headers, data, method, url)
         self._outgoing_queue.append(request)
         self._process_queue()
+
+    def close(self):
+        if self._transport:
+            self._transport.close()

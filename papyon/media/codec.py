@@ -20,6 +20,8 @@
 
 __all__ = ['MediaCodec']
 
+from papyon.media.constants import CODEC_DETAILS
+
 class MediaCodec(object):
     """Class representing a media codec."""
 
@@ -30,21 +32,8 @@ class MediaCodec(object):
         self.params = params or dict()
 
         if encoding is None or clockrate is None or clockrate == 0:
-            if payload == 0:
-                self.encoding = "PCMU"
-                self.clockrate = 8000
-            elif payload == 8:
-                self.encoding = "PCMA"
-                self.clockrate = 8000
-            elif payload == 13:
-                self.encoding = "CN"
-                self.clockrate = 8000
-            elif payload == 31:
-                self.encoding = "H261"
-                self.clockrate = 90000
-            elif payload == 34:
-                self.encoding = "H263"
-                self.clockrate = 90000
+            if payload in CODEC_DETAILS:
+                self.encoding, self.clockrate = CODEC_DETAILS[payload]
 
     def __eq__(self, other):
         return (self.payload == other.payload and

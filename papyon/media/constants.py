@@ -47,6 +47,14 @@ VALID_CODECS = {
     "video" : ["x-rtvc1", "h263"]
 }
 
+CODEC_DETAILS = {
+    0 : ("PCMU", 8000),
+    8 : ("PCMA", 8000),
+    13: ("CN", 8000),
+    31: ("H261", 90000),
+    34: ("H264", 90000)
+}
+
 EXTRA_PARAMS = {
     34: {"x-modea-only": "1"}
 }

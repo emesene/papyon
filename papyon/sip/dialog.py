@@ -126,7 +126,7 @@ class SIPDialog(gobject.GObject, Timer):
         self._pending_accept = False
         self._early = False
         self.stop_timeout("ringing")
-        self.start_timeout("ack", 64 * T1)
+        self.start_timeout("ack", int(64 * T1))
         self.on_accept_timeout()
 
     def reject(self, status):
@@ -514,7 +514,7 @@ class SIPDialog(gobject.GObject, Timer):
 
         # [...] an interval that starts at T1 seconds and doubles for each
         # retransmission until it reaches T2 seconds (Section 13.3.1.4)
-        next_time = min(time * 2, T2)
+        next_time = int(min(time * 2, T2))
         self.start_timeout("accept", time, next_time)
 
     def on_ack_timeout(self):

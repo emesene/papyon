@@ -118,7 +118,7 @@ class SIPCore(gobject.GObject, Timer):
 
     def cancel(self, canceled_request):
         request = self._create_cancel_request(canceled_request)
-        self.start_timeout("cancel", 64 * T1, canceled_request)
+        self.start_timeout("cancel", int(64 * T1), canceled_request)
         self.send(request)
         return request
 

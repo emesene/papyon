@@ -109,9 +109,9 @@ T1 = 0.5 # seconds
 T2 = 4   # seconds
 
 TIMER_A = T1
-TIMER_B = 64 * T1 # INVITE timer
-TIMER_F = 64 * T1 # non-INVITE timer
-TIMER_H = 64 * T1
+TIMER_B = int(64 * T1) # INVITE timer
+TIMER_F = int(64 * T1) # non-INVITE timer
+TIMER_H = int(64 * T1)
 
 class SIPTransactionError(object):
     TIMEOUT = 1

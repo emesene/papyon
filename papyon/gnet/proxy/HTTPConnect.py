@@ -55,6 +55,8 @@ class HTTPConnectProxy(AbstractProxy):
             auth = base64.encodestring(self._proxy.user + ':' + self._proxy.password).strip()
             proxy_protocol += 'Proxy-authorization: Basic ' + auth + '\r\n'
         proxy_protocol += '\r\n'
+
+        self._http_parser.enable()
         self._transport.send(proxy_protocol)
 
     # public API
@@ -70,6 +72,7 @@ class HTTPConnectProxy(AbstractProxy):
     
     def close(self):
         """Close the connection."""
+        self._http_parser.disable()
         self._client._proxy_closed()
         self._transport.close()
 

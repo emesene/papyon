@@ -165,7 +165,7 @@ class HTTPParser(AbstractParser):
     def _reset_state(self):
         self._next_chunk = self.CHUNK_START_LINE
         self._receive_buffer = ""
-        self._content_length = None
+        self._content_length = 0
         self._parser.delimiter = "\r\n"
 
     def _on_received(self, transport, buf, length):

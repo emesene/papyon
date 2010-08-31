@@ -98,7 +98,7 @@ class HTTPConnectProxy(AbstractProxy):
     def _on_proxy_response(self, parser, response):
         if self.status == IoStatus.OPENING:
             if response.status == 200:
-                del self._http_parser
+                self._http_parser.disable()
                 self._transport.disable()
                 self._client._proxy_open()
             elif response.status == 100:

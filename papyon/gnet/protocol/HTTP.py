@@ -63,11 +63,15 @@ class HTTP(gobject.GObject):
         self._host = host
         self._port = port
         self._proxies = proxies
-        self.__http_proxy = None
+        self._http_proxy = None
         self._transport = None
         self._http_parser = None
         self._outgoing_queue = []
         self._waiting_response = False
+
+        if self._proxies and self._proxies.get('http', None):
+            if self._proxies['http'].type == 'http':
+                self._http_proxy = self._proxies['http']
 
         self._errored = False
         self.connect("error", self._on_self_error)
@@ -77,13 +81,9 @@ class HTTP(gobject.GObject):
 
     def _setup_transport(self):
         if self._transport is None:
-            if self._proxies and self._proxies.get('http', None):
-                if self._proxies['http'].type == 'http':
-                    self.__http_proxy = self._proxies['http']
-
-            if self.__http_proxy:
-                self._transport = TCPClient(self.__http_proxy.host,
-                        self.__http_proxy.port)
+            if self._http_proxy:
+                self._transport = TCPClient(self._http_proxy.host,
+                        self._http_proxy.port)
             else:
                 self._transport = TCPClient(self._host, self._port)
                 if self._proxies:
@@ -160,10 +160,10 @@ class HTTP(gobject.GObject):
             user_agent = GNet.NAME, GNet.VERSION, platform.system(), platform.machine()
             headers['User-Agent'] = "%s/%s (%s %s)" % user_agent
 
-        if self.__http_proxy is not None:
+        if self._http_proxy is not None:
             url = 'http://%s:%d%s' % (self._host, self._port, resource)
-            if self.__http_proxy.user:
-                auth = self.__http_proxy.user + ':' + self.__http_proxy.password
+            if self._http_proxy.user:
+                auth = self._http_proxy.user + ':' + self._http_proxy.password
                 credentials = base64.encodestring(auth).strip()
                 headers['Proxy-Authorization'] = 'Basic ' + credentials
         else:

@@ -39,6 +39,7 @@ class HTTPS(HTTP):
             @param proxies: proxies that we can use to connect
             @type proxies: L{gnet.proxy.ProxyInfos}"""
         HTTP.__init__(self, host, port, proxies)
+        self._http_proxy = None
 
     def _setup_transport(self):
         if self._transport is None:

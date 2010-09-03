@@ -745,7 +745,7 @@ class Contact(BaseContact):
             "memberships": (gobject.TYPE_UINT,
                 "Memberships",
                 "Membership relation with the contact.",
-                0, 15, 0, gobject.PARAM_READABLE),
+                0, 31, 0, gobject.PARAM_READABLE),
 
              "groups": (gobject.TYPE_PYOBJECT,
                  "Groups",

@@ -22,6 +22,8 @@ from papyon.service.SingleSignOn import *
 
 from papyon.gnet.protocol import ProtocolFactory
 
+import urllib
+
 __all__ = ['Storage']
 
 class Storage(SOAPService):
@@ -58,6 +60,7 @@ class Storage(SOAPService):
 
         display_name = expression_profile.findtext('./st:DisplayName')
         personal_msg = expression_profile.findtext('./st:PersonalStatus')
+        user_tile_url = expression_profile.findtext('./st:StaticUserTilePublicURL')
 
         photo = expression_profile.find('./st:Photo')
         if photo is not None:
@@ -70,7 +73,7 @@ class Storage(SOAPService):
             photo_rid = photo_mime_type = photo_data_size = photo_url = None
         
         callback[0](profile_rid, expression_profile_rid, display_name, personal_msg,
-                    photo_rid, photo_mime_type, photo_data_size, photo_url,
+                    user_tile_url, photo_rid, photo_mime_type, photo_data_size, photo_url,
                     *callback[1:])
 
     def UpdateProfile(self, callback, errback, scenario, profile_rid,
@@ -126,27 +129,35 @@ class Storage(SOAPService):
         self._soap_request(method, (scenario, token), args, callback, errback)
 
     @RequireSecurityTokens(LiveService.STORAGE)
-    def get_display_picture(self, pre_auth_url, callback, errback):
+    def get_display_picture(self, pre_auth_url, user_tile_url, callback, errback):
         token = str(self._tokens[LiveService.STORAGE])
 
-        scheme = 'http'
-        host = 'byfiles.storage.msn.com'
-        port = 80
-        resource = '?'.join([pre_auth_url, token.split('&')[0]])
-
-        def request_callback(transport, http_response):
-            type = http_response.get_header('Content-Type')#.split('/')[1]
+        def success(transport, http_response):
+            type = http_response.get_header('Content-Type')
             data = http_response.body
             callback[0](type, data, *callback[1:])
 
+        def total_fail(transport, error_code):
+            errback[0](*errback[1:])
+
+        def request_static_tile(transport, error_code):
+            # Request using the PreAuthURL didn't work, try with static tilephoto
+            scheme, host, port, resource = url_split(user_tile_url)
+            self.get_resource(scheme, host, resource, success, total_fail)
+
+        scheme, host, port, resource = url_split(pre_auth_url)
+        resource += '?t=' + urllib.quote(token.split('&')[0][2:])
+        self.get_resource(scheme, host, resource, success, request_static_tile)
+
+    def get_resource(self, scheme, host, resource, callback, errback):
         http_headers = {}
         http_headers["Accept"] = "*/*"
         http_headers["Proxy-Connection"] = "Keep-Alive"
         http_headers["Connection"] = "Keep-Alive"
         
-        transport = ProtocolFactory(scheme, host, port, proxies=self._proxies)
-        transport.connect("response-received", request_callback)
+        transport = ProtocolFactory(scheme, host, proxies=self._proxies)
+        transport.connect("response-received", callback)
         transport.connect("request-sent", self._request_handler)
-        transport.connect("error", errback[0], *errback[1:])
+        transport.connect("error", errback)
 
         transport.request(resource, http_headers, method='GET')

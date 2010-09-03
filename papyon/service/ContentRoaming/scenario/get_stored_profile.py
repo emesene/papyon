@@ -43,15 +43,16 @@ class GetStoredProfileScenario(BaseScenario):
                                   True, True, True, True, True, True,
                                   True, True, True, True, True)
 
-    def __get_profile_callback(self, profile_rid, expression_profile_rid, 
-                               display_name, personal_msg, photo_rid, 
-                               photo_mime_type, photo_data_size, photo_url):
+    def __get_profile_callback(self, profile_rid, expression_profile_rid,
+                               display_name, personal_msg, user_tile_url,
+                               photo_rid, photo_mime_type, photo_data_size,
+                               photo_url):
         callback = self._callback
         callback[0](profile_rid, expression_profile_rid, display_name,
             personal_msg, photo_rid, *callback[1:])
 
         if photo_rid is not None:
-            self.__storage.get_display_picture(photo_url, 
+            self.__storage.get_display_picture(photo_url, user_tile_url,
                                (self.__get_display_picture_callback,),
                                (self.__get_display_picture_errback,))
 

@@ -285,7 +285,7 @@ class MSNObjectStore(P2PSessionHandler):
             if obj._data_sha == msn_object._data_sha:
                 session.accept(obj._data)
                 return session
-        logger.warning("Unknown MSN object, another end point might have")
+        logger.warning("Unknown MSN object, another end point might have it")
 
     def _connect_session(self, session):
         P2PSessionHandler._connect_session(self, session)
@@ -515,16 +515,13 @@ class P2PMetaSession(gobject.GObject):
         self.emit("rejected")
 
     def _on_session_completed(self, session, data):
-        print "completed"
         self.emit("completed", data)
 
     def _on_session_progressed(self, session, data):
         self.emit("progressed", data)
 
     def _on_session_disposed(self, disposed_session):
-        print "remove all"
         self._remove_all()
-        print "disposed"
         self.emit("disposed")
 
 

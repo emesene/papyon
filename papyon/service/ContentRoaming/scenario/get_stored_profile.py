@@ -40,14 +40,14 @@ class GetStoredProfileScenario(BaseScenario):
         self.__storage.GetProfile((self.__get_profile_callback,),
                                   (self.__get_profile_errback,),
                                   self._scenario, self.cid,
-                                  True, True, True, True, True, True, 
+                                  True, True, True, True, True, True,
                                   True, True, True, True, True)
 
     def __get_profile_callback(self, profile_rid, expression_profile_rid, 
                                display_name, personal_msg, photo_rid, 
                                photo_mime_type, photo_data_size, photo_url):
         callback = self._callback
-        callback[0](profile_rid, expression_profile_rid, display_name, 
+        callback[0](profile_rid, expression_profile_rid, display_name,
             personal_msg, photo_rid, *callback[1:])
 
         if photo_rid is not None:
@@ -71,4 +71,3 @@ class GetStoredProfileScenario(BaseScenario):
         errback = self._errback[0]
         args = self._errback[1:]
         errback(errcode, *args)
-

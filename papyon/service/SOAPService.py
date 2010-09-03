@@ -220,9 +220,7 @@ class SOAPService(object):
             return #FIXME: propagate the error up
 
         if not soap_response.is_fault():
-            handler = getattr(self,
-                    "_Handle" + request_id + "Response",
-                    None)
+            handler = getattr(self, "_Handle" + request_id + "Response", None)
             method = getattr(self._service, request_id)
             response = method.process_response(soap_response)
 
@@ -232,9 +230,7 @@ class SOAPService(object):
                 self._HandleSOAPResponse(request_id, callback, errback,
                         response, user_data)
         else:
-            handler = getattr(self,
-                    "_Handle" + request_id + "Fault",
-                    None)
+            handler = getattr(self, "_Handle" + request_id + "Fault", None)
             if handler is not None:
                 handler(callback, errback, soap_response, user_data)
             else:
@@ -272,8 +268,8 @@ class SOAPService(object):
         else:
             transport = papyon.gnet.protocol.ProtocolFactory(scheme,
                     host, port, proxies=self._proxies)
-            handler_id = [transport.connect("response-received",
-                    self._response_handler),
+            handler_id = [
+                transport.connect("response-received", self._response_handler),
                 transport.connect("request-sent", self._request_handler),
                 transport.connect("error", self._error_handler)]
 

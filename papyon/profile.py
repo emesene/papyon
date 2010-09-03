@@ -29,9 +29,12 @@ contacts in his/her contact list.
 from papyon.util.decorator import rw_property
 
 import gobject
+import logging
 
 __all__ = ['Profile', 'Contact', 'Group', 'EndPoint',
         'Presence', 'Membership', 'ContactType', 'Privacy', 'NetworkID', 'ClientCapabilities']
+
+logger = logging.getLogger('papyon.profile')
 
 
 class ClientCapabilities(gobject.GObject):
@@ -336,6 +339,12 @@ class ContactType(object):
     the contact dropped it"""
 
 
+class ContactFlag(object):
+    """Internal contact flag"""
+
+    EXTENDED_PRESENCE_KNOWN = 1
+    """Set once we receive the extended presence (UBX) for a buddy"""
+
 
 class BaseContact(gobject.GObject):
 
@@ -372,6 +381,11 @@ class BaseContact(gobject.GObject):
                 "List of locations where the user is connected",
                 gobject.PARAM_READABLE),
 
+            "flags": (gobject.TYPE_UINT,
+                "Flags",
+                "Contact flags.",
+                0, 1, 0, gobject.PARAM_READABLE),
+
             "msn-object": (gobject.TYPE_STRING,
                 "MSN Object",
                 "MSN Object attached to the user, this generally represent "
@@ -404,6 +418,7 @@ class BaseContact(gobject.GObject):
         self._current_media = None
         self._display_name = ""
         self._end_points = {}
+        self._flags = 0
         self._personal_message = ""
         self._presence = Presence.OFFLINE
         self._msn_object = None
@@ -486,6 +501,21 @@ class BaseContact(gobject.GObject):
         """Contact signature sound
             @type: string"""
         return self._signature_sound
+
+    ### flags management
+    def has_flag(self, flags):
+        return (self.flags & flags) == flags
+
+    def _set_flags(self, flags):
+        logger.info("Set contact %s flags to %i" % (self._account, flags))
+        self._flags = flags
+        self.notify("flags")
+
+    def _add_flag(self, flag):
+        self._set_flags(self._flags | flag)
+
+    def _remove_flag(self, flag):
+        self._set_flags(self._flags ^ flag)
 
     def _server_property_changed(self, name, value):
         if name == "client-capabilities":
@@ -855,6 +885,7 @@ class Contact(BaseContact):
         self._id = "00000000-0000-0000-0000-000000000000"
         self._cid = "00000000-0000-0000-0000-000000000000"
         self._groups = set()
+        self._flags = 0
 
         self._server_property_changed("presence", Presence.OFFLINE)
         self._server_property_changed("display-name", self._account)

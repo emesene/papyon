@@ -452,6 +452,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         idx, network_id, account = self.__parse_network_and_account(command)
         contacts = self.__search_account(account, network_id)
         for contact in contacts:
+            contact._remove_flag(profile.ContactFlag.EXTENDED_PRESENCE_KNOWN)
             contact._server_property_changed("presence",
                     profile.Presence.OFFLINE)
 
@@ -482,7 +483,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 contact._server_property_changed("presence", presence)
                 contact._server_property_changed("client-capabilities", capabilities)
             contact._server_property_changed("display-name", display_name)
-            contact._server_property_changed("msn-object", msn_object)
+            # only change MSNObject if the extended presence is known (MSNP18)
+            if self._protocol_version < 18 or \
+               contact.has_flag(profile.ContactFlag.EXTENDED_PRESENCE_KNOWN):
+                contact._server_property_changed("msn_object", msn_object)
             if icon_url is not None:
                 contact._server_attribute_changed('icon_url', icon_url)
 
@@ -520,11 +524,16 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             logger.error("Invalid XML data in received UBX command")
             return
 
+        utl = self.__find_node(tree, "./UserTileLocation", "")
         cm_parts = self.__find_node(tree, "./CurrentMedia", "").split('\\0')
         pm = self.__find_node(tree, "./PSM", "")
         rmu = self.__find_node(tree, "./RMU", "")
         ss = self.__find_node(tree, "./SignatureSound", None)
         mg = self.__find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
+
+        msn_object = None
+        if utl != "":
+            msn_object = papyon.p2p.MSNObject.parse(self._client, utl)
 
         if len(cm_parts) < 3 or cm_parts[2] == '0':
             cm = None
@@ -549,6 +558,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
         contacts = self.__search_account(account, network_id)
         for contact in contacts:
+            contact._add_flag(profile.ContactFlag.EXTENDED_PRESENCE_KNOWN)
+            contact._server_property_changed("msn-object", msn_object)
             contact._server_property_changed("current-media", cm)
             contact._server_property_changed("personal-message", pm)
             contact._server_property_changed("signature-sound", ss)

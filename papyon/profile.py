@@ -336,10 +336,8 @@ class ContactType(object):
     the contact dropped it"""
 
 
-class Profile(gobject.GObject):
-    """Profile of the User connecting to the service
 
-        @undocumented: __gsignals__, __gproperties__, do_get_property"""
+class BaseContact(gobject.GObject):
 
     __gsignals__ =  {
             "end-point-added": (gobject.SIGNAL_RUN_FIRST,
@@ -352,6 +350,17 @@ class Profile(gobject.GObject):
             }
 
     __gproperties__ = {
+            "client-capabilities": (gobject.TYPE_STRING,
+                "Client capabilities",
+                "The client capabilities of the contact 's client",
+                "",
+                gobject.PARAM_READABLE),
+
+            "current-media": (gobject.TYPE_PYOBJECT,
+                "Current media",
+                "The current media that the user wants to display",
+                gobject.PARAM_READABLE),
+
             "display-name": (gobject.TYPE_STRING,
                 "Friendly name",
                 "A nickname that the user chooses to display to others",
@@ -363,25 +372,17 @@ class Profile(gobject.GObject):
                 "List of locations where the user is connected",
                 gobject.PARAM_READABLE),
 
+            "msn-object": (gobject.TYPE_STRING,
+                "MSN Object",
+                "MSN Object attached to the user, this generally represent "
+                "its display picture",
+                "",
+                gobject.PARAM_READABLE),
+
             "personal-message": (gobject.TYPE_STRING,
                 "Personal message",
                 "The personal message that the user wants to display",
                 "",
-                gobject.PARAM_READABLE),
-
-            "current-media": (gobject.TYPE_PYOBJECT,
-                "Current media",
-                "The current media that the user wants to display",
-                gobject.PARAM_READABLE),
-
-            "signature-sound": (gobject.TYPE_PYOBJECT,
-                "Signature sound",
-                "The sound played by others' client when the user connects",
-                gobject.PARAM_READABLE),
-
-            "profile": (gobject.TYPE_PYOBJECT,
-                "Profile",
-                "the text/x-msmsgsprofile sent by the server",
                 gobject.PARAM_READABLE),
 
             "presence": (gobject.TYPE_STRING,
@@ -390,59 +391,165 @@ class Profile(gobject.GObject):
                 Presence.OFFLINE,
                 gobject.PARAM_READABLE),
 
+            "signature-sound": (gobject.TYPE_PYOBJECT,
+                "Signature sound",
+                "The sound played by others' client when the user connects",
+                gobject.PARAM_READABLE),
+            }
+
+    def __init__(self):
+        gobject.GObject.__init__(self)
+
+        self._client_capabilities = ClientCapabilities()
+        self._current_media = None
+        self._display_name = ""
+        self._end_points = {}
+        self._personal_message = ""
+        self._presence = Presence.OFFLINE
+        self._msn_object = None
+        self._signature_sound = None
+
+    @property
+    def account(self):
+        """Contact account
+            @rtype: utf-8 encoded string"""
+        return self._account
+
+    @property
+    def client_id(self):
+        """The user capabilities
+            @rtype: ClientCapabilities"""
+        return self._client_capabilities
+
+    @property
+    def client_capabilities(self):
+        """The user capabilities
+            @rtype: ClientCapabilities"""
+        return self._client_capabilities
+
+    @property
+    def current_media(self):
+        """Contact current media
+            @rtype: (artist: string, track: string)"""
+        return self._current_media
+
+    @property
+    def display_name(self):
+        """Contact display name
+            @rtype: utf-8 encoded string"""
+        return self._display_name
+
+    @property
+    def end_points(self):
+        """List of contact's locations
+           @rtype: list of string"""
+        return self._end_points
+
+    @property
+    def flags(self):
+        """Internal contact flags
+            @rtype: bitmask of L{Membership<papyon.profile.ContactFlag}s"""
+        return self._flags
+
+    @property
+    def id(self):
+        """Contact identifier in a GUID form
+            @rtype: GUID string"""
+        return self._id
+
+    @property
+    def msn_object(self):
+        """Contact MSN Object
+            @type: L{MSNObject<papyon.p2p.MSNObject>}"""
+        return self._msn_object
+
+    @property
+    def network_id(self):
+        """Contact network ID
+            @rtype: L{NetworkID<papyon.profile.NetworkID>}"""
+        return self._network_id
+
+    @property
+    def personal_message(self):
+        """Contact personal message
+            @rtype: utf-8 encoded string"""
+        return self._personal_message
+
+    @property
+    def presence(self):
+        """Contact presence
+            @rtype: L{Presence<papyon.profile.Presence>}"""
+        return self._presence
+
+    @property
+    def signature_sound():
+        """Contact signature sound
+            @type: string"""
+        return self._signature_sound
+
+    def _server_property_changed(self, name, value):
+        if name == "client-capabilities":
+            value = ClientCapabilities(client_id=value)
+        attr_name = "_" + name.lower().replace("-", "_")
+        old_value = getattr(self, attr_name)
+        if value != old_value:
+            setattr(self, attr_name, value)
+            self.notify(name)
+        if name == "end-points":
+            self._diff_end_points(old_value, value)
+
+    def _diff_end_points(self, old_eps, new_eps):
+        added_eps = set(new_eps.keys()) - set(old_eps.keys())
+        removed_eps = set(old_eps.keys()) - set(new_eps.keys())
+        for ep in added_eps:
+            self.emit("end-point-added", new_eps[ep])
+        for ep in removed_eps:
+            self.emit("end-point-removed", old_eps[ep])
+
+    def do_get_property(self, pspec):
+        name = pspec.name.lower().replace("-", "_")
+        return getattr(self, name)
+gobject.type_register(BaseContact)
+
+
+class Profile(BaseContact):
+    """Profile of the User connecting to the service"""
+
+    __gproperties__ = {
+            "profile": (gobject.TYPE_PYOBJECT,
+                "Profile",
+                "the text/x-msmsgsprofile sent by the server",
+                gobject.PARAM_READABLE),
+
             "privacy": (gobject.TYPE_STRING,
                 "Privacy",
                 "The privacy policy to use",
                 Privacy.BLOCK,
                 gobject.PARAM_READABLE),
-
-            "msn-object": (gobject.TYPE_STRING,
-                "MSN Object",
-                "MSN Object attached to the user, this generally represent "
-                "its display picture",
-                "",
-                gobject.PARAM_READABLE),
             }
 
     def __init__(self, account, ns_client):
-        gobject.GObject.__init__(self)
+        BaseContact.__init__(self)
         self._ns_client = ns_client
         self._account = account[0]
         self._password = account[1]
 
+        self._id = "00000000-0000-0000-0000-000000000000"
         self._profile = ""
         self._display_name = self._account.split("@", 1)[0]
-        self._presence = Presence.OFFLINE
         self._privacy = Privacy.BLOCK
-        self._personal_message = ""
-        self._current_media = None
-        self._signature_sound = None
         self._end_point_name = ""
-        self._end_points = {}
 
-        self._client_id = ClientCapabilities(10)
-        self._client_id.supports_sip_invite = True
-        self._client_id.supports_tunneled_sip = True
-        self._client_id.supports_p2pv2 = True
-        self._client_id.p2p_bootstrap_via_uun = True
-        self._client_id.connect("capability-changed", self._client_capability_changed)
+        self._client_capabilities = ClientCapabilities(10)
+        self._client_capabilities.supports_sip_invite = True
+        self._client_capabilities.supports_tunneled_sip = True
+        self._client_capabilities.supports_p2pv2 = True
+        self._client_capabilities.p2p_bootstrap_via_uun = True
+        self._client_capabilities.connect("capability-changed",
+                self._client_capability_changed)
 
-        self._msn_object = None
-
-        self.__pending_set_presence = [self._presence, self._client_id, self._msn_object]
+        self.__pending_set_presence = [self._presence, self._client_capabilities, self._msn_object]
         self.__pending_set_personal_message = [self._personal_message, self._current_media]
-
-    @property
-    def network_id(self):
-        """The network ID
-            @rtype: L{NetworkID<papyon.profile.NetworkID>}"""
-        return NetworkID.MSN
-
-    @property
-    def account(self):
-        """The user account
-            @rtype: utf-8 encoded string"""
-        return self._account
 
     @property
     def password(self):
@@ -455,30 +562,6 @@ class Profile(gobject.GObject):
         """The user profile retrieved from the MSN servers
             @rtype: dict of fields"""
         return self._profile
-
-    @property
-    def id(self):
-        """The user identifier in a GUID form
-            @rtype: GUID string"""
-        return "00000000-0000-0000-0000-000000000000"
-
-    @property
-    def client_id(self):
-        """The user capabilities
-            @rtype: ClientCapabilities"""
-        return self._client_id
-
-    @property
-    def client_capabilities(self):
-        """The user capabilities
-            @rtype: ClientCapabilities"""
-        return self._client_id
-
-    @property
-    def end_points(self):
-        """The user end points
-            @rtype: EndPoint"""
-        return self._end_points
 
     @rw_property
     def display_name():
@@ -605,41 +688,22 @@ class Profile(gobject.GObject):
             return self._personal_message, self._current_media
         return locals()
 
-    def _diff_end_points(self, old_eps, new_eps):
-        added_eps = set(new_eps.keys()) - set(old_eps.keys())
-        removed_eps = set(old_eps.keys()) - set(new_eps.keys())
-        for ep in added_eps:
-            self.emit("end-point-added", new_eps[ep])
-        for ep in removed_eps:
-            self.emit("end-point-removed", old_eps[ep])
-
     def request_profile_url(self, callback):
         self._ns_client.send_url_request(('PROFILE', '0x0409'), callback)
 
     def _client_capability_changed(self, client, name, value):
-        self.__pending_set_presence[1] = self._client_id
+        self.__pending_set_presence[1] = self._client_capabilities
         self._ns_client.set_presence(*self.__pending_set_presence)
 
     def _server_property_changed(self, name, value):
-        attr_name = "_" + name.lower().replace("-", "_")
-        if attr_name == "_msn_object" and value is not None:
+        if name == "msn-object" and value is not None:
             self.__pending_set_presence[2] = value
-        old_value = getattr(self, attr_name)
-        if value != old_value:
-            setattr(self, attr_name, value)
-            self.notify(name)
-        if attr_name == "_end_points":
-            self._diff_end_points(old_value, value)
-
-    def do_get_property(self, pspec):
-        name = pspec.name.lower().replace("-", "_")
-        return getattr(self, name)
+        BaseContact._server_property_changed(self, name, value)
 gobject.type_register(Profile)
 
 
-class Contact(gobject.GObject):
-    """Contact related information
-        @undocumented: __gsignals__, __gproperties__, do_get_property"""
+class Contact(BaseContact):
+    """Contact related information"""
 
     __gsignals__ =  {
             "infos-changed": (gobject.SIGNAL_RUN_FIRST,
@@ -652,39 +716,6 @@ class Contact(gobject.GObject):
                 "Memberships",
                 "Membership relation with the contact.",
                 0, 15, 0, gobject.PARAM_READABLE),
-
-            "display-name": (gobject.TYPE_STRING,
-                "Friendly name",
-                "A nickname that the user chooses to display to others",
-                "",
-                gobject.PARAM_READWRITE),
-
-            "end-points": (gobject.TYPE_PYOBJECT,
-                "List of end points",
-                "The locations where this contact is connected (MPOP)",
-                gobject.PARAM_READABLE),
-
-            "personal-message": (gobject.TYPE_STRING,
-                "Personal message",
-                "The personal message that the user wants to display",
-                "",
-                gobject.PARAM_READABLE),
-
-            "current-media": (gobject.TYPE_PYOBJECT,
-                "Current media",
-                "The current media that the user wants to display",
-                gobject.PARAM_READABLE),
-
-            "signature-sound": (gobject.TYPE_PYOBJECT,
-                "Signature sound",
-                "The sound played by others' client when the user connects",
-                gobject.PARAM_READABLE),
-
-            "presence": (gobject.TYPE_STRING,
-                "Presence",
-                "The presence to show to others",
-                Presence.OFFLINE,
-                gobject.PARAM_READABLE),
 
              "groups": (gobject.TYPE_PYOBJECT,
                  "Groups",
@@ -700,44 +731,23 @@ class Contact(gobject.GObject):
                 "Contact type",
                 "The contact automatic update status flag",
                  gobject.PARAM_READABLE),
-
-            "client-capabilities": (gobject.TYPE_STRING,
-                "Client capabilities",
-                "The client capabilities of the contact 's client",
-                "",
-                gobject.PARAM_READABLE),
-
-            "msn-object": (gobject.TYPE_STRING,
-                "MSN Object",
-                "MSN Object attached to the contact, this generally represent "
-                "its display picture",
-                "",
-                gobject.PARAM_READABLE),
             }
 
     def __init__(self, id, network_id, account, display_name, cid=None,
             memberships=Membership.NONE, contact_type=ContactType.REGULAR):
         """Initializer"""
-        gobject.GObject.__init__(self)
+        BaseContact.__init__(self)
         self._id = id or "00000000-0000-0000-0000-000000000000"
         self._cid = cid or "00000000-0000-0000-0000-000000000000"
         self._network_id = network_id
         self._account = account
-
         self._display_name = display_name
-        self._end_points = {}
-        self._presence = Presence.OFFLINE
-        self._personal_message = ""
-        self._current_media = None
-        self._signature_sound = None
-        self._groups = set()
 
+        self._attributes = {'icon_url' : None}
+        self._groups = set()
+        self._infos = {}
         self._memberships = memberships
         self._contact_type = contact_type
-        self._client_capabilities = ClientCapabilities()
-        self._msn_object = None
-        self._infos = {}
-        self._attributes = {'icon_url' : None}
 
     def __repr__(self):
         def memberships_str():
@@ -758,12 +768,6 @@ class Contact(gobject.GObject):
         return template % (self._id, self._network_id, self._account, memberships_str())
 
     @property
-    def id(self):
-        """Contact identifier in a GUID form
-            @rtype: GUID string"""
-        return self._id
-
-    @property
     def attributes(self):
         """Contact attributes
             @rtype: {key: string => value: string}"""
@@ -774,54 +778,6 @@ class Contact(gobject.GObject):
         """Contact ID
             @rtype: GUID string"""
         return self._cid
-
-    @property
-    def network_id(self):
-        """Contact network ID
-            @rtype: L{NetworkID<papyon.profile.NetworkID>}"""
-        return self._network_id
-
-    @property
-    def account(self):
-        """Contact account
-            @rtype: utf-8 encoded string"""
-        return self._account
-
-    @property
-    def presence(self):
-        """Contact presence
-            @rtype: L{Presence<papyon.profile.Presence>}"""
-        return self._presence
-
-    @property
-    def display_name(self):
-        """Contact display name
-            @rtype: utf-8 encoded string"""
-        return self._display_name
-
-    @property
-    def end_points(self):
-        """List of contact's locations
-           @rtype: list of string"""
-        return self._end_points
-
-    @property
-    def personal_message(self):
-        """Contact personal message
-            @rtype: utf-8 encoded string"""
-        return self._personal_message
-
-    @property
-    def current_media(self):
-        """Contact current media
-            @rtype: (artist: string, track: string)"""
-        return self._current_media
-
-    @property
-    def signature_sound():
-        """Contact signature sound
-            @type: string"""
-        return self._signature_sound
 
     @property
     def groups(self):
@@ -846,18 +802,6 @@ class Contact(gobject.GObject):
         """Contact automatic update status flag
             @rtype: L{ContactType<papyon.profile.ContactType>}"""
         return self._contact_type
-
-    @property
-    def client_capabilities(self):
-        """Contact client capabilities
-            @rtype: L{ClientCapabilities}"""
-        return self._client_capabilities
-
-    @property
-    def msn_object(self):
-        """Contact MSN Object
-            @type: L{MSNObject<papyon.p2p.MSNObject>}"""
-        return self._msn_object
 
     @property
     def domain(self):
@@ -896,21 +840,8 @@ class Contact(gobject.GObject):
         self.notify("memberships")
 
     def _remove_membership(self, membership):
-        """removes the given membership from the contact
-
-            @param membership: the membership to remove
-            @type membership: int L{Membership}"""
         self._memberships ^= membership
         self.notify("memberships")
-
-    def _server_property_changed(self, name, value): #FIXME, should not be used for memberships
-        if name == "client-capabilities":
-            value = ClientCapabilities(client_id=value)
-        attr_name = "_" + name.lower().replace("-", "_")
-        old_value = getattr(self, attr_name)
-        if value != old_value:
-            setattr(self, attr_name, value)
-            self.notify(name)
 
     def _server_attribute_changed(self, name, value):
         self._attributes[name] = value
@@ -931,8 +862,8 @@ class Contact(gobject.GObject):
         self._server_property_changed("current-media", None)
         self._server_property_changed("msn-object", None)
         self._server_property_changed("client-capabilities", "0:0")
+        self._server_property_changed("end-points", {})
         self._server_infos_changed({})
-
 
     ### group management
     def _add_group_ownership(self, group):
@@ -940,10 +871,6 @@ class Contact(gobject.GObject):
 
     def _delete_group_ownership(self, group):
         self._groups.discard(group)
-
-    def do_get_property(self, pspec):
-        name = pspec.name.lower().replace("-", "_")
-        return getattr(self, name)
 gobject.type_register(Contact)
 
 

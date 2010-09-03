@@ -209,6 +209,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('UUX', payload=ep)
         self._send_command('UUX', payload=pep)
 
+    @throttled(2, LastElementQueue())
+    def set_privacy(self, privacy=profile.Privacy.BLOCK):
+        self._send_command("BLP", (privacy,))
+
     def signoff(self):
         """Logout from the server"""
         self._send_command('OUT')
@@ -596,8 +600,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                     profile[name] = value.strip()
             self._client.profile._server_property_changed("profile", profile)
 
-            self._send_command("BLP",
-                    (self._client.profile.privacy,))
+            self.set_privacy(self._client.profile.privacy)
             self._state = ProtocolState.SYNCHRONIZING
             self._client.address_book.sync()
         elif content_type[0] in \

@@ -623,7 +623,7 @@ class Profile(BaseContact):
         """The default privacy, can be either Privacy.ALLOW or Privacy.BLOCK
             @type: L{Privacy<papyon.profile.Privacy>}"""
         def fset(self, privacy):
-            pass #FIXME: set the privacy setting
+            self._ns_client.set_privacy(privacy)
         def fget(self):
             return self._privacy
         return locals()

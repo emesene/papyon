@@ -26,9 +26,12 @@ from papyon.gnet.proxy.factory import ProxyFactory
 
 import gobject
 import base64
+import logging
 import platform
 
 __all__ = ['HTTP']
+
+logger = logging.getLogger('papyon.gnet.HTTP')
 
 
 class HTTP(gobject.GObject):
@@ -134,7 +137,12 @@ class HTTP(gobject.GObject):
         #        self._setup_transport()
         #        return
         self._outgoing_queue.pop(0) # pop the request from the queue
-        self.emit("response-received", response)
+        if response.status >= 400:
+            logger.error("Received error code %i (%s) from %s:%i" %
+                (response.status, response.reason, self._host, self._port))
+            self.emit("error", response.status)
+        else:
+            self.emit("response-received", response)
         self._waiting_response = False
         self._process_queue() # next request ?
 

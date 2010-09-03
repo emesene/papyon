@@ -87,6 +87,7 @@ import papyon.service.SingleSignOn as SSO
 import papyon.service.AddressBook as AB
 import papyon.service.OfflineIM as OIM
 import papyon.service.Spaces as Spaces
+import papyon.service.ContentRoaming as CR
 
 from papyon.util.decorator import rw_property
 from papyon.transport import *
@@ -163,6 +164,7 @@ class Client(EventsDispatcher):
         self._address_book = None
         self._oim_box = None
         self._mailbox = None
+        self._roaming = None
 
         self.__die = False
         self.__connect_transport_signals()
@@ -200,6 +202,10 @@ class Client(EventsDispatcher):
         """The SIP call manager
             @type: L{SIPCallManager<papyon.sip.SIPCallManager>}"""
         return self._call_manager
+
+    @property
+    def content_roaming(self):
+        return self._roaming
 
     @property
     def ft_manager(self):
@@ -384,6 +390,7 @@ class Client(EventsDispatcher):
             self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
             self.__connect_oim_box_signals()
             self._spaces = Spaces.Spaces(self._sso, self._proxies)
+            self._roaming = CR.ContentRoaming(self._sso, self._address_book, self._proxies)
 
             self._state = ClientState.CONNECTED
 

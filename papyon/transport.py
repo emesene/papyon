@@ -5,6 +5,7 @@
 # Copyright (C) 2005-2006 Ali Sabil <ali.sabil@gmail.com>
 # Copyright (C) 2006  Johann Prieur <johann.prieur@gmail.com>
 # Copyright (C) 2006  Ole André Vadla Ravnås <oleavr@gmail.com>
+# Copyright (C) 2010  Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

@@ -446,12 +446,12 @@ class HTTPPollConnection(BaseTransport):
     
     def __on_error(self, transport, reason):
         self.__error = True
+        if reason == 403:
+            reason = TransportError.PROXY_FORBIDDEN
         self.emit("connection-lost", reason)
+        self.lose_connection()
         
     def __on_received(self, transport, http_response):
-        if http_response.status == 403:
-            self.emit("connection-lost", TransportError.PROXY_FORBIDDEN)
-            self.lose_connection()
         if 'X-MSN-Messenger' in http_response.headers:
             data = http_response.headers['X-MSN-Messenger'].split(";")
             for elem in data:

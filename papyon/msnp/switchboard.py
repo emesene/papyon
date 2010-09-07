@@ -190,7 +190,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     def leave(self):
         """Leave the conversation"""
-        assert(self.state == ProtocolState.OPEN)
+        if self.state != ProtocolState.OPEN:
+            return
         self._send_command('OUT')
     # Handlers ---------------------------------------------------------------
     # --------- Authentication -----------------------------------------------

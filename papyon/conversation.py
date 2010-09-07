@@ -452,3 +452,9 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
             ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
         SwitchboardHandler._send_message(self, content_type, body, headers,
                 ack, callback=callback, errback=errback)
+
+    def _on_closed(self):
+        self._dispatch("on_conversation_closed")
+
+    def _on_switchboard_closed(self):
+        pass

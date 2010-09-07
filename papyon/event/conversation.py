@@ -118,3 +118,6 @@ class ConversationEventInterface(BaseEventInterface):
             @type sender: L{Contact<papyon.profile.Contact>}"""
         pass
 
+    def on_conversation_closed(self):
+        """Called when the conversation is closed."""
+        pass

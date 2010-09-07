@@ -114,8 +114,18 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         logger.debug("<<< %s" % repr(chunk))
         self._on_chunk_received(self._peer, self._peer_guid, chunk)
 
+    def _on_switchboard_closed(self):
+        logger.info("Switchboard has been closed")
+
+    def _on_closed(self):
+        self.close()
+
+    def _on_error(self, error_type, error):
+        logger.info("Received error %i (type=%i)" % (error, error_type))
+
     def _on_contact_joined(self, contact):
         pass
 
     def _on_contact_left(self, contact):
-        self.close()
+        if contact == self._peer:
+            self.close()

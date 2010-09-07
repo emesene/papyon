@@ -126,6 +126,12 @@ class SwitchboardHandler(object):
     def _on_contact_left(self, contact):
         raise NotImplementedError
 
+    def _on_switchboard_closed(self):
+        raise NotImplementedError
+
+    def _on_closed(self):
+        raise NotImplementedError
+
     def _on_error(self, error_type, error):
         raise NotImplementedError
 
@@ -277,7 +283,9 @@ class SwitchboardManager(gobject.GObject):
                 request_switchboard(priority, self._ns_switchboard_request_response, handler)
 
     def close_handler(self, handler):
+        logger.info("Closing switchboard handler %s" % repr(handler))
         self._orphaned_handlers.discard(handler)
+        handler._on_closed()
         for switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
             handlers.discard(handler)
@@ -351,6 +359,7 @@ class SwitchboardManager(gobject.GObject):
             if switchboard in self._switchboards.keys():
                 for handler in self._switchboards[switchboard]:
                     self._orphaned_handlers.add(handler)
+                    handler._on_switchboard_closed()
                 del self._switchboards[switchboard]
             self._orphaned_switchboards.discard(switchboard)
 

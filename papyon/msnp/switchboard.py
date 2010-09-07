@@ -116,9 +116,14 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
         self.__invitations = {}
 
+        logger.info("New switchboard session %s" % session_id)
         client.profile.connect("end-point-added", self._on_end_point_added)
 
     # Properties ------------------------------------------------------------
+    @property
+    def session_id(self):
+        return self.__session_id
+
     def __get_state(self):
         return self.__state
     def __set_state(self, state):

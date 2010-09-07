@@ -158,18 +158,25 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._inviting = True
         self._send_command('CAL', (contact.account,) )
 
-    def send_message(self, message, ack, callback=None, cb_args=()):
+    def send_message(self, message, ack, callback=None):
         """Send a message to all contacts in this switchboard
 
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
+
+        cb = None
+        cb_args = ()
+        if callback:
+            cb = callback[0]
+            cb_args = callback[1:]
+
         return self._send_command('MSG',
                 (ack,),
                 message,
                 True,
                 self.__on_message_sent,
-                message, callback, cb_args)
+                message, cb, cb_args)
 
     def __on_message_sent(self, message, user_callback, user_cb_args):
         self.emit("message-sent", message)

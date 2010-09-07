@@ -290,7 +290,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
 
         self.__last_received_msn_objects = {}
 
-    def send_text_message(self, message):
+    def send_text_message(self, message, callback=None, errback=None):
         if len(message.msn_objects) > 0:
             body = []
             for alias, msn_object in message.msn_objects.iteritems():
@@ -308,7 +308,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
         if message.formatting is not None:
             headers["X-MMS-IM-Format"] = str(message.formatting)
 
-        self._send_message(content_type, body, headers, ack)
+        self._send_message(content_type, body, headers, ack, callback, errback)
 
     def send_nudge(self):
         content_type = "text/x-msnmsgr-datacast"
@@ -330,7 +330,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
         raise NotImplementedError
 
     def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF):
+            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
         raise NotImplementedError
 
     def _on_contact_joined(self, contact):
@@ -404,7 +404,7 @@ class ExternalNetworkConversation(AbstractConversation):
         self._client._unregister_external_conversation(self)
 
     def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF):
+            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
         if content_type[0]  in ['text/x-mms-emoticon',
                                 'text/x-mms-animemoticon']:
             return
@@ -449,5 +449,6 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
         SwitchboardHandler._leave(self)
 
     def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF):
-        SwitchboardHandler._send_message(self, content_type, body, headers, ack)
+            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
+        SwitchboardHandler._send_message(self, content_type, body, headers,
+                ack, callback=callback, errback=errback)

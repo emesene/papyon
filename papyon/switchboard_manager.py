@@ -47,7 +47,7 @@ class SwitchboardHandler(object):
         self.participants = set()
         self._pending_invites = set(contacts)
         self._pending_messages = []
-        self._delivery_callbacks = {}
+        self._delivery_callbacks = {} # transaction_id => (callback, errback)
 
         if switchboard is not None:
             self._switchboard = switchboard
@@ -95,7 +95,7 @@ class SwitchboardHandler(object):
 
     # protected
     def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF, callback=None, cb_args=()):
+            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
         message = msnp.Message(self._client.profile)
         message.add_header('MIME-Version', '1.0')
         message.content_type = content_type
@@ -103,7 +103,7 @@ class SwitchboardHandler(object):
             message.add_header(key, value)
         message.body = body
 
-        self._pending_messages.append((message, ack, callback, cb_args))
+        self._pending_messages.append((message, ack, callback, errback))
         self._process_pending_queues()
 
     def _invite_user(self, contact):
@@ -154,13 +154,15 @@ class SwitchboardHandler(object):
         self._on_error(ConversationErrorType.CONTACT_INVITE,
                 ContactInviteError.NOT_AVAILABLE)
 
-    def __on_message_delivered(self, transaction_id):
-        if transaction_id in self._delivery_callbacks:
-            callback, cb_args = self._delivery_callbacks.pop(transaction_id)
-            if callback:
-                callback(*cb_args)
+    def __on_message_delivered(self, trid):
+        callback, errback = self._delivery_callbacks.pop(trid, (None, None))
+        if callback:
+            callback[0](*callback[1:])
 
-    def __on_message_undelivered(self, transaction_id):
+    def __on_message_undelivered(self, trid):
+        callback, errback = self._delivery_callbacks.pop(trid, (None, None))
+        if errback:
+            errback[0](*errback[1:])
         self._on_error(ConversationErrorType.MESSAGE,
                 MessageError.DELIVERY_FAILED)
 
@@ -179,14 +181,14 @@ class SwitchboardHandler(object):
         self._pending_invites = set()
 
         if not self.switchboard.inviting:
-            for message, ack, callback, cb_args in self._pending_messages:
+            for message, ack, callback, errback in self._pending_messages:
                 # if ack type is FULL or MSNC, wait for ACK before calling back
                 if ack in (msnp.MessageAcknowledgement.FULL,
                            msnp.MessageAcknowledgement.MSNC):
                     transaction_id = self.switchboard.send_message(message, ack)
-                    self._delivery_callbacks[transaction_id] = (callback, cb_args)
+                    self._delivery_callbacks[transaction_id] = (callback, errback)
                 else:
-                    self.switchboard.send_message(message, ack, callback, cb_args)
+                    self.switchboard.send_message(message, ack, callback)
 
             self._pending_messages = []
 

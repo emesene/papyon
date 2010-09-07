@@ -21,7 +21,7 @@
 from papyon.msnp.message import MessageAcknowledgement
 from papyon.msnp2p.transport.TLP import MessageChunk
 from papyon.msnp2p.transport.base import BaseP2PTransport
-from papyon.switchboard_manager import SwitchboardClient
+from papyon.switchboard_manager import SwitchboardHandler
 
 import gobject
 import struct
@@ -32,11 +32,11 @@ __all__ = ['SwitchboardP2PTransport']
 logger = logging.getLogger('papyon.msnp2p.transport.switchboard')
 
 
-class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardClient):
+class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
     def __init__(self, client, switchboard, contacts, peer, peer_guid, transport_manager):
         self._peer = peer
         self._peer_guid = peer_guid
-        SwitchboardClient.__init__(self, client, switchboard, contacts)
+        SwitchboardHandler.__init__(self, client, switchboard, contacts)
         BaseP2PTransport.__init__(self, transport_manager, "switchboard")
 
     def close(self):

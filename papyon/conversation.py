@@ -26,7 +26,7 @@ contact."""
 
 import msnp
 import p2p
-from switchboard_manager import SwitchboardClient
+from switchboard_manager import SwitchboardHandler
 from papyon.event import EventsDispatcher
 from papyon.profile import NetworkID
 
@@ -418,9 +418,9 @@ class ExternalNetworkConversation(AbstractConversation):
                     send_unmanaged_message(contact, message)
 
 
-class SwitchboardConversation(AbstractConversation, SwitchboardClient):
+class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
     def __init__(self, client, switchboard, contacts):
-        SwitchboardClient.__init__(self, client, switchboard, contacts, priority=0)
+        SwitchboardHandler.__init__(self, client, switchboard, contacts, priority=0)
         AbstractConversation.__init__(self, client)
 
     @staticmethod
@@ -442,12 +442,12 @@ class SwitchboardConversation(AbstractConversation, SwitchboardClient):
 
             @param contact: the contact to invite.
             @type contact: L{profile.Contact}"""
-        SwitchboardClient._invite_user(self, contact)
+        SwitchboardHandler._invite_user(self, contact)
 
     def leave(self):
         """Leave the conversation."""
-        SwitchboardClient._leave(self)
+        SwitchboardHandler._leave(self)
 
     def _send_message(self, content_type, body, headers={},
             ack=msnp.MessageAcknowledgement.HALF):
-        SwitchboardClient._send_message(self, content_type, body, headers, ack)
+        SwitchboardHandler._send_message(self, content_type, body, headers, ack)

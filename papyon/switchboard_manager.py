@@ -36,7 +36,7 @@ __all__ = ['SwitchboardManager']
 
 logger = logging.getLogger('papyon.protocol.switchboard_manager')
 
-class SwitchboardClient(object):
+class SwitchboardHandler(object):
     def __init__(self, client, switchboard, contacts, priority=99):
         self._client = client
         self._switchboard_manager = weakref.proxy(self._client._switchboard_manager)

@@ -28,6 +28,7 @@ import gobject
 import weakref
 
 import papyon.msnp as msnp
+from papyon.profile import Presence
 from papyon.transport import ServerType
 from papyon.util.weak import WeakSet
 from papyon.event import ConversationErrorType, ContactInviteError, MessageError
@@ -45,9 +46,13 @@ class SwitchboardHandler(object):
         self._switchboard_priority = priority
 
         self.participants = set()
-        self._pending_invites = set(contacts)
+        self._pending_invites = set()
         self._pending_messages = []
+        self._pending_handles = {}
         self._delivery_callbacks = {} # transaction_id => (callback, errback)
+
+        for contact in contacts:
+            self.__add_pending(contact)
 
         if switchboard is not None:
             self._switchboard = switchboard
@@ -74,6 +79,8 @@ class SwitchboardHandler(object):
 
         self.switchboard.connect("notify::inviting",
                 lambda sb, pspec: self.__on_user_inviting_changed())
+        self.switchboard.connect("notify::state",
+                lambda sb, pspec: self.__on_switchboard_state_changed())
         self.switchboard.connect("user-joined",
                 lambda sb, contact: self.__on_user_joined(contact))
         self.switchboard.connect("user-left",
@@ -107,7 +114,7 @@ class SwitchboardHandler(object):
         self._process_pending_queues()
 
     def _invite_user(self, contact):
-        self._pending_invites.add(contact)
+        self.__add_pending(contact)
         self._process_pending_queues()
 
     def _leave(self):
@@ -136,24 +143,59 @@ class SwitchboardHandler(object):
         raise NotImplementedError
 
     # private
+    def __add_pending(self, contact):
+        if contact in self._pending_invites:
+            return
+        self._pending_invites.add(contact)
+        handle = contact.connect("notify::presence",
+                lambda contact, pspec: self.__on_user_presence_changed(contact))
+        self._pending_handles[contact] = handle
+
+    def __remove_pending(self, contact):
+        self._pending_invites.discard(contact)
+        if contact in self._pending_handles:
+            contact.disconnect(self._pending_handles[contact])
+            del self._pending_handles[contact]
+
     def __on_user_inviting_changed(self):
         if not self.switchboard.inviting:
             self._process_pending_queues()
 
     def __on_user_joined(self, contact):
         self.participants.add(contact)
-        self._pending_invites.discard(contact)
+        self.__remove_pending(contact)
         self._on_contact_joined(contact)
 
     def __on_user_left(self, contact):
         self._on_contact_left(contact)
         self.participants.remove(contact)
         if len(self.participants) == 0:
-            self._pending_invites.add(contact)
+            self.__add_pending(contact)
             self._switchboard.leave()
 
+    def __on_user_presence_changed(self, contact):
+        if (self._switchboard and self.switchboard.state == msnp.ProtocolState.OPEN) or self._switchboard_requested:
+            return
+        for contact in self._pending_invites:
+            if contact == self._client.profile:
+                continue
+            if contact.presence != Presence.OFFLINE:
+                return
+        logger.info("All pending invites are now offline, closing handler")
+        self._leave()
+
+    def __on_switchboard_state_changed(self):
+        if self._switchboard.state == msnp.ProtocolState.CLOSED:
+            for contact in self._pending_invites:
+                if contact == self._client.profile:
+                    continue
+                if contact.presence != Presence.OFFLINE:
+                    return
+            logger.info("All pending invites are offline, closing handler")
+            self._leave()
+
     def __on_user_invitation_failed(self, contact):
-        self._pending_invites.discard(contact)
+        self.__remove_pending(contact)
         self._on_error(ConversationErrorType.CONTACT_INVITE,
                 ContactInviteError.NOT_AVAILABLE)
 
@@ -181,7 +223,10 @@ class SwitchboardHandler(object):
         for contact in self._pending_invites:
             if contact not in self.participants:
                 self.switchboard.invite_user(contact)
+        for contact, handle in self._pending_handles.items():
+            contact.disconnect(handle)
         self._pending_invites = set()
+        self._pending_handles = dict()
 
         if not self.switchboard.inviting:
             for message, ack, callback, errback in self._pending_messages:
@@ -203,7 +248,8 @@ class SwitchboardHandler(object):
             return True
         logger.info("requesting new switchboard")
         self._switchboard_requested = True
-        self._pending_invites |= self.participants
+        for participant in self.participants:
+            self.__add_pending(participant)
         self.participants = set()
         self._switchboard_manager.request_switchboard(self, self._switchboard_priority) # may set the switchboard immediatly
         return self._switchboard_requested

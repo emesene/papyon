@@ -249,8 +249,10 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
             # keep that dialog for now, it will be disposed soon
             self._keep_dialog(dialog)
 
-        if len(self._dialogs) <= 1:
-            logger.info("Call invitation has been rejected (%i)", response.status)
+        remaining = len(self._dialogs) - 1
+        logger.info("Call invitation has been rejected (%i)", response.status)
+        logger.info("%i pending dialog(s) remaining for that call" % remaining)
+        if remaining <= 0:
             self._dispatch("on_call_rejected", response)
 
     def _on_dialog_ended(self, dialog):

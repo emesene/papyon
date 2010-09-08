@@ -24,6 +24,7 @@ import scenario
 from papyon.service.SOAPUtils import *
 from papyon.service.OfflineIM.constants import *
 
+from papyon.msnp import Message
 from papyon.profile import NetworkID
 
 from papyon.util.decorator import throttled
@@ -283,6 +284,14 @@ class OfflineMessagesBox(gobject.GObject):
         if len(self.__messages) > 0:
             self.emit('messages-received', self.__messages)
 
+    def __send_unmanaged_message(self, recipient, body):
+        """ Send offline message through a UUM command when using MSNP18. """
+        message = Message(self._client.profile)
+        message.content_type = ("text/plain", "utf-8")
+        message.add_header("Dest-Agent", "client")
+        message.body = body
+        self._client._protocol.send_unmanaged_message(recipient, message)
+
     # Public API
     def fetch_messages(self, messages=None):
         if messages is None:
@@ -300,6 +309,10 @@ class OfflineMessagesBox(gobject.GObject):
 
     @throttled(1, list())
     def send_message(self, recipient, message):
+        if self._client.protocol_version >= 18:
+            self.__send_unmanaged_message(recipient, message)
+            return
+            
         if recipient.network_id == NetworkID.EXTERNAL:
             return
 

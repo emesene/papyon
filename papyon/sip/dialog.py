@@ -347,7 +347,7 @@ class SIPDialog(gobject.GObject, Timer):
             self.dispose()
             return False
 
-        if response.status in (408, 481):
+        if response.status in (408, 481) and not self._early:
             self.end()
             return False
 

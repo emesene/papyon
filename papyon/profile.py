@@ -515,7 +515,7 @@ class BaseContact(gobject.GObject):
         self._set_flags(self._flags | flag)
 
     def _remove_flag(self, flag):
-        self._set_flags(self._flags ^ flag)
+        self._set_flags(self._flags & ~flag)
 
     def _server_property_changed(self, name, value):
         if name == "client-capabilities":

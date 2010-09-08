@@ -390,7 +390,7 @@ class SIPDialog(gobject.GObject, Timer):
 
     def _handle_invite_response(self, response):
         # 13.2.2 Processing INVITE Responses (UAC Processing)
-        if response.request is not self._initial_request:
+        if not self._early:
             return self._handle_reinvite_response(response)
 
         if response.status == 180:

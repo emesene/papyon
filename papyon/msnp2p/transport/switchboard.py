@@ -125,7 +125,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         pass
 
     def _on_closed(self):
-        self.close()
+        BaseP2PTransport.close(self)
 
     def _on_error(self, error_type, error):
         logger.info("Received error %i (type=%i)" % (error, error_type))

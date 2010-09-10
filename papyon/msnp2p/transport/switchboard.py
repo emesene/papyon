@@ -86,6 +86,11 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
     def can_send(self, peer, peer_guid, blob, bootstrap=False):
         return (self._peer == peer and self._peer_guid == peer_guid)
 
+    def __parse_guid(self, message, header):
+        if header not in message.headers or ';' not in message.headers[header]:
+            return None
+        return message.headers[header].split(';', 1)[1][1:-1]
+
     def _send_chunk(self, peer, peer_guid, chunk):
         logger.debug(">>> %s" % repr(chunk))
         if self.version is 1:
@@ -103,10 +108,12 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
     def _on_message_received(self, message):
         version = 1
         # if destination contains a GUID, the protocol should be TLPv2
-        if 'P2P-Dest' in message.headers and ';' in message.headers['P2P-Dest']:
+        dest_guid = self.__parse_guid(message, 'P2P-Dest')
+        src_guid = self.__parse_guid(message, 'P2P-Src')
+        if dest_guid and src_guid:
             version = 2
-            dest_guid = message.headers['P2P-Dest'].split(';', 1)[1][1:-1]
-            if dest_guid != self._client.machine_guid:
+            if dest_guid != self._client.machine_guid or \
+               src_guid != self._peer_guid:
                 return # this chunk is not for us
 
         chunk = MessageChunk.parse(version, message.body[:-4])

@@ -1,3 +1,14 @@
+papyon-0.5.1 (2010-09-10)
+=========================
+
+Fixes:
+  * Multiple fixes to video-conference and proxy support
+  * Only update MSN Object once we received extended presence (fdo #29967)
+  * Fallback on public picture when default one fails (roaming) (fdo #29965)
+  * Support MSNP18-style offline messaging
+  * Better handling of switchboard sessions
+  * Minor fixes for bugs fdo #29742, #29763 and #29764
+
 papyon-0.5.0 (2010-08-12)
 =========================
 

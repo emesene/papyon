@@ -211,6 +211,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.SYNCHRONIZING
         self._state = ProtocolState.SYNCHRONIZED
         self._state = ProtocolState.OPEN
+        if self._client.protocol_version >= 16:
+            self.invite_user(self._client.profile)
 
     def _handle_OUT(self, command):
         pass

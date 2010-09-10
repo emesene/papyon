@@ -56,10 +56,6 @@ class SwitchboardHandler(object):
 
         if switchboard is not None:
             self._switchboard = switchboard
-        else:
-            if self._client.protocol_version >= 16:
-                self._pending_invites.add(self._client.profile)
-            self._process_pending_queues()
 
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -145,7 +141,7 @@ class SwitchboardHandler(object):
 
     # private
     def __add_pending(self, contact):
-        if contact in self._pending_invites:
+        if contact in self._pending_invites or contact is self._client.profile:
             return
         self._pending_invites.add(contact)
         handle = contact.connect("notify::presence",
@@ -178,8 +174,6 @@ class SwitchboardHandler(object):
         if (self._switchboard and self.switchboard.state == msnp.ProtocolState.OPEN) or self._switchboard_requested:
             return
         for contact in self._pending_invites:
-            if contact == self._client.profile:
-                continue
             if contact.presence != Presence.OFFLINE:
                 return
         # Switchboard was already closed and there is (almost) no chance
@@ -190,8 +184,6 @@ class SwitchboardHandler(object):
     def __on_switchboard_state_changed(self):
         if self._switchboard.state == msnp.ProtocolState.CLOSED:
             for contact in self._pending_invites:
-                if contact == self._client.profile:
-                    continue
                 if contact.presence != Presence.OFFLINE:
                     return
             # Might be that an "appear offline" contact closed the

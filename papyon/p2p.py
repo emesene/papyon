@@ -483,7 +483,7 @@ class P2PMetaSession(gobject.GObject):
         self._handles[session] = handles
 
     def _disconnect_session(self, session):
-        handles = self._handles.pop(session)
+        handles = self._handles.pop(session, [])
         for handle in handles:
             session.disconnect(handle)
 

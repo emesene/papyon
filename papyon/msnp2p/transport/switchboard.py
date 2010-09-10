@@ -115,7 +115,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         self._on_chunk_received(self._peer, self._peer_guid, chunk)
 
     def _on_switchboard_closed(self):
-        logger.info("Switchboard has been closed")
+        pass
 
     def _on_closed(self):
         self.close()
@@ -129,3 +129,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
     def _on_contact_left(self, contact):
         if contact == self._peer:
             self.close()
+
+    def __repr__(self):
+        return '<SwitchboardP2PTransport peer="%s" guid="%s">' % \
+                (self.peer.account, self.peer_guid)

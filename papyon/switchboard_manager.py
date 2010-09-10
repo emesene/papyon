@@ -91,7 +91,8 @@ class SwitchboardHandler(object):
                 lambda sb, trid: self.__on_message_delivered(trid))
         self.switchboard.connect("message-undelivered",
                 lambda sb, trid: self.__on_message_undelivered(trid))
-        logger.info("New switchboard attached")
+        logger.info("Handler %s attached to switchboard %s" %
+                (repr(self), switchboard.session_id))
         def process_pending_queues():
             self._process_pending_queues()
             return False
@@ -181,6 +182,8 @@ class SwitchboardHandler(object):
                 continue
             if contact.presence != Presence.OFFLINE:
                 return
+        # Switchboard was already closed and there is (almost) no chance
+        # a new one will be created now.
         logger.info("All pending invites are now offline, closing handler")
         self._leave()
 
@@ -191,7 +194,8 @@ class SwitchboardHandler(object):
                     continue
                 if contact.presence != Presence.OFFLINE:
                     return
-            logger.info("All pending invites are offline, closing handler")
+            # Might be that an "appear offline" contact closed the
+            # switchboard or that the switchboard has been explicitely closed
             self._leave()
 
     def __on_user_invitation_failed(self, contact):
@@ -246,7 +250,6 @@ class SwitchboardHandler(object):
             return False
         if self._switchboard_requested:
             return True
-        logger.info("requesting new switchboard")
         self._switchboard_requested = True
         for participant in self.participants:
             self.__add_pending(participant)
@@ -295,6 +298,8 @@ class SwitchboardManager(gobject.GObject):
 
     def request_switchboard(self, handler, priority=99):
         handler_participants = handler.total_participants
+        participants = ", ".join(map(lambda c: c.account, handler_participants))
+        logger.info("Requesting switchboard for participant(s) %s" % participants)
 
         # If the Handler was orphan, then it is no more
         self._orphaned_handlers.discard(handler)
@@ -303,6 +308,8 @@ class SwitchboardManager(gobject.GObject):
         for switchboard in self._switchboards.keys():
             switchboard_participants = set(switchboard.participants.values())
             if handler_participants == switchboard_participants:
+                logger.info("Using already opened switchboard %s" %
+                        switchboard.session_id)
                 self._switchboards[switchboard].add(handler)
                 handler._switchboard = switchboard
                 return
@@ -311,6 +318,8 @@ class SwitchboardManager(gobject.GObject):
         for switchboard in list(self._orphaned_switchboards):
             switchboard_participants = set(switchboard.participants.values())
             if handler_participants == switchboard_participants:
+                logger.info("Using orphaned switchboard %s" %
+                        switchboard.session_id)
                 self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
                 self._orphaned_switchboards.discard(switchboard)
                 handler._switchboard = switchboard
@@ -323,10 +332,12 @@ class SwitchboardManager(gobject.GObject):
             switchboard_participants = pending_handler.total_participants
             if handler_participants == switchboard_participants:
                 self._pending_switchboards[switchboard].add(handler)
+                logger.info("Using pending switchboard")
                 return
 
         self._client._protocol.\
                 request_switchboard(priority, self._ns_switchboard_request_response, handler)
+        logger.info("Requesting new switchboard")
 
     def close_handler(self, handler):
         logger.info("Closing switchboard handler %s" % repr(handler))

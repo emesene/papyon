@@ -192,6 +192,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         """Leave the conversation"""
         if self.state != ProtocolState.OPEN:
             return
+        logger.info("Leaving switchboard %s" % self.__session_id)
         self._send_command('OUT')
     # Handlers ---------------------------------------------------------------
     # --------- Authentication -----------------------------------------------
@@ -333,7 +334,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.AUTHENTICATING
 
     def _disconnect_cb(self, transport, reason):
-        logger.info("Disconnected")
+        logger.info("Disconnected (%s)" % self.__session_id)
         self._state = ProtocolState.CLOSED
 
     def _on_end_point_added(self, profile, end_point):

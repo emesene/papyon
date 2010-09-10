@@ -458,3 +458,7 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
 
     def _on_switchboard_closed(self):
         pass
+
+    def __repr__(self):
+        participants = ",".join(map(lambda p: p.account, self.total_participants))
+        return '<SwitchboardConversation participants="%s">' % participants

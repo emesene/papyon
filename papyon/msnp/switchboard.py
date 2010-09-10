@@ -250,11 +250,12 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         if guid is not None:
             places = self.end_points.setdefault(account, [])
             places.append(guid)
+            return # wait for the command without GUID
         if account == self._client.profile.account:
             return # ignore our own user
-        contact = self.__search_account(account, display_name)
-        if contact in self.participants:
+        if account in self.participants:
             return # ignore duplicate users
+        contact = self.__search_account(account, display_name)
         contact._server_property_changed("client-capabilities", client_id)
         self.participants[account] = contact
         self.emit("user-joined", contact)

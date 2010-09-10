@@ -239,9 +239,14 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                     display_name=display_name)
         else:
             return contacts[0]
+
+    def __discard_invitation(self, account):
+        for trid, contact in self.__invitations.items():
+            if contact.account == account:
+                del self.__invitations[trid]
+                return
             
-    def __participant_join(self, account, display_name, client_id):
-        account, guid = self.__parse_account(account)
+    def __participant_join(self, account, guid, display_name, client_id):
         if guid is not None:
             places = self.end_points.setdefault(account, [])
             places.append(guid)
@@ -254,8 +259,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.participants[account] = contact
         self.emit("user-joined", contact)
 
-    def __participant_left(self, account):
-        account, guid = self.__parse_account(account)
+    def __participant_left(self, account, guid):
         if guid is not None:
             places = self.end_points.setdefault(account, [])
             places.remove(guid)
@@ -266,28 +270,28 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         del self.participants[account]
 
     def _handle_IRO(self, command):
-        account = command.arguments[2]
+        account, guid = self.__parse_account(command.arguments[2])
         display_name = urllib.unquote(command.arguments[3])
         client_id = command.arguments[4]
-        self.__participant_join(account, display_name, client_id)
-
-    def _handle_JOI(self, command):
-        account = command.arguments[0]
-        display_name = urllib.unquote(command.arguments[1])
-        client_id = command.arguments[2]
-        self.__participant_join(account, display_name, client_id)
-        if len(self.__invitations) == 0:
-            self._inviting = False
+        self.__participant_join(account, guid, display_name, client_id)
 
     def _handle_CAL(self, command):
-        # this should be followed by a JOI, so we only change
-        # the self._inviting state until we get the actual JOI
-        del self.__invitations[command.transaction_id]
+        pass
+
+    def _handle_JOI(self, command):
+        account, guid = self.__parse_account(command.arguments[0])
+        display_name = urllib.unquote(command.arguments[1])
+        client_id = command.arguments[2]
+        self.__participant_join(account, guid, display_name, client_id)
+        if guid is None:
+            self.__discard_invitation(account)
+            if len(self.__invitations) == 0:
+                self._inviting = False
 
     def _handle_BYE(self, command):
         if len(command.arguments) == 1:
-            account = command.arguments[0]
-            self.__participant_left(account)
+            account, guid = self.__parse_account(command.arguments[0])
+            self.__participant_left(account, guid)
         else:
             self._state = ProtocolState.CLOSED
             self.participants = {}

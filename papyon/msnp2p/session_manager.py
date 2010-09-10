@@ -91,7 +91,7 @@ class P2PSessionManager(gobject.GObject):
             account, guid = account.split(';', 1)
             guid = guid[1:-1]
         else:
-            guid = ""
+            guid = None
 
         if account == self._client.profile.account:
             peer = self._client.profile

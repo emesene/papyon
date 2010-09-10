@@ -144,5 +144,6 @@ class RTCActivityTunneledTransport(gobject.GObject):
     def _on_notification_received(self, protocol, peer, peer_guid, type, message):
         if type is not UserNotificationTypes.RTC_ACTIVITY:
             return
+        logger.debug("<<< " + message)
         params = message.split(' ')
         self.emit("message-received", peer, peer_guid, int(params[0]), params[1:])

@@ -509,7 +509,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
     def _handle_UBN(self, command): # contact infos
         if not command.payload:
             return
-        print command.payload
         idx, account, guid = self.__parse_account_and_guid(command)
         contact = self.__search_account(account)[0]
         type = int(command.arguments[1])

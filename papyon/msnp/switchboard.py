@@ -194,6 +194,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             return
         logger.info("Leaving switchboard %s" % self.__session_id)
         self._send_command('OUT')
+        self._state = ProtocolState.CLOSING
+
     # Handlers ---------------------------------------------------------------
     # --------- Authentication -----------------------------------------------
     def _handle_ANS(self, command):

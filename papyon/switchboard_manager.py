@@ -272,6 +272,7 @@ class SwitchboardManager(gobject.GObject):
         self._orphaned_handlers = WeakSet()
         self._switchboards = {}
         self._orphaned_switchboards = set()
+        self._requested_switchboards = {}
         self._pending_switchboards = {}
 
         self._client._protocol.connect("switchboard-invitation-received",
@@ -317,7 +318,7 @@ class SwitchboardManager(gobject.GObject):
                 handler._switchboard = switchboard
                 return
 
-        # Check being requested switchboards
+        # Check pending switchboards
         for switchboard, handlers in self._pending_switchboards.iteritems():
             pending_handler = handlers.pop()
             handlers.add(pending_handler)
@@ -327,9 +328,16 @@ class SwitchboardManager(gobject.GObject):
                 logger.info("Using pending switchboard")
                 return
 
-        self._client._protocol.\
-                request_switchboard(priority, self._ns_switchboard_request_response, handler)
+        # Check switchboards being requested for same participants
+        if participants in self._requested_switchboards:
+            self._requested_switchboards[participants].add(handler)
+            logger.info("Using already requested switchboard for same contacts")
+            return
+
         logger.info("Requesting new switchboard")
+        self._requested_switchboards[participants] = set([handler])
+        self._client._protocol.request_switchboard(priority,
+                self._ns_switchboard_request_response, participants)
 
     def close_handler(self, handler):
         logger.info("Closing switchboard handler %s" % repr(handler))
@@ -350,9 +358,10 @@ class SwitchboardManager(gobject.GObject):
                 del self._pending_switchboards[switchboard]
                 self._orphaned_switchboards.add(switchboard)
 
-    def _ns_switchboard_request_response(self, session, handler):
+    def _ns_switchboard_request_response(self, session, participants):
         switchboard = self._build_switchboard(session)
-        self._pending_switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
+        handlers = self._requested_switchboards.pop(participants, set())
+        self._pending_switchboards[switchboard] = handlers
 
     def _ns_switchboard_invite(self, protocol, session, inviter):
         switchboard = self._build_switchboard(session)

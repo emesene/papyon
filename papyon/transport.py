@@ -365,7 +365,7 @@ class HTTPPollConnection(BaseTransport):
         self.__error = False
 
     def _setup_transport(self, host, port, proxies):
-        transport = gnet.protocol.HTTP(host, port, self.proxies)
+        transport = gnet.protocol.HTTP(host, port, proxies)
         transport.connect("response-received", self.__on_received)
         transport.connect("request-sent", self.__on_sent)
         transport.connect("error", self.__on_error)

@@ -62,6 +62,7 @@ class P2PTransportManager(gobject.GObject):
         uun_transport = NotificationP2PTransport(client, self)
 
     def _register_transport(self, transport):
+        logger.info("Registering transport %s" % repr(transport))
         assert transport not in self._transports, "Trying to register transport twice"
         self._transports.add(transport)
         signals = []
@@ -76,11 +77,13 @@ class P2PTransportManager(gobject.GObject):
         self._transport_signals[transport] = signals
 
     def _unregister_transport(self, transport):
+        if transport not in self._transports:
+            return
+        logger.info("Unregistering transport %s" % repr(transport))
         self._transports.discard(transport)
-        signals = self._transport_signals[transport]
+        signals = self._transport_signals.pop(transport, [])
         for signal in signals:
             transport.disconnect(signal)
-        del self._transport_signals[transport]
 
     def _get_transport(self, peer, peer_guid, blob):
         for transport in self._transports:

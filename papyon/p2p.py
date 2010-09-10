@@ -493,9 +493,10 @@ class P2PMetaSession(gobject.GObject):
         self._sessions = []
 
     def _cancel_all(self):
-        for session in self._sessions:
-            self._cancel_session(session)
+        sessions = self._sessions[:]
         self._remove_all()
+        for session in sessions:
+            self._cancel_session(session)
 
     def _keep_session(self, session_to_keep):
         if session_to_keep not in self._sessions:

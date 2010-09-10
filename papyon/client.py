@@ -94,6 +94,7 @@ from papyon.transport import *
 from papyon.switchboard_manager import SwitchboardManager
 from papyon.media import RTCActivityManager
 from papyon.msnp2p import P2PSessionManager
+from papyon.msnp2p.transport.switchboard import SwitchboardP2PTransport
 from papyon.p2p import MSNObjectStore, FileTransferManager, WebcamHandler
 from papyon.sip import SIPCallManager
 from papyon.conversation import SwitchboardConversation, \
@@ -467,6 +468,8 @@ class Client(EventsDispatcher):
             if handler_class is SwitchboardConversation:
                 if self._dispatch("on_invite_conversation", handler) == 0:
                     logger.warning("No event handler attached for conversations")
+            elif handler_class in [SwitchboardP2PTransport]:
+                pass
             else:
                 logger.warning("Unknown Switchboard Handler class %s" % handler_class)
 

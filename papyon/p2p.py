@@ -329,6 +329,8 @@ class MSNObjectStore(P2PSessionHandler):
         session = MSNObjectMetaSession(self._client, peer, app_id, context)
         self._add_session(session)
         self._callbacks[session] = (callback, errback, msn_object)
+        logger.info("Requesting a MSNObject from %s (%i end points)" %
+                (peer.account, session.count))
         session.invite()
         return session
 
@@ -457,6 +459,10 @@ class P2PMetaSession(gobject.GObject):
             return self._sessions[0]
         return None
 
+    @property
+    def count(self):
+        return len(self._sessions)
+
     def __getattr__(self, name):
         if self.session:
             return getattr(self.session, name)
@@ -501,6 +507,8 @@ class P2PMetaSession(gobject.GObject):
     def _keep_session(self, session_to_keep):
         if session_to_keep not in self._sessions:
             return False
+        logger.info("Keeping only session %s in meta session" %
+                session_to_keep.id)
         self._sessions.remove(session_to_keep)
         handles = self._handles.pop(session_to_keep)
         self._cancel_all()

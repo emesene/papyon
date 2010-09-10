@@ -114,7 +114,7 @@ class SIPTunneledTransport(SIPBaseTransport):
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \
                 (call_id, data)
         data = data.replace("\r\n", "\n").replace("\n", "\r\n")
-        self._protocol.send_user_notification(data, contact, None,
+        self._protocol.send_user_notification(data, contact, guid,
                 UserNotificationTypes.TUNNELED_SIP)
 
     def on_notification_received(self, protocol, peer, peer_guid, type, message):

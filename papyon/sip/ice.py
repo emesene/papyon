@@ -153,13 +153,13 @@ class ICECandidateParser(object):
         if draft is 19:
             cand.priority = int(cand.priority)
         if draft is 6:
+            cand.username = fix_b64_padding(cand.username)
+            cand.password = fix_b64_padding(cand.password)
             cand.priority = int(float(cand.priority) * 1000)
             if cand.priority < 0.5:
                 cand.type = "relay"
 
         cand.component_id = int(cand.component_id)
-        cand.username = fix_b64_padding(cand.username)
-        cand.password = fix_b64_padding(cand.password)
         cand.port = int(cand.port)
         if cand.base_port is not None:
             cand.base_port = int(cand.base_port)

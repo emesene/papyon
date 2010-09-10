@@ -86,6 +86,8 @@ class ClientEvents(papyon.event.ClientEventInterface,
         elif state == papyon.event.ClientState.OPEN:
             self._client.profile.display_name = "Paypon (SIP test)"
             self._client.profile.presence = papyon.Presence.ONLINE
+            self._client.profile.client_capabilities.has_webcam = True
+            self._client.profile.client_capabilities.supports_rtc_video = True
             for contact in self._client.address_book.contacts:
                 print contact
             gobject.timeout_add_seconds(2, self._client.invite)

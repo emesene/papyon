@@ -290,12 +290,11 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                 self._inviting = False
 
     def _handle_BYE(self, command):
-        if len(command.arguments) == 1:
-            account, guid = self.__parse_account(command.arguments[0])
-            self.__participant_left(account, guid)
-        else:
-            self._state = ProtocolState.CLOSED
-            self.participants = {}
+        account, guid = self.__parse_account(command.arguments[0])
+        self.__participant_left(account, guid)
+        end_points = self.end_points.get(self._client.profile.account, [])
+        if len(self.participants) == 0 and len(end_points) == 0:
+            self.leave()
 
     # --------- Messenging ---------------------------------------------------
     def _handle_MSG(self, command):

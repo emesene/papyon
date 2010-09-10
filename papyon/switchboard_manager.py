@@ -168,7 +168,6 @@ class SwitchboardHandler(object):
         self.participants.remove(contact)
         if len(self.participants) == 0:
             self.__add_pending(contact)
-            self._switchboard.leave()
 
     def __on_user_presence_changed(self, contact):
         if (self._switchboard and self.switchboard.state == msnp.ProtocolState.OPEN) or self._switchboard_requested:

@@ -33,7 +33,11 @@ logger = logging.getLogger('papyon.msnp2p.transport.switchboard')
 
 
 class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
+
+    MAX_OUTSTANDING_SENDS = 5
+
     def __init__(self, client, switchboard, contacts, peer, peer_guid, transport_manager):
+        self._oustanding_sends = 0
         self._peer = peer
         self._peer_guid = peer_guid
         SwitchboardHandler.__init__(self, client, switchboard, contacts)
@@ -91,6 +95,9 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
             return None
         return message.headers[header].split(';', 1)[1][1:-1]
 
+    def _ready_to_send(self):
+        return (self._oustanding_sends < self.MAX_OUTSTANDING_SENDS)
+
     def _send_chunk(self, peer, peer_guid, chunk):
         logger.debug(">>> %s" % repr(chunk))
         if self.version is 1:
@@ -102,8 +109,10 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
                                    peer_guid + "}"}
         content_type = 'application/x-msnmsgrp2p'
         body = str(chunk) + struct.pack('>L', chunk.application_id)
+        self._oustanding_sends += 1
         self._send_message(content_type, body, headers,
-                MessageAcknowledgement.MSNC, (self._on_chunk_sent, chunk))
+                MessageAcknowledgement.MSNC, (self._on_message_sent, chunk),
+                (self._on_message_error, chunk))
 
     def _on_message_received(self, message):
         version = 1
@@ -120,6 +129,13 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         logger.debug("<<< %s" % repr(chunk))
         self._on_chunk_received(self._peer, self._peer_guid, chunk)
+
+    def _on_message_sent(self, chunk):
+        self._oustanding_sends -= 1
+        self._on_chunk_sent(chunk)
+
+    def _on_message_error(self, chunk):
+        self._oustanding_sends -= 1
 
     def _on_switchboard_closed(self):
         pass

@@ -97,10 +97,7 @@ class BaseP2PTransport(gobject.GObject):
         self._queue_lock.acquire()
         self._data_blob_queue.append((peer, peer_guid, blob))
         self._queue_lock.release()
-
-        if self._source is None:
-            self._source = gobject.timeout_add(200, self._process_send_queue)
-        self._process_send_queue()
+        self._start_processing()
 
     def cleanup(self, session_id):
         # remove this session's blobs from the data queue
@@ -115,6 +112,9 @@ class BaseP2PTransport(gobject.GObject):
 
     def close(self):
         self._transport_manager._unregister_transport(self)
+
+    def _ready_to_send(self):
+        raise NotImplementedError
 
     def _send_chunk(self, peer, peer_guid, chunk):
         raise NotImplementedError
@@ -168,7 +168,7 @@ class BaseP2PTransport(gobject.GObject):
             else: # data chunk (buffered by the transport manager)
                 self.emit("chunk-received", chunk)
 
-        self._process_send_queue()
+        self._start_processing()
 
     def _on_signaling_chunk_received(self, chunk):
         blob_id = chunk.blob_id
@@ -187,17 +187,30 @@ class BaseP2PTransport(gobject.GObject):
 
     def _on_chunk_sent(self, chunk):
         self.emit("chunk-sent", chunk)
+        self._start_processing()
+
+    def _start_processing(self):
+        if self._source is None:
+            self._source = gobject.timeout_add(200, self._process_send_queue)
         self._process_send_queue()
+
+    def _stop_processing(self):
+        if self._source is not None:
+            gobject.source_remove(self._source)
+            self._source = None
 
     def _process_send_queue(self):
         if not self._queue_lock.acquire(False):
             return True
         if len(self._data_blob_queue) == 0:
             self._queue_lock.release()
-            if self._source is not None:
-                gobject.source_remove(self._source)
-                self._source = None
+            self._stop_processing()
             return False
+        if not self._ready_to_send():
+            logger.info("Transport is not ready to send, bail out")
+            self._queue_lock.release()
+            self._stop_processing()
+            return True
 
         sync = self._first
         self._first = False

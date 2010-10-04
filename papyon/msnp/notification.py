@@ -562,11 +562,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         contacts = self.__search_account(account, network_id)
         for contact in contacts:
             contact._add_flag(profile.ContactFlag.EXTENDED_PRESENCE_KNOWN)
+            contact._server_property_changed("end-points", end_points)
             contact._server_property_changed("msn-object", msn_object)
             contact._server_property_changed("current-media", cm)
             contact._server_property_changed("personal-message", pm)
             contact._server_property_changed("signature-sound", ss)
-            contact._server_property_changed("end-points", end_points)
 
     def _handle_UUN(self, command): # UBN acknowledgment
         pass

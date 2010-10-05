@@ -390,7 +390,10 @@ def match_response_to_transaction(response, transaction, match_method=True):
     # Reponse To header might have a mepid and tag added
     if not response.To.uri.startswith(transaction.request.To.uri):
         return False
-    headers = ("Call-ID", "CSeq", "From")
+    if (response.From.uri != transaction.request.From.uri or
+            response.From.tag != transaction.request.From.tag):
+        return False
+    headers = ("Call-ID", "CSeq")
     return response.match_headers(headers, transaction.request)
 
 def match_request_to_transaction(request, transaction, match_method=True):

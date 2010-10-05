@@ -29,8 +29,5 @@ class MSEpidExtension(SIPExtension):
         self._epid = uuid.uuid4().get_hex()[:10]
 
     def extend_request(self, message):
-        mepid = self._client.machine_guid.upper().replace("-", "")
-        mepid = mepid.replace("{", "")
-        mepid = mepid.replace("}", "")
         if message.From and "epid" not in message.From.params:
             message.From.params["epid"] = self._epid

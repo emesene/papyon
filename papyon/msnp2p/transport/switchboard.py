@@ -68,6 +68,8 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
                 peer = client.profile
         if peer is None and len(participants) > 0:
             peer = list(participants)[0]
+        elif peer is None:
+            return None
         return SwitchboardP2PTransport(client, (), peer, guid,
             transport_manager)
 

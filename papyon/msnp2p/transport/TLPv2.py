@@ -298,7 +298,7 @@ class MessageChunk(object):
 
     def create_ack_chunk(self, sync=False):
         header = TLPHeader()
-        header.ack_seq = self.header.chunk_id + self.header.chunk_size
+        header.ack_seq = self.ack_id
         header.set_sync(sync)
         return MessageChunk(header)
 

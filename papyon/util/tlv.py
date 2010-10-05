@@ -61,8 +61,9 @@ class TLV(object):
         size = 0
         for (t, v) in self._data.items():
             size += 2 + self._length_dict[t]
-        padding = 4 - (size % 4)
-        return size + padding
+        if (size % 4) != 0:
+            size += 4 - (size % 4)
+        return size
 
     def __str__(self):
         """Pack data in a string and add padding."""
@@ -72,8 +73,8 @@ class TLV(object):
             l = self._length_dict[t]
             f = self.size_to_packed_format(l)
             string += struct.pack(">BB%s" % f, t, l, v)
-        padding = 4 - (len(string) % 4)
-        string += '\x00' * padding
+        if (len(string) % 4) != 0:
+            string += '\x00' * (4 - (len(string) % 4))
         return string
 
     def parse(self, data, size):

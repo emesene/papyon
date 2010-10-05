@@ -29,7 +29,7 @@ import uuid
 __all__ = ['SLPMessage', 'SLPRequestMessage', 'SLPResponseMessage',
            'SLPMessageBody', 'SLPNullBody', 'SLPSessionRequestBody',
            'SLPSessionCloseBody', 'SLPSessionFailureResponseBody',
-           'SLPTransferRequestBody', 'SLPTransferResponseBody']
+           'SLPTransportRequestBody', 'SLPTransportResponseBody']
 
 
 class SLPMessage(HTTPMessage):
@@ -279,10 +279,10 @@ class SLPSessionRequestBody(SLPMessageBody):
 
 SLPMessageBody.register_content(SLPContentType.SESSION_REQUEST, SLPSessionRequestBody)
 
-class SLPTransferRequestBody(SLPMessageBody):
+class SLPTransportRequestBody(SLPMessageBody):
     def __init__(self, session_id=None, s_channel_state=None,
             capabilities_flags=None):
-        SLPMessageBody.__init__(self,SLPContentType.TRANSFER_REQUEST,
+        SLPMessageBody.__init__(self,SLPContentType.TRANSPORT_REQUEST,
                                     session_id, s_channel_state, capabilities_flags)
 
         self.add_header("NetID",-1388627126)
@@ -301,13 +301,13 @@ class SLPTransferRequestBody(SLPMessageBody):
         except (KeyError, ValueError):
             return ""
 
-SLPMessageBody.register_content(SLPContentType.TRANSFER_REQUEST, SLPTransferRequestBody)
+SLPMessageBody.register_content(SLPContentType.TRANSPORT_REQUEST, SLPTransportRequestBody)
 
-class SLPTransferResponseBody(SLPMessageBody):
+class SLPTransportResponseBody(SLPMessageBody):
     def __init__(self, bridge=None, listening=None, nonce=None, internal_ips=None,
             internal_port=None, external_ips=None, external_port=None,
             session_id=None, s_channel_state=None, capabilities_flags=None):
-        SLPMessageBody.__init__(self,SLPContentType.TRANSFER_RESPONSE,
+        SLPMessageBody.__init__(self,SLPContentType.TRANSPORT_RESPONSE,
                                     session_id, s_channel_state, capabilities_flags)
 
         if bridge is not None:
@@ -381,7 +381,7 @@ class SLPTransferResponseBody(SLPMessageBody):
         except (KeyError, ValueError):
             return 0
 
-SLPMessageBody.register_content(SLPContentType.TRANSFER_RESPONSE, SLPTransferResponseBody)
+SLPMessageBody.register_content(SLPContentType.TRANSPORT_RESPONSE, SLPTransportResponseBody)
 
 class SLPSessionCloseBody(SLPMessageBody):
     def __init__(self, context=None, session_id=None, reason=None,

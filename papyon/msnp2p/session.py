@@ -157,7 +157,7 @@ class P2PSession(gobject.GObject):
 
     def _transreq(self):
         self._cseq = 0
-        body = SLPTransferRequestBody(self._id, 0, 1)
+        body = SLPTransportRequestBody(self._id, 0, 1)
         message = SLPRequestMessage(SLPRequestMethod.INVITE,
                 "MSNMSGR:" + self.remote_id,
                 to=self.remote_id,
@@ -197,12 +197,12 @@ class P2PSession(gobject.GObject):
 
     def _accept_transreq(self, transreq, bridge, listening, nonce, local_ip,
             local_port, extern_ip, extern_port):
-        body = SLPTransferResponseBody(bridge, listening, nonce, [local_ip],
+        body = SLPTransportResponseBody(bridge, listening, nonce, [local_ip],
                 local_port, [extern_ip], extern_port, self._id, 0, 1)
         self._respond_transreq(transreq, 200, body)
 
     def _decline_transreq(self, transreq):
-        body = SLPTransferResponseBody(session_id=self._id)
+        body = SLPTransportResponseBody(session_id=self._id)
         self._respond_transreq(transreq, 603, body)
         self._dispose()
 
@@ -283,7 +283,7 @@ class P2PSession(gobject.GObject):
             if isinstance(message, SLPRequestMessage):
                 if isinstance(message.body, SLPSessionRequestBody):
                     self._on_invite_received(message)
-                elif isinstance(message.body, SLPTransferRequestBody):
+                elif isinstance(message.body, SLPTransportRequestBody):
                     self._decline_transreq(message)
                 elif isinstance(message.body, SLPSessionCloseBody):
                     self._on_bye_received(message)

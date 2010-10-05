@@ -174,7 +174,7 @@ class P2PSessionManager(gobject.GObject):
                         #TODO: answer with a 603 Decline ?
                         logger.error("SLPError")
                         return None
-                elif isinstance(message.body, SLPTransferRequestBody):
+                elif isinstance(message.body, SLPTransportRequestBody):
                     session = self._sessions[session_id]
                 else:
                     return None

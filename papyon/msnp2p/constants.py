@@ -44,8 +44,8 @@ class SLPContentType(object):
     SESSION_FAILURE = "application/x-msnmsgr-session-failure-respbody"
     SESSION_CLOSE = "application/x-msnmsgr-sessionclosebody"
 
-    TRANSFER_REQUEST = "application/x-msnmsgr-transreqbody"
-    TRANSFER_RESPONSE = "application/x-msnmsgr-transrespbody"
+    TRANSPORT_REQUEST = "application/x-msnmsgr-transreqbody"
+    TRANSPORT_RESPONSE = "application/x-msnmsgr-transrespbody"
 
     TRANS_UDP_SWITCH = "application/x-msnmsgr-transudpswitch"
     

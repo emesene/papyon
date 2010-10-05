@@ -52,7 +52,7 @@ class P2PTransportManager(gobject.GObject):
 
         self._client = client
         switchboard_manager = self._client._switchboard_manager
-        switchboard_manager.register_handler(SwitchboardP2PTransport, self)
+        switchboard_manager.register_handler_class(SwitchboardP2PTransport, self)
         self._default_transport = lambda peer, peer_guid : \
             SwitchboardP2PTransport.handle_peer(client, peer, peer_guid, self)
         self._transports = set()

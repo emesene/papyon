@@ -54,6 +54,7 @@ class SwitchboardHandler(object):
         for contact in contacts:
             self.__add_pending(contact)
 
+        self._switchboard_manager.register_handler(self)
 
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -283,8 +284,11 @@ class SwitchboardManager(gobject.GObject):
         for switchboard in self._switchboards:
             switchboard.leave()
 
-    def register_handler(self, handler_class, *extra_arguments):
+    def register_handler_class(self, handler_class, *extra_arguments):
         self._handlers_class.add((handler_class, extra_arguments))
+
+    def register_handler(self, handler):
+        self._orphaned_handlers.add(handler)
 
     def request_switchboard(self, handler, priority=99):
         handler_participants = handler.total_participants
@@ -448,6 +452,7 @@ class SwitchboardManager(gobject.GObject):
                     switchboard_participants, message, *extra_args)
             if handler is None:
                 continue
+            self._orphaned_handlers.discard(handler)
             self._orphaned_switchboards.discard(switchboard)
             handlers.add(handler)
             handler._switchboard = switchboard

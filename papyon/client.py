@@ -143,7 +143,7 @@ class Client(EventsDispatcher):
                 self._proxies, version)
 
         self._switchboard_manager = SwitchboardManager(self)
-        self._switchboard_manager.register_handler(SwitchboardConversation)
+        self._switchboard_manager.register_handler_class(SwitchboardConversation)
 
         self._p2p_session_manager = P2PSessionManager(self)
         self._webcam_handler = WebcamHandler(self)

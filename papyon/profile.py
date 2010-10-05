@@ -566,6 +566,7 @@ class Profile(BaseContact):
 
         self._id = "00000000-0000-0000-0000-000000000000"
         self._profile = ""
+        self._network_id = NetworkID.MSN
         self._display_name = self._account.split("@", 1)[0]
         self._privacy = Privacy.BLOCK
         self._end_point_name = ""

@@ -768,9 +768,16 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
                 address_book.profile.display_name)
 
         contacts = address_book.contacts.group_by_domain()
+        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
+
+        for contact in address_book.contacts:
+            if (contact.memberships & mask & ~profile.Membership.FORWARD) == \
+                    (profile.Membership.ALLOW | profile.Membership.BLOCK):
+                logger.warning("Contact is on both Allow and Block list; " \
+                               "removing from Allow list (%s)" % contact.account)
+                contact._remove_membership(profile.Membership.ALLOW)
 
         payloads = ['<ml l="1">']
-        mask = ~(profile.Membership.REVERSE | profile.Membership.PENDING)
         for domain, contacts in contacts.iteritems():
             payloads[-1] += '<d n="%s">' % domain
             for contact in contacts:

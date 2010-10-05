@@ -36,11 +36,11 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
 
     MAX_OUTSTANDING_SENDS = 5
 
-    def __init__(self, client, switchboard, contacts, peer, peer_guid, transport_manager):
+    def __init__(self, client, contacts, peer, peer_guid, transport_manager):
         self._oustanding_sends = 0
         self._peer = peer
         self._peer_guid = peer_guid
-        SwitchboardHandler.__init__(self, client, switchboard, contacts)
+        SwitchboardHandler.__init__(self, client, contacts)
         BaseP2PTransport.__init__(self, transport_manager, "switchboard")
 
     def close(self):
@@ -54,11 +54,11 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
 
     @staticmethod
     def handle_peer(client, peer, peer_guid, transport_manager):
-        return SwitchboardP2PTransport(client, None, (peer,), peer, peer_guid,
+        return SwitchboardP2PTransport(client, (peer,), peer, peer_guid,
             transport_manager)
 
     @staticmethod
-    def handle_message(client, switchboard, message, transport_manager):
+    def handle_message(client, participants, message, transport_manager):
         guid = None
         peer = None
         if 'P2P-Src' in message.headers and ';' in message.headers['P2P-Src']:
@@ -66,9 +66,9 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
             guid = guid[1:-1]
             if account == client.profile.account:
                 peer = client.profile
-        if peer is None:
-            peer = switchboard.participants.values()[0]
-        return SwitchboardP2PTransport(client, switchboard, (), peer, guid,
+        if peer is None and len(participants) > 0:
+            peer = list(participants)[0]
+        return SwitchboardP2PTransport(client, (), peer, guid,
             transport_manager)
 
     @property

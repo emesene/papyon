@@ -38,7 +38,7 @@ __all__ = ['SwitchboardManager']
 logger = logging.getLogger('papyon.protocol.switchboard_manager')
 
 class SwitchboardHandler(object):
-    def __init__(self, client, switchboard, contacts, priority=99):
+    def __init__(self, client, contacts, priority=99):
         self._client = client
         self._switchboard_manager = weakref.proxy(self._client._switchboard_manager)
         self.__switchboard = None
@@ -54,8 +54,6 @@ class SwitchboardHandler(object):
         for contact in contacts:
             self.__add_pending(contact)
 
-        if switchboard is not None:
-            self._switchboard = switchboard
 
     @staticmethod
     def _can_handle_message(message, switchboard_client=None):
@@ -422,31 +420,36 @@ class SwitchboardManager(gobject.GObject):
 
     def _sb_message_received(self, switchboard, message):
         switchboard_participants = set(switchboard.participants.values())
+
+        # Get current handlers for this switchboard
         if switchboard in self._switchboards.keys():
             handlers = self._switchboards[switchboard]
             handlers_class = [type(handler) for handler in handlers]
-            for handler in list(handlers):
-                if not handler._can_handle_message(message, handler):
-                    continue
-                handler._on_message_received(message)
-            for handler_class, extra_args in self._handlers_class:
-                if handler_class in handlers_class:
-                    continue
-                if not handler_class._can_handle_message(message):
-                    continue
-                handler = handler_class.handle_message(self._client,
-                        switchboard, message, *extra_args)
-                handlers.add(handler)
-                self.emit("handler-created", handler_class, handler)
-                handler._on_message_received(message)
+        elif switchboard in list(self._orphaned_switchboards):
+            handlers = set() #FIXME: WeakSet ?
+            handlers_class = []
+            self._switchboards[switchboard] = handlers
+        else:
+            logger.warning("Message received on unknown switchboard")
+            return
 
-        if switchboard in list(self._orphaned_switchboards):
-            for handler_class, extra_args in self._handlers_class:
-                if not handler_class._can_handle_message(message):
-                    continue
-                handler = handler_class.handle_message(self._client,
-                        switchboard, message, *extra_args)
-                self._switchboards[switchboard] = set([handler]) #FIXME: WeakSet ?
-                self._orphaned_switchboards.discard(switchboard)
-                self.emit("handler-created", handler_class, handler)
-                handler._on_message_received(message)
+        # Signal message to existing handlers
+        for handler in list(handlers):
+            if not handler._can_handle_message(message, handler):
+                continue
+            handler._on_message_received(message)
+        # Create all handler that could handle this message
+        for handler_class, extra_args in self._handlers_class:
+            if handler_class in handlers_class:
+                continue
+            if not handler_class._can_handle_message(message):
+                continue
+            handler = handler_class.handle_message(self._client,
+                    switchboard_participants, message, *extra_args)
+            if handler is None:
+                continue
+            self._orphaned_switchboards.discard(switchboard)
+            handlers.add(handler)
+            handler._switchboard = switchboard
+            self.emit("handler-created", handler_class, handler)
+            handler._on_message_received(message)

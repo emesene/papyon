@@ -59,7 +59,7 @@ def Conversation(client, contacts):
     external_contacts = set(contacts) - msn_contacts
 
     if len(external_contacts) == 0:
-        return SwitchboardConversation(client, None, contacts)
+        return SwitchboardConversation(client, contacts)
     elif len(msn_contacts) != 0:
         raise NotImplementedError("The protocol doesn't allow mixing " \
                 "contacts from different networks in a single conversation")
@@ -419,8 +419,8 @@ class ExternalNetworkConversation(AbstractConversation):
 
 
 class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
-    def __init__(self, client, switchboard, contacts):
-        SwitchboardHandler.__init__(self, client, switchboard, contacts, priority=0)
+    def __init__(self, client, contacts):
+        SwitchboardHandler.__init__(self, client, contacts, priority=0)
         AbstractConversation.__init__(self, client)
 
     @staticmethod
@@ -434,8 +434,8 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
                 'text/x-mms-animemoticon')
 
     @staticmethod
-    def handle_message(client, switchboard, message):
-        return SwitchboardConversation(client, switchboard, ())
+    def handle_message(client, participants, message):
+        return SwitchboardConversation(client, ())
 
     def invite_user(self, contact):
         """Request a contact to join in the conversation.

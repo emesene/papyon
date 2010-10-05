@@ -32,6 +32,7 @@ import struct
 import gobject
 import logging
 import base64
+import os
 import random
 
 from papyon.media import MediaCall, MediaCandidate, MediaCandidateEncoder, \

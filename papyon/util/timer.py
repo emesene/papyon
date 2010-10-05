@@ -34,7 +34,10 @@ class Timer(object):
 
     def start_timeout(self, key, time, *cb_args):
         self.stop_timeout(key)
-        source = gobject.timeout_add_seconds(time, self.on_timeout, key)
+        if int(time) == time:
+            source = gobject.timeout_add_seconds(int(time), self.on_timeout, key)
+        else:
+            source = gobject.timeout_add(time * 1000, self.on_timeout, key)
         self._timeout_sources[key] = source
         self._timeout_args[key] = cb_args
 

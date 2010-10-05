@@ -62,9 +62,9 @@ class BaseP2PTransport(gobject.GObject):
         self._local_chunk_id = None
         self._remote_chunk_id = None
 
-        self._transport_manager._register_transport(self)
         self._queue_lock = threading.Lock()
         self._reset()
+        self._transport_manager._register_transport(self)
 
     @property
     def name(self):

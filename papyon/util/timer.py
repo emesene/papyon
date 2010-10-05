@@ -25,37 +25,51 @@ __all__ = ['Timer']
 class Timer(object):
 
     def __init__(self):
-        self._timeout_sources = {} # name => source
-        self._timeout_args = {} # name => callback args
+        self._timeout_sources = {} # key => source
+        self._timeout_args = {} # key => callback args
 
     @property
     def timeouts(self):
         return self._timeout_sources.keys()
 
-    def start_timeout(self, name, time, *cb_args):
-        self.stop_timeout(name)
-        source = gobject.timeout_add_seconds(time, self.on_timeout, name)
-        self._timeout_sources[name] = source
-        self._timeout_args[name] = cb_args
+    def start_timeout(self, key, time, *cb_args):
+        self.stop_timeout(key)
+        source = gobject.timeout_add_seconds(time, self.on_timeout, key)
+        self._timeout_sources[key] = source
+        self._timeout_args[key] = cb_args
 
-    def stop_timeout(self, name):
-        source = self._timeout_sources.get(name, None)
+    def stop_timeout(self, key):
+        source = self._timeout_sources.get(key, None)
         if source is not None:
             gobject.source_remove(source)
-            del self._timeout_sources[name]
-        if name in self._timeout_args:
-            return self._timeout_args.pop(name)
+            del self._timeout_sources[key]
+        if key in self._timeout_args:
+            return self._timeout_args.pop(key)
         return []
 
+    def start_timeout_with_id(self, name, id, time, *cb_args):
+        key = (name, id)
+        self.start_timeout(key, time, *cb_args)
+
+    def stop_timeout_with_id(self, name, id):
+        key = (name, id)
+        self.stop_timeout(key)
+
     def stop_all_timeout(self):
-        for (name, source) in self._timeout_sources.items():
+        for (key, source) in self._timeout_sources.items():
             if source is not None:
                 gobject.source_remove(source)
         self._timeout_sources.clear()
         self._timeout_args.clear()
 
-    def on_timeout(self, name):
-        cb_args = self.stop_timeout(name)
+    def on_timeout(self, key):
+        cb_args = self.stop_timeout(key)
+        if type(key) is tuple:
+            name = key[0]
+            cb_args = list(cb_args)
+            cb_args.insert(0, key[1]) # prepend ID to args
+        elif type(key) is str:
+            name = key
         handler = getattr(self, "on_%s_timeout" % name, None)
         if handler is not None:
             handler(*cb_args)

@@ -447,6 +447,7 @@ class SIPDialog(gobject.GObject, Timer):
 
     def _handle_reinvite_request(self, request):
         # 14.2 UAS Behavior (Modifying an Existing Session)
+        self.answer(request, 100)
         if self._state in ("INVITED", "REINVITED"):
             logger.warning("Already invited, can't handle incoming INVITE")
             self.answer(request, 500)

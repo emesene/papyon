@@ -469,6 +469,7 @@ class SIPDialog(gobject.GObject, Timer):
         return request
 
     def _handle_ack_request(self, request):
+        self._pending_incoming_requests.remove(request) # No need to answer
         self._state = "CONFIRMED"
 
     # CANCEL Method ----------------------------------------------------------

@@ -100,9 +100,9 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
 
     def _send_chunk(self, peer, peer_guid, chunk):
         logger.debug(">>> %s" % repr(chunk))
-        if self.version is 1:
+        if chunk.version is 1 or peer_guid is None:
             headers = {'P2P-Dest': self.peer.account}
-        elif self.version is 2:
+        elif chunk.version is 2:
             headers = {'P2P-Src' : self._client.profile.account + ";{" +
                                    self._client.machine_guid + "}",
                        'P2P-Dest': peer.account + ";{" +

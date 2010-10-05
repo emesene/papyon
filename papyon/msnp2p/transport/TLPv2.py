@@ -257,6 +257,10 @@ class MessageChunk(object):
             return 0
         return self.header.data_remaining + self.size
 
+    @property
+    def version(self):
+        return 2
+
     def is_control_chunk(self):
         return self.is_ack_chunk() or self.is_nak_chunk() or \
                 (self.require_ack() and self.size == 0)

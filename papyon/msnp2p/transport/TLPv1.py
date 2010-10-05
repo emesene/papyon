@@ -137,6 +137,10 @@ class MessageChunk(object):
     def blob_size(self):
         return self.header.blob_size
 
+    @property
+    def version(self):
+        return 1
+
     def is_control_chunk(self):
         return self.header.flags & 0xCF
 

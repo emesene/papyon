@@ -267,8 +267,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             return # wait for the command without GUID to remove from participants
         if account == self._client.profile.account:
             return # ignore our own user
-        self.emit("user-left", self.participants[account])
-        del self.participants[account]
+        participant = self.participants.pop(account)
+        self.emit("user-left", participant)
 
     def _handle_IRO(self, command):
         account, guid = self.__parse_account(command.arguments[2])

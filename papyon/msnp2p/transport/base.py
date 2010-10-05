@@ -152,8 +152,12 @@ class BaseP2PTransport(gobject.GObject):
         if chunk.is_data_preparation_chunk():
             return
 
+        if self._first and not chunk.is_syn_request():
+            self._first = False
+
         if chunk.require_ack():
-            ack_chunk = chunk.create_ack_chunk()
+            ack_chunk = chunk.create_ack_chunk(self._first)
+            self._first = False
             self.__send_chunk(peer, peer_guid, ack_chunk)
 
         if chunk.is_ack_chunk() or chunk.is_nak_chunk():

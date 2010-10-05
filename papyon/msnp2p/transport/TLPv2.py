@@ -151,6 +151,16 @@ class TLPHeader(object):
             self.data_tlv.update(DLPParamType.DATA_REMAINING, value)
         return locals()
 
+    def set_sync(self, sync):
+        if sync:
+            self.op_code = TLPFlag.SYN | TLPFlag.RAK
+            self.peer_info = struct.pack(">HHHHI",
+                    PeerInfo.PROTOCOL_VERSION, PeerInfo.IMPLEMENTATION_ID,
+                    PeerInfo.VERSION, 0, PeerInfo.CAPABILITIES)
+        else:
+            self.op_code = 0
+            self.peer_info = ""
+
     def __str__(self):
         size = 8 + len(self.tlv)
         data_size = self.chunk_size
@@ -286,16 +296,10 @@ class MessageChunk(object):
     def has_progressed(self):
         return True
 
-    def create_ack_chunk(self):
+    def create_ack_chunk(self, sync=False):
         header = TLPHeader()
         header.ack_seq = self.header.chunk_id + self.header.chunk_size
-
-        # if we received a SYN request, send a SYN/ACK with a copy of the
-        # peer info and ask for an ACK
-        if self.is_syn_request():
-            header.peer_info = self.header.peer_info
-            header.op_code = TLPFlag.SYN | TLPFlag.RAK
-
+        header.set_sync(sync)
         return MessageChunk(header)
 
     def set_data(self, data):
@@ -308,12 +312,8 @@ class MessageChunk(object):
         header.session_id = session_id
         header.first = (offset == 0)
 
-        # if first message of a P2P session, add Peer Info to TLVs
-        if sync:
-            header.op_code = TLPFlag.SYN | TLPFlag.RAK
-            header.peer_info = struct.pack(">HHHHI",
-                    PeerInfo.PROTOCOL_VERSION, PeerInfo.IMPLEMENTATION_ID,
-                    PeerInfo.VERSION, 0, PeerInfo.CAPABILITIES)
+        # if first message of a transport, add Peer Info to TLVs
+        header.set_sync(sync)
 
         max_chunk_size = max_size - header.size
         data_remaining = blob_size - offset

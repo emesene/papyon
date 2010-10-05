@@ -153,6 +153,9 @@ class MessageChunk(object):
     def is_nonce_chunk(self):
         return self.header.flags & TLPFlag.KEY
 
+    def is_syn_request(self):
+        return False
+
     def is_data_preparation_chunk(self):
         return (self.header.chunk_size == 4 and self.header.blob_size == 4 and
                 self.body == "\x00\x00\x00\x00" and
@@ -181,7 +184,7 @@ class MessageChunk(object):
             return True
         return False
 
-    def create_ack_chunk(self):
+    def create_ack_chunk(self, sync=False):
         flags = TLPFlag.ACK
         if self.header.flags & TLPFlag.RAK:
             flags |= TLPFlag.RAK

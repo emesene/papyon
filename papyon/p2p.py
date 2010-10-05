@@ -125,7 +125,8 @@ class MSNObject(object):
         if other == None:
             return False
         return other._type == self._type and \
-            other._data_sha == self._data_sha
+            other._data_sha == self._data_sha and \
+            other._checksum_sha == self._checksum_sha
 
     def __hash__(self):
         return hash(str(self._type) + self._data_sha)
@@ -278,14 +279,21 @@ class MSNObjectStore(P2PSessionHandler):
             session.reject()
             return
 
+        obj = self._get_published_object(msn_object)
+        if obj is None:
+            logger.warning("Unknown MSN object, another end point might have it")
+            return
+
         self._add_session(session)
         self._callbacks[session] = (None, None, msn_object)
+        session.accept(obj._data)
+        return session
 
+    def _get_published_object(self, msn_object):
         for obj in self._published_objects:
             if obj._data_sha == msn_object._data_sha:
-                session.accept(obj._data)
-                return session
-        logger.warning("Unknown MSN object, another end point might have it")
+                return obj
+        return None
 
     def _connect_session(self, session):
         P2PSessionHandler._connect_session(self, session)
@@ -310,6 +318,9 @@ class MSNObjectStore(P2PSessionHandler):
     ### Public API
 
     def request(self, msn_object, callback, errback=None, peer=None):
+        obj = self._get_published_object(msn_object)
+        if obj is not None:
+            msn_object._data = obj._data
         if msn_object._data is not None:
             callback[0](msn_object, *callback[1:])
             return

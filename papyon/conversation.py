@@ -424,9 +424,9 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
         AbstractConversation.__init__(self, client)
 
     @staticmethod
-    def _can_handle_message(message, switchboard_client=None):
+    def _can_handle_message(message, switchboard_handler=None):
         content_type = message.content_type[0]
-        if switchboard_client is None:
+        if switchboard_handler is None:
             return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
         # FIXME : we need to not filter those 'text/x-mms-emoticon', 'text/x-mms-animemoticon'
         return content_type in ('text/plain', 'text/x-msmsgscontrol',

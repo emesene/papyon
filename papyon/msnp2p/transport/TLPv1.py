@@ -25,6 +25,7 @@ from papyon.util.decorator import rw_property
 import struct
 import random
 import logging
+import uuid
 
 logger = logging.getLogger('papyon.msnp2p.transport')
 
@@ -207,26 +208,19 @@ class MessageChunk(object):
         bytes += struct.pack(">H", self.header.dw2 >> 16)
         bytes += struct.pack("<Q", self.header.qw1)
 
-        nonce = [("%X" % ord(byte)).zfill(2) for byte in bytes]
-        for idx in (4, 7, 10, 13):
-            nonce.insert(idx, '-')
-        return "".join(nonce)
+        return uuid.UUID(bytes=bytes)
 
     def set_nonce(self, nonce):
         """Set the chunk headers from a nonce and make it a nonce chunk by
            adding the KEY flag."""
 
-        nonce = filter(lambda c: c not in '{-}', nonce)
-        bytes = ""
-        for i in range(0, len(nonce), 2):
-            bytes += chr(int(nonce[i:i+2], 16))
+        bytes = nonce.bytes
 
         self.header.dw1 = struct.unpack(">L", bytes[0:4])[0]
         self.header.dw2 = struct.unpack(">H", bytes[4:6])[0]
         self.header.dw2 += struct.unpack(">H", bytes[6:8])[0] << 16
         self.header.qw1 = struct.unpack("<Q", bytes[8:16])[0]
         self.header.flags |= TLPFlag.KEY
-
 
     @staticmethod
     def create(app_id, session_id, blob_id, offset, blob_size, max_size, sync):

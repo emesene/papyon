@@ -294,6 +294,13 @@ class SLPTransferRequestBody(SLPMessageBody):
         self.add_header("Nonce", "{%s}" % str(uuid.uuid4()).upper())
         self.add_header("Nat-Trav-Msg-Type", "WLX-Nat-Trav-Msg-Direct-Connect-Req")
 
+    @property
+    def nonce(self):
+        try:
+            return uuid.UUID(self.get_header("Nonce")[1:-1])
+        except (KeyError, ValueError):
+            return ""
+
 SLPMessageBody.register_content(SLPContentType.TRANSFER_REQUEST, SLPTransferRequestBody)
 
 class SLPTransferResponseBody(SLPMessageBody):
@@ -308,7 +315,7 @@ class SLPTransferResponseBody(SLPMessageBody):
         if listening is not None:
             self.add_header("Listening", listening and "true" or "false")
         if nonce is not None:
-            self.add_header("Nonce", "{%s}" % nonce.upper())
+            self.add_header("Nonce", "{%s}" % str(nonce).upper())
         if internal_ips is not None:
             internal_ips = " ".join(internal_ips)
             self.add_header("IPv4Internal-Addrs"[::-1], internal_ips[::-1])
@@ -342,7 +349,7 @@ class SLPTransferResponseBody(SLPMessageBody):
     @property
     def nonce(self):
         try:
-            return self.get_header("Nonce")[1:-1]
+            return uuid.UUID(self.get_header("Nonce")[1:-1])
         except (KeyError, ValueError):
             return ""
 

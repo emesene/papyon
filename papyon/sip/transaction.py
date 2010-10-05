@@ -75,9 +75,15 @@ class SIPTransactionLayer(gobject.GObject):
             self._add_transaction(transaction)
         elif type(message) is SIPResponse:
             transaction = message.request.transaction
+        else:
+            logger.warning("Invalid message type (%s)" % type(message))
+            return
 
-        if transaction is not None:
-            transaction.send(message)
+        if transaction is None:
+            logger.warning("Couldn't find transaction to send message")
+            return
+
+        transaction.send(message)
 
     def _add_transaction(self, transaction):
         handles = []

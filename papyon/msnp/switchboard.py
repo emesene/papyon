@@ -159,6 +159,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @param contact: the contact to invite
             @type contact: L{profile.Contact}"""
         assert(self.state == ProtocolState.OPEN)
+        if contact in self.__invitations.values():
+            return
         self.__invitations[self._transport.transaction_id] = contact
         self._inviting = True
         self._send_command('CAL', (contact.account,) )

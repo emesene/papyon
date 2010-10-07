@@ -125,7 +125,7 @@ class BaseP2PTransport(gobject.GObject):
         self._queue_lock.acquire()
         self._first = True
         self._data_blob_queue = {} # session_id : [(peer, peer_guid, blob)]
-        self._pending_blob = {} # ack_id : (blob, callback, errback)
+        self._outgoing_chunks = {} # chunk : blob
         self._pending_ack = set()
         self._queue_lock.release()
 
@@ -134,18 +134,6 @@ class BaseP2PTransport(gobject.GObject):
 
     def _del_pending_ack(self, ack_id):
         self._pending_ack.discard(ack_id)
-
-    def _add_pending_blob(self, ack_id, blob):
-        if self.version == 1:
-            self._pending_blob[ack_id] = blob
-        else:
-            self.emit("blob-sent", blob)
-
-    def _del_pending_blob(self, ack_id):
-        if not ack_id in self._pending_blob:
-            return
-        blob = self._pending_blob.pop(ack_id)
-        self.emit("blob-sent", blob)
 
     def _on_chunk_received(self, peer, peer_guid, chunk):
         if chunk.is_data_preparation_chunk():
@@ -161,7 +149,6 @@ class BaseP2PTransport(gobject.GObject):
 
         if chunk.is_ack_chunk() or chunk.is_nak_chunk():
             self._del_pending_ack(chunk.acked_id)
-            self._del_pending_blob(chunk.acked_id)
 
         #FIXME: handle all the other flags (NAK...)
 
@@ -172,6 +159,9 @@ class BaseP2PTransport(gobject.GObject):
 
     def _on_chunk_sent(self, chunk):
         self.emit("chunk-sent", chunk)
+        blob = self._outgoing_chunks.pop(chunk, None)
+        if blob and blob.is_complete() and blob not in self._outgoing_chunks.values():
+            self.emit("blob-sent", blob)
         self._start_processing()
 
     def _start_processing(self):
@@ -207,11 +197,11 @@ class BaseP2PTransport(gobject.GObject):
         self._first = False
         (peer, peer_guid, blob) = self._data_blob_queue[session_id][0]
         chunk = blob.get_chunk(self.version, self.max_chunk_size, sync)
+        self._outgoing_chunks[chunk] = blob
         self.__send_chunk(peer, peer_guid, chunk)
 
         if blob.is_complete():
             self._data_blob_queue[session_id].pop(0)
-            self._add_pending_blob(chunk.ack_id, blob)
         if len(self._data_blob_queue[session_id]) == 0:
             del self._data_blob_queue[session_id]
         self._queue_lock.release()

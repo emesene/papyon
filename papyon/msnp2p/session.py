@@ -140,7 +140,8 @@ class P2PSession(gobject.GObject):
         return self._peer.account
 
     def set_receive_data_buffer(self, buffer, size):
-        self._transport_manager.register_data_buffer(self.id, buffer, size)
+        self._transport_manager.register_data_buffer(self.peer,
+                self.peer_guid, self.id, buffer, size)
 
     def _invite(self, context):
         body = SLPSessionRequestBody(self._euf_guid, self._application_id,
@@ -253,7 +254,8 @@ class P2PSession(gobject.GObject):
 
     def _dispose(self):
         logger.info("Session %s disposed" % self._id)
-        self._session_manager._transport_manager.cleanup(self._id)
+        self._session_manager._transport_manager.cleanup(self.peer,
+                self.peer_guid, self._id)
         self._session_manager._unregister_session(self)
         self.emit("disposed")
 

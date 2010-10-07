@@ -50,11 +50,14 @@ class P2PSessionManager(gobject.GObject):
         self._handlers = []
         self._transport_manager = P2PTransportManager(self._client)
         self._transport_manager.connect("blob-received",
-                lambda tr, blob: self._on_blob_received(blob))
+                lambda tr, peer, guid, blob:
+                    self._on_blob_received(peer, guid, blob))
         self._transport_manager.connect("blob-sent",
-                lambda tr, blob: self._on_blob_sent(blob))
+                lambda tr, peer, guid, blob:
+                    self._on_blob_sent(peer, guid, blob))
         self._transport_manager.connect("chunk-transferred",
-                lambda tr, chunk: self._on_chunk_transferred(chunk))
+                lambda tr, peer, guid, chunk:
+                    self._on_chunk_transferred(peer, guid, chunk))
 
     def register_handler(self, handler_class):
         self._handlers.append(handler_class)
@@ -69,7 +72,7 @@ class P2PSessionManager(gobject.GObject):
         self._transport_manager.add_to_blacklist(session.peer,
                 session.peer_guid, session.id)
 
-    def _on_chunk_transferred(self, chunk):
+    def _on_chunk_transferred(self, peer, peer_guid, chunk):
         session_id = chunk.session_id
         session = self._get_session(session_id)
         if session is None:
@@ -124,7 +127,7 @@ class P2PSessionManager(gobject.GObject):
 
         return self._get_session(session_id)
 
-    def _on_blob_received(self, blob):
+    def _on_blob_received(self, peer, peer_guid, blob):
         try:
             session = self._blob_to_session(blob)
         except SLPError:
@@ -187,7 +190,7 @@ class P2PSessionManager(gobject.GObject):
 
         session._on_blob_received(blob)
 
-    def _on_blob_sent(self, blob):
+    def _on_blob_sent(self, peer, peer_guid, blob):
         session = None
         try:
             session = self._blob_to_session(blob)

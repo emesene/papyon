@@ -116,8 +116,9 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         body = str(chunk) + struct.pack('>L', chunk.application_id)
         self._oustanding_sends += 1
         self._send_message(content_type, body, headers,
-                MessageAcknowledgement.MSNC, (self._on_message_sent, chunk),
-                (self._on_message_error, chunk))
+                MessageAcknowledgement.MSNC,
+                (self._on_message_sent, peer, peer_guid, chunk),
+                (self._on_message_error, peer, peer_guid, chunk))
 
     def _on_message_received(self, message):
         version = 1
@@ -135,11 +136,11 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         logger.debug("<<< %s" % repr(chunk))
         self._on_chunk_received(self._peer, self._peer_guid, chunk)
 
-    def _on_message_sent(self, chunk):
+    def _on_message_sent(self, peer, peer_guid, chunk):
         self._oustanding_sends -= 1
-        self._on_chunk_sent(chunk)
+        self._on_chunk_sent(peer, peer_guid, chunk)
 
-    def _on_message_error(self, chunk):
+    def _on_message_error(self, peer, peer_guid, chunk):
         self._oustanding_sends -= 1
 
     def _on_switchboard_closed(self):

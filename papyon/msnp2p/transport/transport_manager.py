@@ -36,15 +36,15 @@ class P2PTransportManager(gobject.GObject):
     __gsignals__ = {
             "blob-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, blob
 
             "blob-sent" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, blob
 
             "chunk-transferred" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, chunk
     }
 
     def __init__(self, client):
@@ -91,9 +91,8 @@ class P2PTransportManager(gobject.GObject):
                 return transport
         return self._default_transport(peer, peer_guid)
 
-    def _on_chunk_received(self, transport, chunk):
-        self.emit("chunk-transferred", chunk)
-        peer, peer_guid = transport.peer, transport.peer_guid
+    def _on_chunk_received(self, transport, peer, peer_guid, chunk):
+        self.emit("chunk-transferred", peer, peer_guid, chunk)
         session_id = chunk.session_id
         blob_id = chunk.blob_id
         key = (peer, peer_guid, session_id)
@@ -114,16 +113,16 @@ class P2PTransportManager(gobject.GObject):
         blob.append_chunk(chunk)
         if blob.is_complete():
             del self._data_blobs[key]
-            self.emit("blob-received", blob)
+            self._on_blob_received(transport, peer, peer_guid, blob)
 
-    def _on_chunk_sent(self, transport, chunk):
-        self.emit("chunk-transferred", chunk)
+    def _on_chunk_sent(self, transport, peer, peer_guid, chunk):
+        self.emit("chunk-transferred", peer, peer_guid, chunk)
 
-    def _on_blob_received(self, transport, blob):
-        self.emit("blob-received", blob)
+    def _on_blob_received(self, transport, peer, peer_guid, blob):
+        self.emit("blob-received", peer, peer_guid, blob)
 
-    def _on_blob_sent(self, transport, blob):
-        self.emit("blob-sent", blob)
+    def _on_blob_sent(self, transport, peer, peer_guid, blob):
+        self.emit("blob-sent", peer, peer_guid, blob)
 
     def send_slp_message(self, peer, peer_guid, application_id, message):
         self.send_data(peer, peer_guid, application_id, 0, str(message))

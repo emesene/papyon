@@ -37,19 +37,19 @@ class BaseP2PTransport(gobject.GObject):
     __gsignals__ = {
             "chunk-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, chunk
 
             "chunk-sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, chunk
 
             "blob-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, blob
 
             "blob-sent": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object,)),
+                (object, object, object)), # peer, peer_guid, blob
             }
 
     def __init__(self, transport_manager, name):
@@ -153,15 +153,15 @@ class BaseP2PTransport(gobject.GObject):
         #FIXME: handle all the other flags (NAK...)
 
         if not chunk.is_control_chunk():
-            self.emit("chunk-received", chunk)
+            self.emit("chunk-received", peer, peer_guid, chunk)
 
         self._start_processing()
 
-    def _on_chunk_sent(self, chunk):
-        self.emit("chunk-sent", chunk)
+    def _on_chunk_sent(self, peer, peer_guid, chunk):
+        self.emit("chunk-sent", peer, peer_guid, chunk)
         blob = self._outgoing_chunks.pop(chunk, None)
         if blob and blob.is_complete() and blob not in self._outgoing_chunks.values():
-            self.emit("blob-sent", blob)
+            self.emit("blob-sent", peer, peer_guid, blob)
         self._start_processing()
 
     def _start_processing(self):

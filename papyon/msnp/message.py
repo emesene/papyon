@@ -64,6 +64,7 @@ class Message(HTTPMessage):
         self.sender = sender
         if message:
             self.parse(message)
+        self.sender_guid = self.parse_guid('P2P-Src')
 
     def __repr__(self):
         """Represents the payload of the message"""
@@ -96,3 +97,10 @@ class Message(HTTPMessage):
     content_type = property(__get_content_type, __set_content_type,
             doc="a tuple specifying the content type")
 
+    def parse_guid(self, header):
+        if header not in self.headers or ';' not in self.headers[header]:
+            return None
+        try:
+            return self.headers[header].split(';', 1)[1][1:-1]
+        except:
+            return None

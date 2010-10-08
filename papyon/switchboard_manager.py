@@ -448,7 +448,7 @@ class SwitchboardManager(gobject.GObject):
             if not handler_class._can_handle_message(message):
                 continue
             handler = handler_class.handle_message(self._client,
-                    switchboard_participants, message, *extra_args)
+                    message, *extra_args)
             if handler is None:
                 continue
             self._orphaned_handlers.discard(handler)

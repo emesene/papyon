@@ -61,18 +61,9 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
             transport_manager)
 
     @staticmethod
-    def handle_message(client, participants, message, transport_manager):
-        guid = None
-        peer = None
-        if 'P2P-Src' in message.headers and ';' in message.headers['P2P-Src']:
-            account, guid = message.headers['P2P-Src'].split(';', 1)
-            guid = guid[1:-1]
-            if account == client.profile.account:
-                peer = client.profile
-        if peer is None and len(participants) > 0:
-            peer = list(participants)[0]
-        elif peer is None:
-            return None
+    def handle_message(client, message, transport_manager):
+        peer = message.sender
+        guid = message.sender_guid
         return SwitchboardP2PTransport(client, (), peer, guid,
             transport_manager)
 
@@ -94,11 +85,6 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
 
     def can_send(self, peer, peer_guid, blob, bootstrap=False):
         return (self._peer == peer and self._peer_guid == peer_guid)
-
-    def __parse_guid(self, message, header):
-        if header not in message.headers or ';' not in message.headers[header]:
-            return None
-        return message.headers[header].split(';', 1)[1][1:-1]
 
     def _ready_to_send(self):
         return (self._oustanding_sends < self.MAX_OUTSTANDING_SENDS)
@@ -122,19 +108,20 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
 
     def _on_message_received(self, message):
         version = 1
+        peer = message.sender
+        peer_guid = message.sender_guid
+        dest_guid = message.parse_guid('P2P-Dest')
         # if destination contains a GUID, the protocol should be TLPv2
-        dest_guid = self.__parse_guid(message, 'P2P-Dest')
-        src_guid = self.__parse_guid(message, 'P2P-Src')
-        if dest_guid and src_guid:
+        if dest_guid and peer_guid:
             version = 2
             if dest_guid != self._client.machine_guid or \
-               src_guid != self._peer_guid:
+               peer_guid != self._peer_guid:
                 return # this chunk is not for us
 
         chunk = MessageChunk.parse(version, message.body[:-4])
         chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         logger.debug("<<< %s" % repr(chunk))
-        self._on_chunk_received(self._peer, self._peer_guid, chunk)
+        self._on_chunk_received(peer, peer_guid, chunk)
 
     def _on_message_sent(self, peer, peer_guid, chunk):
         self._oustanding_sends -= 1

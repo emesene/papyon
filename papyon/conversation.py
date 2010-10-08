@@ -434,7 +434,7 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
                 'text/x-mms-animemoticon')
 
     @staticmethod
-    def handle_message(client, participants, message):
+    def handle_message(client, message):
         return SwitchboardConversation(client, ())
 
     def invite_user(self, contact):

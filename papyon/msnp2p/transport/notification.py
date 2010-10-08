@@ -48,6 +48,14 @@ class NotificationP2PTransport(BaseP2PTransport):
     def max_chunk_size(self):
         return 7500
 
+    @property
+    def peer(self):
+        return None
+
+    @property
+    def peer_guid(self):
+        return None
+
     def can_send(self, peer, peer_guid, blob, bootstrap=False):
         if not bootstrap:
             return False # can only handle bootstrap signaling

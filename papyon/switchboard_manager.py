@@ -442,7 +442,8 @@ class SwitchboardManager(gobject.GObject):
             if not handler._can_handle_message(message, handler):
                 continue
             handler._on_message_received(message)
-        # Create all handler that could handle this message
+            return
+        # Create first handler that could handle this message
         for handler_class, extra_args in self._handlers_class:
             if handler_class in handlers_class:
                 continue
@@ -458,3 +459,4 @@ class SwitchboardManager(gobject.GObject):
             handler._switchboard = switchboard
             self.emit("handler-created", handler_class, handler)
             handler._on_message_received(message)
+            return

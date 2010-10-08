@@ -204,6 +204,7 @@ class P2PSession(gobject.GObject):
     def _decline_transreq(self, transreq):
         body = SLPTransferResponseBody(session_id=self._id)
         self._respond_transreq(transreq, 603, body)
+        self._dispose()
 
     def _close(self, context=None, reason=None):
         body = SLPSessionCloseBody(context=context, session_id=self._id,

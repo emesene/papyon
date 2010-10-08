@@ -49,15 +49,18 @@ class P2PSessionManager(gobject.GObject):
         self._sessions = weakref.WeakValueDictionary() # session_id => session
         self._handlers = []
         self._transport_manager = P2PTransportManager(self._client)
-        self._transport_manager.connect("blob-received",
-                lambda tr, peer, guid, blob:
-                    self._on_blob_received(peer, guid, blob))
-        self._transport_manager.connect("blob-sent",
-                lambda tr, peer, guid, blob:
-                    self._on_blob_sent(peer, guid, blob))
-        self._transport_manager.connect("chunk-transferred",
-                lambda tr, peer, guid, chunk:
-                    self._on_chunk_transferred(peer, guid, chunk))
+        self._transport_manager.connect("data-received",
+                lambda tr, peer, guid, session_id, data:
+                    self._on_data_received(peer, guid, session_id, data))
+        self._transport_manager.connect("data-sent",
+                lambda tr, peer, guid, session_id, data:
+                    self._on_data_sent(peer, guid, session_id, data))
+        self._transport_manager.connect("data-transferred",
+                lambda tr, peer, guid, session_id, size:
+                    self._on_data_transferred(peer, guid, session_id, size))
+        self._transport_manager.connect("slp-message-received",
+                lambda tr, peer, guid, msg:
+                    self._on_slp_message_received(peer, guid, msg))
 
     def register_handler(self, handler_class):
         self._handlers.append(handler_class)
@@ -71,13 +74,6 @@ class P2PSessionManager(gobject.GObject):
         del self._sessions[session.id]
         self._transport_manager.add_to_blacklist(session.peer,
                 session.peer_guid, session.id)
-
-    def _on_chunk_transferred(self, peer, peer_guid, chunk):
-        session_id = chunk.session_id
-        session = self._get_session(session_id)
-        if session is None:
-            return
-        session._on_data_chunk_transferred(chunk)
 
     def _get_session(self, session_id):
         if session_id in self._sessions:
@@ -106,51 +102,39 @@ class P2PSessionManager(gobject.GObject):
 
         return peer, guid
 
-    def _blob_to_session(self, blob):
-        session_id = blob.session_id
+    def _on_data_received(self, peer, peer_guid, session_id, data):
+        session = self._get_session(session_id)
+        if session is None:
+            # This means that we received a data packet for an unknown session
+            # We must RESET the session just like the official client does
+            # TODO send a TLP
+            logger.error("SLPSessionError")
+            return
+        session._on_data_received(data)
 
-        # Check to see if it's a signaling message
-        if session_id == 0:
-            slp_data = blob.read_data()
-            try:
-                message = SLPMessage.build(slp_data)
-            except ParseError:
-                print slp_data
-                logger.warning('Received blob with SessionID=0 and non SLP data')
-                raise SLPError("Non SLP data for blob with null sessionID")
-            session_id = message.body.session_id
+    def _on_data_sent(self, peer, peer_guid, session_id, data):
+        session = self._get_session(session_id)
+        if session is None:
+            return
+        session._on_data_sent(data)
 
+    def _on_data_transferred(self, peer, peer_guid, session_id, size):
+        session = self._get_session(session_id)
+        if session is None:
+            return
+        session._on_data_transferred(size)
+
+    def _on_slp_message_received(self, peer, peer_guid, message):
+        session_id = message.body.session_id
         # Backward compatible with older clients that use the call-id
         # for responses
         if session_id == 0:
-            return self._search_session_by_call(message.call_id)
-
-        return self._get_session(session_id)
-
-    def _on_blob_received(self, peer, peer_guid, blob):
-        try:
-            session = self._blob_to_session(blob)
-        except SLPError:
-            # If the blob has a null session id but a badly formed SLP
-            # Then we should do nothing. The official client doesn't answer.
-            # We can't send a '500 Internal Error' response since we can't
-            # parse the SLP, so we don't know who to send it to, or the call-id, etc...
-            return
+            session = self._search_session_by_call(message.call_id)
+        else:
+            session = self._get_session(session_id)
 
         # The session could not be found, create a new one if necessary
         if session is None:
-            if blob.session_id != 0:
-                # This means that we received a data packet for an unknown session
-                # We must RESET the session just like the official client does
-                # TODO send a TLP
-                logger.error("SLPSessionError")
-                return
-
-            # No need to 'try', if it was invalid, we would have received an SLPError
-            slp_data = blob.read_data()
-            message = SLPMessage.build(slp_data)
-            session_id = message.body.session_id
-
             # Make sure the SLP has a session_id, otherwise, it means it's invite
             # if it's a signaling SLP and the call-id could not be matched to
             # an existing session
@@ -188,22 +172,6 @@ class P2PSessionManager(gobject.GObject):
                 #TODO: answer with a 500 Internal Error
                 return None
 
-        session._on_blob_received(blob)
-
-    def _on_blob_sent(self, peer, peer_guid, blob):
-        session = None
-        try:
-            session = self._blob_to_session(blob)
-        except SLPError, e:
-            # Something is fishy.. we shouldn't have to send anything abnormal..
-            logger.warning("Sent a bad message : %s" % (e))
-            session = None
-        except SLPSessionError, e:
-            # May happen when we close the session
-            pass
-
-        if session is None:
-            return
-        session._on_blob_sent(blob)
+        session._on_slp_message_received(message)
 
 gobject.type_register(P2PSessionManager)

@@ -161,7 +161,8 @@ class BaseP2PTransport(gobject.GObject):
         self.emit("chunk-sent", peer, peer_guid, chunk)
         blob = self._outgoing_chunks.pop(chunk, None)
         if blob and blob.is_complete() and blob not in self._outgoing_chunks.values():
-            self.emit("blob-sent", peer, peer_guid, blob)
+            if not chunk.is_data_preparation_chunk():
+                self.emit("blob-sent", peer, peer_guid, blob)
         self._start_processing()
 
     def _start_processing(self):

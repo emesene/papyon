@@ -267,66 +267,42 @@ class P2PSession(gobject.GObject):
         self._transport_manager.send_data(self.peer, self.peer_guid,
                 self._application_id, self._id, data)
 
-    def _on_blob_sent(self, blob):
-        if blob.session_id == 0:
-            # FIXME: handle the signaling correctly
-            return
-        data = blob.read_data()
-        if blob.total_size == 4 and data == ('\x00' * 4):
-            self._on_data_preparation_blob_sent(blob)
-        else:
-            self._on_data_blob_sent(blob)
+    def _on_slp_message_received(self, message):
+        if isinstance(message, SLPRequestMessage):
+            if isinstance(message.body, SLPSessionRequestBody):
+                self._on_invite_received(message)
+            elif isinstance(message.body, SLPTransportRequestBody):
+                self._decline_transreq(message)
+            elif isinstance(message.body, SLPSessionCloseBody):
+                self._on_bye_received(message)
+            else:
+                print "Unhandled signaling blob :", message
+        elif isinstance(message, SLPResponseMessage):
+            if isinstance(message.body, SLPSessionRequestBody):
+                if message.status == 200:
+                    self.emit("accepted")
+                    self._on_session_accepted()
+                elif message.status == 603:
+                    self.emit("rejected")
+                    self._on_session_rejected(message)
+            else:
+                print "Unhandled response blob :", message
 
-    def _on_blob_received(self, blob):
-        data = blob.read_data()
-
-        if blob.session_id == 0:
-            message = SLPMessage.build(data)
-            if isinstance(message, SLPRequestMessage):
-                if isinstance(message.body, SLPSessionRequestBody):
-                    self._on_invite_received(message)
-                elif isinstance(message.body, SLPTransportRequestBody):
-                    self._decline_transreq(message)
-                elif isinstance(message.body, SLPSessionCloseBody):
-                    self._on_bye_received(message)
-                else:
-                    print "Unhandled signaling blob :", message
-            elif isinstance(message, SLPResponseMessage):
-                if isinstance(message.body, SLPSessionRequestBody):
-                    if message.status == 200:
-                        self.emit("accepted")
-                        self._on_session_accepted()
-                    elif message.status == 603:
-                        self.emit("rejected")
-                        self._on_session_rejected(message)
-                else:
-                    print "Unhandled response blob :", message
-            return
-
-        self._on_data_blob_received(blob)
-
-    def _on_data_chunk_transferred(self, chunk):
-        if chunk.has_progressed():
-            self.emit("progressed", len(chunk.body))
-
-    def _on_data_preparation_blob_received(self, blob):
-        pass
-
-    def _on_data_preparation_blob_sent(self, blob):
-        pass
-
-    def _on_data_blob_sent(self, blob):
+    def _on_data_sent(self, data):
         logger.info("Session data transfer completed")
-        blob.data.seek(0, os.SEEK_SET)
+        data.seek(0, os.SEEK_SET)
         self._completed = True
-        self.emit("completed", blob.data)
+        self.emit("completed", data)
 
-    def _on_data_blob_received(self, blob):
+    def _on_data_received(self, data):
         logger.info("Session data transfer completed")
-        blob.data.seek(0, os.SEEK_SET)
+        data.seek(0, os.SEEK_SET)
         self._completed = True
-        self.emit("completed", blob.data)
+        self.emit("completed", data)
         self._close()
+
+    def _on_data_transferred(self, size):
+        self.emit("progressed", size)
 
     # Methods to implement in different P2P applications
 

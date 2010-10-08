@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.msnp2p.SLP import SLPMessage
 from papyon.msnp2p.transport.switchboard import *
 from papyon.msnp2p.transport.notification import *
 from papyon.msnp2p.transport.TLP import MessageBlob
@@ -34,17 +35,25 @@ logger = logging.getLogger('papyon.msnp2p.transport')
 
 class P2PTransportManager(gobject.GObject):
     __gsignals__ = {
-            "blob-received" : (gobject.SIGNAL_RUN_FIRST,
+            "data-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object, object, object)), # peer, peer_guid, blob
+                # peer, peer_guid, session_id, data
+                (object, object, object, object)),
 
-            "blob-sent" : (gobject.SIGNAL_RUN_FIRST,
+            "data-sent" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object, object, object)), # peer, peer_guid, blob
+                # peer, peer_guid, session_id, data
+                (object, object, object, object)),
 
-            "chunk-transferred" : (gobject.SIGNAL_RUN_FIRST,
+            "data-transferred" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (object, object, object)), # peer, peer_guid, chunk
+                # peer, peer_guid, session_id, size
+                (object, object, object, object)),
+
+            "slp-message-received" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                # peer, peer_guid, slp_message
+                (object, object, object)),
     }
 
     def __init__(self, client):
@@ -92,7 +101,6 @@ class P2PTransportManager(gobject.GObject):
         return self._default_transport(peer, peer_guid)
 
     def _on_chunk_received(self, transport, peer, peer_guid, chunk):
-        self.emit("chunk-transferred", peer, peer_guid, chunk)
         session_id = chunk.session_id
         blob_id = chunk.blob_id
         key = (peer, peer_guid, session_id)
@@ -111,18 +119,34 @@ class P2PTransportManager(gobject.GObject):
             self._data_blobs[key] = blob
 
         blob.append_chunk(chunk)
+        self._on_chunk_transferred(peer, peer_guid, chunk)
         if blob.is_complete():
             del self._data_blobs[key]
             self._on_blob_received(transport, peer, peer_guid, blob)
 
     def _on_chunk_sent(self, transport, peer, peer_guid, chunk):
-        self.emit("chunk-transferred", peer, peer_guid, chunk)
+        self._on_chunk_transferred(peer, peer_guid, chunk)
+
+    def _on_chunk_transferred(self, peer, peer_guid, chunk):
+        session_id = chunk.session_id
+        size = chunk.size
+        if chunk.has_progressed():
+            self.emit("data-transferred", peer, peer_guid, session_id, size)
 
     def _on_blob_received(self, transport, peer, peer_guid, blob):
-        self.emit("blob-received", peer, peer_guid, blob)
+        # Determine if it's a signaling message or a data blob
+        session_id = blob.session_id
+        if session_id == 0:
+            msg = self._parse_signaling_blob(blob)
+            if msg:
+                self.emit("slp-message-received", peer, peer_guid, msg)
+        else:
+            self.emit("data-received", peer, peer_guid, session_id, blob.data)
 
     def _on_blob_sent(self, transport, peer, peer_guid, blob):
-        self.emit("blob-sent", peer, peer_guid, blob)
+        session_id = blob.session_id
+        if session_id != 0:
+            self.emit("data-sent", peer, peer_guid, session_id, blob.data)
 
     def send_slp_message(self, peer, peer_guid, application_id, message):
         self.send_data(peer, peer_guid, application_id, 0, str(message))
@@ -155,5 +179,16 @@ class P2PTransportManager(gobject.GObject):
 
     def remove_from_blacklist(self, peer, peer_guid, session_id):
         self._blacklist.discard((peer, peer_guid, session_id))
+
+    # Utilities
+
+    def _parse_signaling_blob(self, blob):
+        try:
+            message = SLPMessage.build(blob.read_data())
+        except Exception, err:
+            logger.exception(err)
+            logger.error('Received invalid SLP message')
+            return None
+        return message
 
 gobject.type_register(P2PTransportManager)

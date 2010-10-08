@@ -48,7 +48,10 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         self._leave()
 
     @staticmethod
-    def _can_handle_message(message, switchboard_client=None):
+    def _can_handle_message(message, self=None):
+        if self and (self.peer != message.sender or
+                self.peer_guid != message.sender_guid):
+            return False
         content_type = message.content_type[0]
         return content_type == 'application/x-msnmsgrp2p'
 

@@ -445,8 +445,6 @@ class SwitchboardManager(gobject.GObject):
             return
         # Create first handler that could handle this message
         for handler_class, extra_args in self._handlers_class:
-            if handler_class in handlers_class:
-                continue
             if not handler_class._can_handle_message(message):
                 continue
             handler = handler_class.handle_message(self._client,

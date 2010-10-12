@@ -145,26 +145,22 @@ class P2PSessionManager(gobject.GObject):
 
             # If there was no session then create one only if it's an INVITE
             if isinstance(message, SLPRequestMessage) and \
+                    isinstance(message.body, SLPSessionRequestBody) and \
                     message.method == SLPRequestMethod.INVITE:
-                if isinstance(message.body, SLPSessionRequestBody):
-                    # Find the contact we received the message from
-                    peer, guid = self._find_contact(message.frm)
-                    try:
-                        for handler in self._handlers:
-                            if handler._can_handle_message(message):
-                                session = handler._handle_message(peer, guid, message)
-                                if session is not None:
-                                    break
-                        if session is None:
-                            logger.error("No handler could handle euf-guid %s" % (message.body.euf_guid))
-                            return
-                    except SLPError:
-                        #TODO: answer with a 603 Decline ?
-                        logger.error("SLPError")
-                        return None
-                elif isinstance(message.body, SLPTransportRequestBody):
-                    session = self._sessions[session_id]
-                else:
+                # Find the contact we received the message from
+                peer, guid = self._find_contact(message.frm)
+                try:
+                    for handler in self._handlers:
+                        if handler._can_handle_message(message):
+                            session = handler._handle_message(peer, guid, message)
+                            if session is not None:
+                                break
+                    if session is None:
+                        logger.error("No handler could handle euf-guid %s" % (message.body.euf_guid))
+                        return
+                except SLPError:
+                    #TODO: answer with a 603 Decline ?
+                    logger.error("SLPError")
                     return None
             else:
                 logger.warning('Received initial blob with SessionID=0 and non INVITE SLP data')

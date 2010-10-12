@@ -271,8 +271,6 @@ class P2PSession(gobject.GObject):
         if isinstance(message, SLPRequestMessage):
             if isinstance(message.body, SLPSessionRequestBody):
                 self._on_invite_received(message)
-            elif isinstance(message.body, SLPTransportRequestBody):
-                self._decline_transreq(message)
             elif isinstance(message.body, SLPSessionCloseBody):
                 self._on_bye_received(message)
             else:

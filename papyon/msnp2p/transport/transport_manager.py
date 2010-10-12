@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.SLP import SLPMessage
+from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport.switchboard import *
 from papyon.msnp2p.transport.notification import *
 from papyon.msnp2p.transport.TLP import MessageBlob
@@ -138,7 +138,7 @@ class P2PTransportManager(gobject.GObject):
         session_id = blob.session_id
         if session_id == 0:
             msg = self._parse_signaling_blob(blob)
-            if msg:
+            if msg and not self._handle_signaling_message(peer, peer_guid, msg):
                 self.emit("slp-message-received", peer, peer_guid, msg)
         else:
             self.emit("data-received", peer, peer_guid, session_id, blob.data)
@@ -179,6 +179,31 @@ class P2PTransportManager(gobject.GObject):
 
     def remove_from_blacklist(self, peer, peer_guid, session_id):
         self._blacklist.discard((peer, peer_guid, session_id))
+
+    # Signaling messages handling --------------------------------------------
+
+    def _handle_signaling_message(self, peer, peer_guid, message):
+        """ Handle the SLP message if it's transport related.
+            Returns True if the message has been handled. """
+        if isinstance(message, SLPRequestMessage) and \
+                isinstance(message.body, SLPTransportRequestBody):
+            self._on_transport_request_received(peer, peer_guid, message)
+            return True
+        if isinstance(message, SLPResponseMessage) and \
+                isinstance(message.body, SLPTransportResponseBody):
+            self._on_transport_response_received(peer, peer_guid, message)
+            return True
+        return False
+
+    def _on_transport_request_received(self, peer, peer_guid, message):
+        logger.info("Received transport request from %s;{%s}" %
+                (peer.account, peer_guid))
+        return
+
+    def _on_transport_response_received(self, peer, peer_guid, message):
+        logger.info("Received transport response %i from %s;{%s}" %
+                (message.status, peer.account, peer_guid))
+        return
 
     # Utilities
 

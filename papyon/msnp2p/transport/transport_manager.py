@@ -70,6 +70,42 @@ class P2PTransportManager(gobject.GObject):
         self._blacklist = set() # blacklist of (peer, peer_guid, session_id)
         uun_transport = NotificationP2PTransport(client, self)
 
+    # Public API -------------------------------------------------------------
+
+    def send_slp_message(self, peer, peer_guid, application_id, message):
+        self.send_data(peer, peer_guid, application_id, 0, str(message))
+
+    def send_data(self, peer, peer_guid, application_id, session_id, data):
+        blob = MessageBlob(application_id, data, None, session_id, None)
+        transport = self._get_transport(peer, peer_guid, blob)
+        transport.send(peer, peer_guid, blob)
+
+    def register_data_buffer(self, peer, peer_guid, session_id, buffer, size):
+        if (peer, peer_guid, session_id) in self._data_blobs:
+            logger.warning("registering already registered blob "\
+                    "with session_id=" + str(session_id))
+            return
+        blob = MessageBlob(0, buffer, size, session_id)
+        self._data_blobs[(peer, peer_guid, session_id)] = blob
+
+    def cleanup(self, peer, peer_guid, session_id):
+        logger.info("Cleaning up session %s" % session_id)
+        if (peer, peer_guid, session_id) in self._data_blobs:
+            del self._data_blobs[(peer, peer_guid, session_id)]
+        for transport in self._transports:
+            if transport.peer == peer and transport.peer_guid == peer_guid:
+                transport.cleanup(session_id)
+
+    def add_to_blacklist(self, peer, peer_guid, session_id):
+        """ Ignore data chunks received for this session_id: we want to
+            ignore chunks received shortly after closing a session. """
+        self._blacklist.add((peer, peer_guid, session_id))
+
+    def remove_from_blacklist(self, peer, peer_guid, session_id):
+        self._blacklist.discard((peer, peer_guid, session_id))
+
+    # Transport registration -------------------------------------------------
+
     def _register_transport(self, transport):
         logger.info("Registering transport %s" % repr(transport))
         assert transport not in self._transports, "Trying to register transport twice"
@@ -94,11 +130,15 @@ class P2PTransportManager(gobject.GObject):
         for signal in signals:
             transport.disconnect(signal)
 
+    # Transport selection ----------------------------------------------------
+
     def _get_transport(self, peer, peer_guid, blob):
         for transport in self._transports:
             if transport.can_send(peer, peer_guid, blob):
                 return transport
         return self._default_transport(peer, peer_guid)
+
+    # Chunk/blob demuxing ----------------------------------------------------
 
     def _on_chunk_received(self, transport, peer, peer_guid, chunk):
         session_id = chunk.session_id
@@ -148,38 +188,6 @@ class P2PTransportManager(gobject.GObject):
         if session_id != 0:
             self.emit("data-sent", peer, peer_guid, session_id, blob.data)
 
-    def send_slp_message(self, peer, peer_guid, application_id, message):
-        self.send_data(peer, peer_guid, application_id, 0, str(message))
-
-    def send_data(self, peer, peer_guid, application_id, session_id, data):
-        blob = MessageBlob(application_id, data, None, session_id, None)
-        transport = self._get_transport(peer, peer_guid, blob)
-        transport.send(peer, peer_guid, blob)
-
-    def register_data_buffer(self, peer, peer_guid, session_id, buffer, size):
-        if (peer, peer_guid, session_id) in self._data_blobs:
-            logger.warning("registering already registered blob "\
-                    "with session_id=" + str(session_id))
-            return
-        blob = MessageBlob(0, buffer, size, session_id)
-        self._data_blobs[(peer, peer_guid, session_id)] = blob
-
-    def cleanup(self, peer, peer_guid, session_id):
-        logger.info("Cleaning up session %s" % session_id)
-        if (peer, peer_guid, session_id) in self._data_blobs:
-            del self._data_blobs[(peer, peer_guid, session_id)]
-        for transport in self._transports:
-            if transport.peer == peer and transport.peer_guid == peer_guid:
-                transport.cleanup(session_id)
-
-    def add_to_blacklist(self, peer, peer_guid, session_id):
-        # ignore data chunks received for this session_id:
-        # we want to ignore chunks received shortly after closing a session
-        self._blacklist.add((peer, peer_guid, session_id))
-
-    def remove_from_blacklist(self, peer, peer_guid, session_id):
-        self._blacklist.discard((peer, peer_guid, session_id))
-
     # Signaling messages handling --------------------------------------------
 
     def _handle_signaling_message(self, peer, peer_guid, message):
@@ -205,7 +213,7 @@ class P2PTransportManager(gobject.GObject):
                 (message.status, peer.account, peer_guid))
         return
 
-    # Utilities
+    # Utilities --------------------------------------------------------------
 
     def _parse_signaling_blob(self, blob):
         try:

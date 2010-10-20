@@ -25,7 +25,7 @@ def soap_header(scenario, security_token):
 
     return """
         <ABApplicationHeader xmlns="http://www.msn.com/webservices/AddressBook">
-           <ApplicationId xmlns="http://www.msn.com/webservices/AddressBook">996CDE1E-AA53-4477-B943-2BE802EA6166</ApplicationId>
+           <ApplicationId xmlns="http://www.msn.com/webservices/AddressBook">CFE80F9D-180F-4399-82AB-413F33A1FA11</ApplicationId>
            <IsMigration xmlns="http://www.msn.com/webservices/AddressBook">false</IsMigration>
            <PartnerScenario xmlns="http://www.msn.com/webservices/AddressBook">%s</PartnerScenario>
        </ABApplicationHeader>

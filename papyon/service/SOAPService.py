@@ -246,7 +246,7 @@ class SOAPService(object):
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
         request_id, callback, errback, user_data = self._unref_transport(transport)
-        return request_id, callback, errback #FIXME: do something sensible here
+        self._HandleTransportError(request_id, callback, errback, error)
 
     # Handlers
     def _HandleSOAPFault(self, request_id, callback, errback,
@@ -256,6 +256,9 @@ class SOAPService(object):
     def _HandleSOAPResponse(self, request_id, callback, errback,
             response, user_data):
         logger.warning("Unhandled Response to %s" % request_id)
+
+    def _HandleTransportError(self, request_id, callback, errback, error):
+        logger.warning("Unhandled SOAP transport error to %s" % request_id)
 
     # Transport management
     def _get_transport(self, request_id, scheme, host, port,

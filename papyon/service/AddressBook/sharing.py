@@ -22,6 +22,7 @@ from papyon.service.SOAPService import SOAPService
 from papyon.util.element_tree import XMLTYPE
 from papyon.service.SingleSignOn import *
 from papyon.service.AddressBook.common import *
+from papyon.service.AddressBook.constants import *
 
 __all__ = ['Sharing']
 
@@ -209,6 +210,10 @@ class Sharing(SOAPService):
             callback[0](*callback[1:])
         else:
             errback[0](errcode, *errback[1:])
+
+    def _HandleTransportError(self, request_id, callback, errback, error):
+        errcode = AddressBookError.UNKNOWN
+        errback[0](errcode, *errback[1:])
 
 if __name__ == '__main__':
     import sys

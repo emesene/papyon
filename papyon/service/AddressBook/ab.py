@@ -361,6 +361,10 @@ class AB(SOAPService):
         errcode, errstring = get_detailled_error(soap_response.fault)
         errback[0](errcode, *errback[1:])
 
+    def _HandleTransportError(self, request_id, callback, errback, error):
+        errcode = AddressBookError.UNKNOWN
+        errback[0](errcode, *errback[1:])
+
 if __name__ == '__main__':
     import sys
     import getpass

@@ -249,6 +249,7 @@ class OfflineMessagesBox(gobject.GObject):
             self.__parse_metadata(xml_data)
 
     def __parse_metadata(self, xml_data):
+        new_messages = []
         metadata = Metadata(xml_data)
         for m in metadata.findall('./M'):
             id = m.findtext('./I')
@@ -277,12 +278,15 @@ class OfflineMessagesBox(gobject.GObject):
             if date is not None:
                 date = date.text
 
-            self.__messages.add(OfflineMessage(id, sender, name, date))
+            if not self.__messages.search_by_id(id):
+                message = OfflineMessage(id, sender, name, date)
+                new_messages.append(message)
+                self.__messages.add(message)
 
         self._state = OfflineMessagesBoxState.SYNCHRONIZED
 
-        if len(self.__messages) > 0:
-            self.emit('messages-received', self.__messages)
+        if len(new_messages) > 0:
+            self.emit('messages-received', new_messages)
 
     def __send_unmanaged_message(self, recipient, body):
         """ Send offline message through a UUM command when using MSNP18. """

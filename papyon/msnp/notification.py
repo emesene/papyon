@@ -580,6 +580,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
     def _handle_RML(self, command):
         pass
 
+    def _handle_FQY(self, command):
+        pass
+
     # --------- Messages -----------------------------------------------------
     def _handle_MSG(self, command):
         message = Message(None, command.payload)

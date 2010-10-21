@@ -1,3 +1,13 @@
+papyon-0.5.2 (2010-10-21)
+=========================
+
+Fixes:
+  * Use the right policy reference when requesting security token (fdo #31004)
+  * Set the peer end-points before requesting his display picture (fdo #30411)
+  * Don't queue all P2P chunks right away when using SB transport (fdo #29512)
+  * Don't send invalid command when contact is in Allow and Block lists
+  * Don't fail when current media that is not music (fdo #30625)
+
 papyon-0.5.1 (2010-09-10)
 =========================
 

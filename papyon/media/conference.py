@@ -91,6 +91,8 @@ class MediaSessionHandler(MediaSessionEventInterface):
         self._conference = None
         self._handlers = []
         self._setup()
+        for stream in session.streams:
+            self.on_stream_added(stream)
 
     def _setup(self):
         self._pipeline = gst.Pipeline()

@@ -194,6 +194,7 @@ class MediaStreamHandler(MediaStreamEventInterface):
         del self.fsstream
 
     def on_remote_candidates_received(self, candidates):
+        candidates = filter(lambda x: x.transport == "UDP", candidates)
         candidates = convert_media_candidates(candidates)
         self.fsstream.set_remote_candidates(candidates)
 
@@ -234,9 +235,9 @@ def convert_fs_candidate(fscandidate):
 def convert_media_candidates(candidates):
     fscandidates = []
     for candidate in candidates:
-        for k,v in protos.iteritems():
-            if v == candidate.transport:
-                proto = k
+        proto = farsight.NETWORK_PROTOCOL_TCP
+        if candidate.transport == "UDP":
+            proto = farsight.NETWORK_PROTOCOL_UDP
         type = 0
         for k,v in types.iteritems():
             if v == candidate.type:

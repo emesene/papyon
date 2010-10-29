@@ -22,7 +22,7 @@ from papyon.sip.extensions import init_extensions
 from papyon.sip.constants import T1, SIPMode, SIPTransactionError, USER_AGENT
 from papyon.sip.dialog import SIPDialog
 from papyon.sip.message import SIPRequest, SIPResponse, SIPContact, SIPCSeq, SIPVia
-from papyon.sip.transaction import SIPTransactionLayer
+from papyon.sip.transaction import SIPClientTransaction, SIPTransactionLayer
 from papyon.sip.transport import SIPTunneledTransport
 from papyon.util.decorator import rw_property
 from papyon.util.timer import Timer

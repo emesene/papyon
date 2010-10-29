@@ -20,6 +20,7 @@
 
 from papyon.event import EventsDispatcher
 from papyon.media.constants import *
+from papyon.util.timer import Timer
 
 import gobject
 import logging
@@ -29,7 +30,7 @@ logger = logging.getLogger('papyon.media.stream')
 
 __all__ = ['MediaStream']
 
-class MediaStream(gobject.GObject, EventsDispatcher):
+class MediaStream(gobject.GObject, EventsDispatcher, Timer):
     """A stream used to transfer media data. It can be an audio or video
        stream and may have codecs and transport candidates associated with it.
 
@@ -62,19 +63,21 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
+        Timer.__init__(self)
         self._session = weakref.ref(session)
         self._name = name
         self._active = False
+        self._ready = False
         self._created = created
         self._direction = direction
         self._local_codecs = []
         self._local_codecs_prepared = False
-        self._local_candidate_id = None
         self._local_candidates = []
+        self._local_active_candidates = {}
         self._local_candidates_prepared = False
         self._remote_codecs = []
-        self._remote_candidate_id = None
         self._remote_candidates = []
+        self._remote_active_candidates = {}
         self.relays = []
 
     @property
@@ -107,8 +110,7 @@ class MediaStream(gobject.GObject, EventsDispatcher):
     @property
     def ready(self):
         """Is the candidate pair selected"""
-        return (self._local_candidate_id is not None and
-                self._remote_candidate_id is not None)
+        return self._ready
 
     def close(self):
         """Close the stream"""
@@ -130,10 +132,14 @@ class MediaStream(gobject.GObject, EventsDispatcher):
             self._remote_candidates.extend(remote_candidates)
 
         # If the media description contains a local candidate, the active pair
-        # has already been selected and the first remote candidate should be the
-        # remote active one.
+        # has already been selected.
         if local_candidates:
-            self._remote_candidate_id = remote_candidates[0].foundation
+            # Add missing selected candidates details
+            for c in local_candidates:
+                self._local_active_candidates[c.component_id] = c
+            for c in remote_candidates:
+                self._remote_active_candidates[c.component_id] = c
+            self._emit_if_ready()
 
         self.process()
 
@@ -166,44 +172,26 @@ class MediaStream(gobject.GObject, EventsDispatcher):
            isn't any active one. This list is meant to be sent to the other
            call participants."""
 
-        active = self._local_candidate_id
-        candidates = self._local_candidates
-        if active:
-            return filter(lambda x: (x.foundation == active), candidates)
-        return candidates
+        if not self._local_active_candidates:
+            return self._local_candidates
+        return self._local_active_candidates.values()
 
     def get_active_remote_candidates(self):
         """Returns the active remote candidates."""
 
-        active = self._remote_candidate_id
-        candidates = self._remote_candidates
-        if active is None:
-            return []
-        return filter(lambda x: (x.foundation == active), candidates)
+        return self._remote_active_candidates.values()
 
     def get_default_address(self):
         """Returns the default address. We use the active local candidate if
            there is one selected, else we are using the default candidate."""
 
-        ip = ""
-        port = 0
-        rtcp = 0
+        if self._has_complete_active_candidates():
+            candidates = self._local_active_candidates
+        else:
+            default = self.search_default_candidate()
+            candidates = self._search_local_candidates(default.foundation)
 
-        active = self._local_candidate_id
-        default = self.search_default_candidate()
-        if not active and default:
-            active = default.foundation
-
-        for candidate in self._local_candidates:
-            if candidate.foundation == active and \
-               candidate.component_id is COMPONENTS.RTP:
-                ip = candidate.ip
-                port = candidate.port
-            if candidate.foundation == active and \
-               candidate.component_id is COMPONENTS.RTCP:
-                rtcp = candidate.port
-
-        return ip, port, rtcp
+        return self._get_destination(candidates)
 
     def search_default_candidate(self):
         """Returns the first relay found in the local candidates or the
@@ -231,17 +219,20 @@ class MediaStream(gobject.GObject, EventsDispatcher):
 
     def new_active_candidate_pair(self, local, remote):
         """Called by the stream handler once the active candidate pair is selected
-           @param local: Local active candidate id
-           @type local: string
-           @param remote: Remote active candidate id
-           @type remote: string"""
+           @param local: Local active candidate
+           @type local: L{papyon.media.candidate.MediaCandidate}
+           @param remote: Remote active candidate
+           @type remote: L{papyon.media.candidate.MediaCandidate}"""
 
-        logger.debug("New active candidate pair (%s, %s)" % (local, remote))
-        if self.ready:
-            return # ignore other candidate pairs
-        self._local_candidate_id = local
-        self._remote_candidate_id = remote
-        self.emit("ready")
+        if isinstance(local, str) or isinstance(remote, str):
+            logger.warning("Deprecated use of new_active_candidate_pair")
+            logger.warning("Use MediaCandidate to specify new active candidates")
+
+        logger.debug("New active candidate pair (%s, %s)" % (local.foundation,
+            remote.foundation))
+        self._local_active_candidates[local.component_id] = local
+        self._remote_active_candidates[remote.component_id] = remote
+        self._emit_if_ready()
 
     def local_candidates_prepared(self):
         """Called by the stream handler once all the local candidates are found"""
@@ -265,3 +256,65 @@ class MediaStream(gobject.GObject, EventsDispatcher):
         if self.prepared:
             self.emit("prepared")
 
+
+    # Utilities functions
+
+    def _has_local_active_candidate(self):
+        if COMPONENTS.RTP in self._local_active_candidates:
+            return True
+        return False
+
+    def _has_complete_active_candidates(self):
+        if COMPONENTS.RTP in self._local_active_candidates and \
+           COMPONENTS.RTCP in self._local_active_candidates and \
+           COMPONENTS.RTP in self._remote_active_candidates and \
+           COMPONENTS.RTCP in self._remote_active_candidates:
+            return True
+        return False
+
+    def _get_destination(self, candidates):
+        ip = ""
+        port = 0
+        rtcp = 0
+        rtp_candidate = candidates.get(COMPONENTS.RTP, None)
+        rtcp_candidate = candidates.get(COMPONENTS.RTCP, None)
+        if rtp_candidate:
+            ip = rtp_candidate.ip
+            port = rtp_candidate.port
+        if rtcp_candidate:
+            rtcp = rtcp_candidate.port
+        return ip, port, rtcp
+
+    def _search_local_candidates(self, foundation):
+        candidates = {}
+        for candidate in self._local_candidates:
+            if candidate.foundation == foundation:
+                candidates[candidate.component_id] = candidate
+        return candidates
+
+    def _search_remote_candidates(self, foundation):
+        candidates = {}
+        for candidate in self._remote_candidates:
+            if candidate.foundation == foundation:
+                candidates[candidate.component_id] = candidate
+        return candidates
+
+    def _emit_if_ready(self):
+        if self._ready:
+            return
+        if not self._has_complete_active_candidates():
+            logger.debug("The active candidates are not complete yet, wait")
+            self.start_timeout("ready", 2)
+            return
+        self._do_emit_ready()
+
+    def on_ready_timeout(self):
+        if self._has_local_active_candidate():
+            self._do_emit_ready()
+
+    def _do_emit_ready(self):
+        self.stop_timeout("ready")
+        if self._ready:
+            return
+        self._ready = True
+        self.emit("ready")

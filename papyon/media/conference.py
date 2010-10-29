@@ -156,7 +156,9 @@ class MediaSessionHandler(MediaSessionEventInterface):
                 stream = self._session.get_stream(name)
                 local = s["local-candidate"]
                 remote = s["remote-candidate"]
-                stream.new_active_candidate_pair(local.foundation, remote.foundation)
+                local = convert_fs_candidate(local)
+                remote = convert_fs_candidate(remote)
+                stream.new_active_candidate_pair(local, remote)
         return ret
 
 

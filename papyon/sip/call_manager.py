@@ -46,6 +46,8 @@ class SIPCallManager(gobject.GObject):
 
         self._calls = {} # Call-ID => call, handle_id
 
+    ### Public API -----------------------------------------------------------
+
     def create_call(self, peer):
         #FIXME check if busy
         id = self._generate_id()
@@ -53,8 +55,12 @@ class SIPCallManager(gobject.GObject):
         self._add_call(call)
         return call
 
+    ### Protected API --------------------------------------------------------
+
     def find_call(self, message):
         return self._calls.get(message.call_id, (None, None))[0]
+
+    ### Private API ----------------------------------------------------------
 
     def _add_call(self, call):
         handle = call.connect("ended", self._remove_call)

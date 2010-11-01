@@ -256,6 +256,16 @@ class P2PSessionHandler(gobject.GObject):
 
 
 class MSNObjectStore(P2PSessionHandler):
+    """Stores published MSN objects.
+
+       Peer requests are automatically accepted and the requested object is
+       sent to them. This class also gives the interface to request objects
+       from peers and should be called when a contact changes his display
+       picture or sends a custom emoticon.
+
+       @note Objects retrieved from peers aren't cached. Clients that use
+             papyon must keep them in memory and ideally on the file system as
+             well so they aren't requested too often."""
 
     def __init__(self, client):
         P2PSessionHandler.__init__(self, client)
@@ -315,9 +325,25 @@ class MSNObjectStore(P2PSessionHandler):
             if errback:
                 errback[0](msn_object, *errback[1:])
 
-    ### Public API
+    ### Public API -----------------------------------------------------------
 
     def request(self, msn_object, callback, errback=None, peer=None):
+        """Request a MSN object from a peer.
+
+           A session invite will be sent to each peer endpoint. When one is
+           accepted, other requests are canceled.
+
+           @param msn_object: MSN Object to retrieve
+           @type msn_object: L{MSNObject<papyon.p2p.MSNObject>}
+           @param callback: method called once the object is retrieved
+           @type callback: tuple(method, *args)
+           @param errback: method called if an error occured
+           @type errback: typle(method, *args)
+           @param peer: peer owning the MSN object
+           @type peer: L{Contact<papyon.profile.Contact>}
+
+           @raise NotImplementedError: if object's type is not supported"""
+
         obj = self._get_published_object(msn_object)
         if obj is not None:
             msn_object._data = obj._data
@@ -346,13 +372,24 @@ class MSNObjectStore(P2PSessionHandler):
         return session
 
     def publish(self, msn_object):
+        """Publish a MSN object that can be requested by peers.
+
+           @param msn_object: MSN Object to publish
+           @type msn_object: L{MSNObject<papyon.p2p.MSNObject>}"""
+
         if msn_object._data is None:
             logger.warning("Trying to publish an empty MSNObject")
         else:
             self._published_objects.add(msn_object)
 
+    ### ----------------------------------------------------------------------
+
 
 class FileTransferManager(P2PSessionHandler):
+    """Manages the file transfer P2P sessions.
+
+       The signal on_invite_file_transfer is dispatched by the
+       L{Client<papyon.Client} when an invite is received."""
 
     __gsignals__ = {
             "transfer-requested" : (gobject.SIGNAL_RUN_FIRST,
@@ -374,13 +411,30 @@ class FileTransferManager(P2PSessionHandler):
         self.emit("transfer-requested", session)
         return session
 
-    ### Public API
+    ### Public API -----------------------------------------------------------
 
     def send(self, peer, filename, size):
+        """Send a request to start sending a file.
+
+           The request is sent to each peer endpoint and we keep only the
+           first P2P session that get accepted. If any invite is rejected, all
+           the sessions are canceled as well.
+
+           @param peer: Peer to who the file is sent
+           @type peer: L{Contact<papyon.profile.Contact>}
+           @param filename: Name of the file
+           @type filename: utf-8 encoded string
+           @param size: Size of file content
+           @type size: int
+           
+           @returns the meta session created to handle the invite."""
+
         session = FileTransferMetaSession(self._client, peer)
         self._add_session(session)
         session.invite(filename, size)
         return session
+
+    ### ----------------------------------------------------------------------
 
 
 class WebcamHandler(P2PSessionHandler):
@@ -415,21 +469,27 @@ class WebcamHandler(P2PSessionHandler):
         self.emit("session-created", session, producer)
         return session
 
-    ### Public API
+    ### Public API -----------------------------------------------------------
 
     def invite(self, peer, producer=True):
-        """Invite a contact for a uni-directionnal webcam session
-           @param producer: if true, we want to send webcam"""
+        """Invite a contact for a uni-directionnal webcam session.
+
+           @param producer: if true, we want to send webcam
+           @type producer: boolean
+
+           @returns the meta session created to handle the invite."""
 
         session = WebcamMetaSession(self._client, peer, producer)
         self._add_session(session)
         session.invite()
         return session
 
+    ### ----------------------------------------------------------------------
+
 
 class P2PMetaSession(gobject.GObject):
     """ A P2PMetaSession is used to wrap multiple outgoing p2p sessions
-        together. This way, we can send a invite to each end point of a peer
+        together. This way, we can send an invite to each end point of a peer
         and still have only one session object for methods and signals. """
 
     __gsignals__ = {

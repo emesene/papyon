@@ -67,7 +67,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
             self._build_from_invite(invite)
 
 
-    # Public API -------------------------------------------------------------
+    ### Public API -----------------------------------------------------------
 
     @property
     def id(self):

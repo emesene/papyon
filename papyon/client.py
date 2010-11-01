@@ -128,7 +128,14 @@ class Client(EventsDispatcher):
 
             @param transport_class: the transport class to use for the network
                     connection
-            @type transport_class: L{papyon.transport.BaseTransport}"""
+            @type transport_class: L{papyon.transport.BaseTransport}
+            
+            @param version: protocol version to use (MSNP15, MSNP18...)
+            @type version: int
+            
+            @param client_type: type of client (computer, mobile, web...)
+            @type client_type: L{ClientTypes<papyon.msnp.constants.ClientTypes>}"""
+
         EventsDispatcher.__init__(self)
 
         self.__state = ClientState.CLOSED
@@ -175,7 +182,8 @@ class Client(EventsDispatcher):
         self.__connect_call_manager_signals()
         self.__connect_ft_manager_signals()
 
-    ### public:
+    ### Public API -----------------------------------------------------------
+
     @property
     def msn_object_store(self):
         """The MSNObjectStore instance associated with this client.
@@ -184,6 +192,8 @@ class Client(EventsDispatcher):
 
     @property
     def webcam_handler(self):
+        """The webcam handler to create new sessions.
+            @rtype: L{WebcamHandler<papyon.p2p.WebcamHandler>}"""
         return self._webcam_handler
 
     @property
@@ -206,6 +216,8 @@ class Client(EventsDispatcher):
 
     @property
     def content_roaming(self):
+        """The content roaming service
+            @type: L{ContentRoaming<papyon.service.ContentRoaming>}"""
         return self._roaming
 
     @property
@@ -245,22 +257,10 @@ class Client(EventsDispatcher):
         return self.__state
 
     @property
-    def local_ip(self):
-        return self._transport.sockname[0]
-
-    @property
-    def protocol_version(self):
-        return self._protocol._protocol_version
-
-    @property
     def client_type(self):
+        """Type of client (computer, mobile, web...)
+            @rtype: L{ClientTypes<papyon.msnp.constants.ClientTypes>}"""
         return self._client_type
-
-    @property
-    def machine_guid(self):
-        if not hasattr(self, '_guid'):
-            self._guid = str(uuid.uuid4())
-        return self._guid
 
     def login(self, account, password):
         """Login to the server.
@@ -291,7 +291,22 @@ class Client(EventsDispatcher):
         self._protocol.signoff()
         self.__state = ClientState.CLOSED
 
-    ### protected:
+    ### Protected API --------------------------------------------------------
+
+    @property
+    def local_ip(self):
+        return self._transport.sockname[0]
+
+    @property
+    def protocol_version(self):
+        return self._protocol._protocol_version
+
+    @property
+    def machine_guid(self):
+        if not hasattr(self, '_guid'):
+            self._guid = str(uuid.uuid4())
+        return self._guid
+
     @rw_property
     def _state():
         def fget(self):
@@ -315,7 +330,8 @@ class Client(EventsDispatcher):
             break
         del self._external_conversations[contact]
 
-    ### private:
+    ### Private API ----------------------------------------------------------
+
     def __connect_profile_signals(self):
         """Connect profile signals"""
         def event(contact, *args):

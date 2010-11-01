@@ -87,12 +87,12 @@ class SIPCore(gobject.GObject, Timer):
         self._dialogs = {} # (call-id, local-tag, remote-tag) => dialog
         self._dialog_handles = {} # dialog => handle id
 
-    def send(self, message, use_transaction=True):
+    def send(self, message, use_transaction=True, callback=None, errback=None):
         """Apply extensions and send message to transaction layer."""
         #self._add_supported_methods(message)
         self._apply_extensions(message)
         if not use_transaction:
-            return self._transport.send(message)
+            return self._transport.send(message, callback, errback)
         return self._transaction_layer.send(message)
 
     def answer(self, request, status, tag=None, extra_headers={}, content=None):

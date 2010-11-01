@@ -198,12 +198,14 @@ class SIPTransaction(gobject.GObject, Timer):
         self._state = "TERMINATED"
 
     def _send(self, message):
-        self._transport.send(message) #FIXME add errcb
+        self._transport.send(message,
+                errback=(self._on_transport_error, message))
 
     def _on_state_changed(self, old_state):
         raise NotImplementedError
 
-    def _on_transport_error(self):
+    def _on_transport_error(self, error, message):
+        logger.error("Transport error while sending %s message" % message.code)
         self.emit("error", SIPTransactionError.TRANSPORT_ERROR)
         self._state = "TERMINATED"
 
@@ -294,10 +296,6 @@ class SIPClientTransaction(SIPTransaction):
         if self._state in ("TRYING", "PROCEEDING"):
             self.emit("error", SIPTransactionError.TIMEOUT)
             self._state = "TERMINATED"
-
-    def _on_transport_error(self):
-        self.emit("error", SIPTransactionError.TRANSPORT_ERROR)
-        self._state = "TERMINATED"
 
 
 # Server Transaction ---------------------------------------------------------

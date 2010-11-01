@@ -97,7 +97,7 @@ class BaseProtocol(object):
             @param error: an error command object
             @type error: L{command.Command}
         """
-        logger.error('Notification got error : ' + unicode(error))
+        logger.error('Notification unhandled error : ' + unicode(error))
 
     # callbacks
     def _dispatch_command(self, connection, command):

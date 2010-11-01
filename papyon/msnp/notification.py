@@ -117,7 +117,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         Timer.__init__(self)
         self.__state = ProtocolState.CLOSED
         self._protocol_version = version
-        self._url_callbacks = {} # tr_id=>callback
+        self._callbacks = {} # tr_id=>(callback, errback)
 
     # Properties ------------------------------------------------------------
     def __get_state(self):
@@ -279,12 +279,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             self._send_command("RML", payload=payload)
 
     def send_user_notification(self, message, contact, contact_guid, type,
-            callback=None, *cb_args):
+            callback=None, errback=None):
         account = contact
         if contact_guid:
             account += ';{' + contact_guid + '}'
         arguments = (account, type)
-        self._send_command("UUN", arguments, message, True, callback, *cb_args)
+        tr_id = self._send_command("UUN", arguments, message, True)
+        self._callbacks[tr_id] = (callback, errback)
 
     def send_unmanaged_message(self, contact, message):
         content_type = message.content_type[0]
@@ -300,7 +301,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def send_url_request(self, url_command_args, callback):
         tr_id = self._send_command('URL', url_command_args)
-        self._url_callbacks[tr_id] = callback
+        self._callbacks[tr_id] = (callback, None)
 
     # Helpers ----------------------------------------------------------------
     def __search_account(self, account, network_id=profile.NetworkID.MSN):
@@ -575,7 +576,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             contact._server_property_changed("signature-sound", ss)
 
     def _handle_UUN(self, command): # UBN acknowledgment
-        pass
+        self._command_answered_cb(command.transaction_id)
 
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
@@ -700,13 +701,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def _handle_URL(self, command):
         tr_id = command.transaction_id
-        if tr_id in self._url_callbacks:
+        if tr_id in self._callbacks:
             message_url, post_url, post_id = command.arguments
             post_url, form_dict = self._build_url_post_data(message_url,
                                                             post_url, post_id)
-            callback = self._url_callbacks[tr_id]
-            del self._url_callbacks[tr_id]
-            callback(post_url, form_dict)
+            self._command_answered_cb(tr_id, post_url, form_dict)
 
     # --------- Invitation ---------------------------------------------------
     def _handle_RNG(self, command):
@@ -736,6 +735,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
     # --------- Notification -------------------------------------------------
     def _handle_NOT(self, command):
         pass
+
+    #---------- Errors -------------------------------------------------------
+    def _error_handler(self, error):
+        logger.error('Notification got error : ' + unicode(error))
+        self._command_error_cb(error.transaction_id, int(error.name))
+
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
@@ -768,6 +773,17 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def on_ping_timeout(self):
         self._transport.enable_ping()
+
+    def _command_answered_cb(self, tr_id, *args):
+        callback, errback = self._callbacks.get(tr_id, (None, None))
+        if callback is not None:
+            args.extend(*callback[1:])
+            callback[0](*args)
+
+    def _command_error_cb(self, tr_id, error):
+        callback, errback = self._callbacks.get(tr_id, (None, None))
+        if errback is not None:
+            errback[0](error, *errback[1:])
 
     def _address_book_state_changed_cb(self, address_book, pspec):
         MAX_PAYLOAD_SIZE = 7500

@@ -68,8 +68,8 @@ class NotificationP2PTransport(BaseP2PTransport):
     def send(self, peer, peer_guid, blob):
         data = blob.read_data()
         self._protocol.send_user_notification(data, peer, peer_guid,
-                UserNotificationTypes.P2P_DATA, self._on_notification_sent,
-                peer, peer_guid, blob)
+                UserNotificationTypes.P2P_DATA,
+                (self._on_notification_sent, peer, peer_guid, blob))
 
     def _on_notification_received(self, protocol, peer, peer_guid, type, data):
         if type is not UserNotificationTypes.P2P_DATA:

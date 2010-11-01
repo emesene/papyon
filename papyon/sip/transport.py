@@ -59,11 +59,11 @@ class SIPBaseTransport(gobject.GObject):
     def on_message_parsed(self, parser, message):
         self.emit("message-received", message)
 
-    def send(self, message):
+    def send(self, message, callback=None, errback=None):
         if type(message) is SIPRequest:
             message.add_header("Via", SIPVia(self.protocol, self.ip, self.port))
             message.add_header("Max-Forwards", 70)
-        self._send(message)
+        self._send(message, callback, errback)
 
     def _send(self, message):
         raise NotImplementedError
@@ -96,7 +96,7 @@ class SIPTunneledTransport(SIPBaseTransport):
     def port(self):
         return 50390
 
-    def _send(self, message):
+    def _send(self, message, callback, errback):
         call_id = message.call_id
         if type(message) is SIPResponse:
             contact = message.From.uri.replace("sip:", "")
@@ -115,7 +115,7 @@ class SIPTunneledTransport(SIPBaseTransport):
                 (call_id, data)
         data = data.replace("\r\n", "\n").replace("\n", "\r\n")
         self._protocol.send_user_notification(data, contact, guid,
-                UserNotificationTypes.TUNNELED_SIP)
+                UserNotificationTypes.TUNNELED_SIP, callback, errback)
 
     def on_notification_received(self, protocol, peer, peer_guid, type, message):
         if type is not UserNotificationTypes.TUNNELED_SIP:

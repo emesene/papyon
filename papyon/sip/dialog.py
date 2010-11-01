@@ -149,7 +149,8 @@ class SIPDialog(gobject.GObject, Timer):
             return
         self._state = "CONFIRMED"
         request = self._create_ack_request(response)
-        self._core.send(request, use_transaction=False)
+        self._core.send(request, use_transaction=False,
+                errback=(self._handle_ack_error,))
 
     def reinvite(self):
         if self._state == "ENDED":
@@ -471,6 +472,10 @@ class SIPDialog(gobject.GObject, Timer):
     def _handle_ack_request(self, request):
         self._pending_incoming_requests.remove(request) # No need to answer
         self._state = "CONFIRMED"
+
+    def _handle_ack_error(self, error):
+        logger.error("Received Transport error while sending ACK")
+        self.force_dispose()
 
     # CANCEL Method ----------------------------------------------------------
 

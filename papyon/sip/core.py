@@ -146,7 +146,7 @@ class SIPCore(gobject.GObject, Timer):
     def _create_dialog(self, request, response, mode):
         dialog = SIPDialog(self, request, response, mode)
         key = (dialog.call_id, dialog.local_tag, dialog.remote_tag)
-        logger.info("Create dialog id=%s, local_tag=%s, remote_tag=%s" % key)
+        logger.info("Create dialog (%s, %s, %s)" % key)
         handle = dialog.connect("disposed", self._on_dialog_disposed)
         self._dialogs[key] = dialog
         self._dialog_handles[dialog] = handle
@@ -173,6 +173,7 @@ class SIPCore(gobject.GObject, Timer):
 
     def _on_dialog_disposed(self, dialog):
         key = (dialog.call_id, dialog.local_tag, dialog.remote_tag)
+        logger.info("Dispose dialog (%s, %s, %s)" % key)
         del self._dialogs[key]
         handle = self._dialog_handles.pop(dialog)
         dialog.disconnect(handle)

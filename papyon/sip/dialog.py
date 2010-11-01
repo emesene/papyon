@@ -101,7 +101,7 @@ class SIPDialog(gobject.GObject, Timer):
         self._route_set = []
 
         self.__state = None
-        self._early = bool(response.status/100 == 1)
+        self._early = True
 
         if mode is SIPMode.SERVER:
             self._build_UAS_dialog(request, response)

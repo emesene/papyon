@@ -215,7 +215,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def signoff(self):
         """Logout from the server"""
-        self._send_command('OUT')
+        if self._state >= ProtocolState.AUTHENTICATING:
+            self._send_command('OUT')
         self._transport.lose_connection()
 
     @throttled(7, list())

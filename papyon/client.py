@@ -288,10 +288,7 @@ class Client(EventsDispatcher):
             return
         self.__die = True
         self._switchboard_manager.close()
-        if self.__state < ClientState.AUTHENTICATING:
-            self._transport.lose_connection()
-        else:
-            self._protocol.signoff()
+        self._protocol.signoff()
         self.__state = ClientState.CLOSED
 
     ### protected:

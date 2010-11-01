@@ -280,6 +280,11 @@ class DirectConnection(BaseTransport):
         self._transport.open()
 
     def send_command(self, command, increment=True, callback=None, *cb_args):
+        status = self._transport.get_property("status")
+        if self.__error or status != gnet.IoStatus.OPEN:
+            logger.warning("Transport is closed or errored, not sending %s" %
+                    command.name)
+            return
         logger.debug('>>> ' + unicode(command))
         our_cb_args = (command, callback, cb_args)
         self._transport.send(str(command), self.__on_command_sent, *our_cb_args)

@@ -31,12 +31,14 @@ class MSMepidExtension(SIPExtension):
         mepid = mepid.replace("}", "")
         if message.To and ";mepid=" not in message.To.uri:
             message.To.uri += ";mepid=" + mepid
+        if message.contact and ";mepid=" not in message.contact.uri:
+            message.contact.uri += ";mepid=" + mepid
 
     def extend_request(self, message):
         mepid = self._client.machine_guid.upper().replace("-", "")
         mepid = mepid.replace("{", "")
         mepid = mepid.replace("}", "")
-        if message.contact:
+        if message.contact and ";mepid=" not in message.contact.uri:
             message.contact.uri += ";mepid=" + mepid
         if message.From and ";mepid=" not in message.From.uri:
             message.From.uri += ";mepid=" + mepid

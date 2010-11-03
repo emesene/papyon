@@ -335,6 +335,8 @@ class SIPDialog(gobject.GObject, Timer):
         self._core.send(request)
 
     def answer(self, request, status, extra_headers={}, content=None):
+        if self._state == "ENDED":
+            return
         if request in self._pending_incoming_requests and status >= 200:
             self._pending_incoming_requests.remove(request)
         return self._core.answer(request, status, tag=self._local_tag,

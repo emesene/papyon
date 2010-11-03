@@ -189,6 +189,10 @@ class SIPDialog(gobject.GObject, Timer):
         self.stop_all_timeout()
         self._state = "DISPOSED"
 
+    def force_dispose(self):
+        self._pending_outgoing_requests = []
+        self.dispose()
+
     # States Handling --------------------------------------------------------
 
     @rw_property

@@ -180,8 +180,9 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
                 NetworkID.MSN)
 
     def _dispose(self):
-        logger.info("Call has been ended")
+        logger.info("Call has been disposed")
         MediaCall.dispose(self)
+        self._remove_all_dialogs()
         self.stop_all_timeout()
         self.emit("ended")
         self._dispatch("on_call_ended")
@@ -210,9 +211,10 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         return True
 
     def _remove_all_dialogs(self):
-        """Remove and disconnect all dialogs."""
+        """Remove, dispose and disconnect all dialogs."""
         for dialog in self._dialogs:
             self._disconnect_dialog(dialog)
+            dialog.force_dispose()
         self._dialogs = []
 
     def _connect_dialog(self, dialog):
@@ -220,7 +222,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         handles.append(dialog.connect("ringing", self._on_dialog_ringing))
         handles.append(dialog.connect("accepted", self._on_dialog_accepted))
         handles.append(dialog.connect("rejected", self._on_dialog_rejected))
-        handles.append(dialog.connect("ended", self._on_dialog_ended))
+        handles.append(dialog.connect("disposed", self._on_dialog_disposed))
         handles.append(dialog.connect("offer-received", self._on_offer_received))
         self._handles[dialog] = handles
 
@@ -255,7 +257,7 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         if remaining <= 0:
             self._dispatch("on_call_rejected", response)
 
-    def _on_dialog_ended(self, dialog):
+    def _on_dialog_disposed(self, dialog):
         self._disconnect_dialog(dialog)
         self._dialogs.remove(dialog)
         if len(self._dialogs) == 0:

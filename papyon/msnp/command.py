@@ -118,7 +118,10 @@ class Command(object):
         @type arguments: tuple()
 
         @ivar payload: the payload of the command
-        @type payload: string or None"""
+        @type payload: string or None
+        
+        @ivar payload_len: the lenght of the payload
+        @type payload_len: integer"""
 
     OUTGOING_NO_TRID = ('OUT', 'PNG')
     INCOMING_NO_TRID = (
@@ -147,6 +150,7 @@ class Command(object):
         self.transaction_id = None
         self.arguments = None
         self.payload = None
+        self.payload_len = 0
 
     ### public methods
     def build(self, name, transaction_id, payload=None, *arguments):
@@ -168,6 +172,8 @@ class Command(object):
         self.transaction_id = transaction_id
         self.arguments = arguments
         self.payload = payload
+        if self.payload is not None:
+            self.payload_len = len(str(payload))
 
     def parse(self, buf):
         """Fills the Command object according parsing a string.
@@ -179,8 +185,6 @@ class Command(object):
         self.__parse_command(lines[0])
         if len(lines) > 1: # payload
             self.payload = lines[1]
-            # remove the last argument as it is the data length
-            self.arguments = self.arguments[:-1]
 
     def is_error(self):
         """Tells if the current command is an error code
@@ -224,10 +228,23 @@ class Command(object):
     def __parse_command(self, buf):
         words = buf.split()
         self.name, pos = words[0], 1
+        if len(self.name) != 3:
+            raise ValueError("Name must be 3 chars long")
         if (words[0] not in self.INCOMING_NO_TRID) and\
                 (words[0] not in self.OUTGOING_NO_TRID) and\
                 len(words) > pos:
-            self.transaction_id = int(words[pos])
+            try:
+                self.transaction_id = int(words[pos])
+            except ValueError:
+                raise ValueError("Transaction ID must be an int")
             pos += 1
         if len(words) > pos:
             self.arguments = words[pos:]
+
+        if self.name in self.INCOMING_PAYLOAD or \
+                (self.is_error() and self.arguments):
+            try:
+                self.payload_len = int(self.arguments[-1])
+                self.arguments = self.arguments[:-1]
+            except ValueError:
+                self.payload_len = 0

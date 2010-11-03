@@ -148,8 +148,11 @@ class BaseTransport(gobject.GObject):
         """Connect to the server server"""
         raise NotImplementedError
 
-    def lose_connection(self):
-        """Disconnect from the server"""
+    def lose_connection(self, error=None):
+        """Disconnect from the server
+        
+            @param error: the error that caused the disconnection if any
+            @type error: Exception"""
         raise NotImplementedError
 
     def reset_connection(self, server=None):
@@ -235,7 +238,7 @@ class DirectConnection(BaseTransport):
         self._receiver = receiver
         self._receiver.delimiter = "\r\n"
         self._transport = transport
-        self.__pending_chunk = None
+        self.__pending_command = None
         self.__resetting = False
         self.__error = False
 
@@ -256,10 +259,15 @@ class DirectConnection(BaseTransport):
         return self._transport.sockname
 
     def establish_connection(self):
+        self.__pending_command = None
         logger.debug('<-> Connecting to %s:%d' % self.server )
         self._transport.open()
 
-    def lose_connection(self):
+    def lose_connection(self, error=None):
+        if error is not None:
+            self.__error = True
+            self.emit("connection-failure", error)
+
         self.__resetting = False
         self._transport.close()
 
@@ -316,24 +324,23 @@ class DirectConnection(BaseTransport):
             self.emit("connection-failure", reason)
 
     def __on_received(self, receiver, chunk):
-        cmd = msnp.Command()
-        if self.__pending_chunk:
-            chunk = self.__pending_chunk + "\r\n" + chunk
-            cmd.parse(chunk)
-            self.__pending_chunk = None
-            self._receiver.delimiter = "\r\n"
+        if self.__pending_command is None:
+            cmd = msnp.Command()
+            try:
+                cmd.parse(chunk)
+            except Exception, err:
+                logger.error("Received invalid command, closing connection")
+                self.lose_connection(err)
+                return
+            if cmd.payload_len > 0:
+                self.__pending_command = cmd
+                self._receiver.delimiter = cmd.payload_len
+                return # wait for payload
         else:
-            cmd.parse(chunk)
-            if cmd.name in msnp.Command.INCOMING_PAYLOAD or \
-                    (cmd.is_error() and (cmd.arguments is not None) and len(cmd.arguments) > 0):
-                try:
-                    payload_len = int(cmd.arguments[-1])
-                except:
-                    payload_len = 0
-                if payload_len > 0:
-                    self.__pending_chunk = chunk
-                    self._receiver.delimiter = payload_len
-                    return
+            cmd = self.__pending_command
+            cmd.payload = chunk
+            self.__pending_command = None
+            self._receiver.delimiter = "\r\n"
         logger.debug('<<< ' + unicode(cmd))
         self.emit("command-received", cmd)
 gobject.type_register(DirectConnection)
@@ -368,10 +375,12 @@ class HTTPPollConnection(BaseTransport):
         self._polling_source_id = gobject.timeout_add_seconds(5, self._poll)
         self.emit("connection-success")
 
-    def lose_connection(self):
+    def lose_connection(self, error=None):
         gobject.source_remove(self._polling_source_id)
         del self._polling_source_id
-        if not self.__error:
+        if error is not None:
+            self.emit("connection-failure", error)
+        elif not self.__error:
             self.emit("connection-lost", None)
         self.__error = False
 
@@ -473,29 +482,22 @@ class HTTPPollConnection(BaseTransport):
     def __extract_command(self, data):
         try:
             first, rest = data.split('\r\n', 1)
-        except ValueError:
+        except ValueError, err:
             logger.warning('Unable to extract a command: %s' % data)
-            self.__error = True
-            self.emit("connection-failure", None)
+            self.lose_connection(err)
             return []
 
-        cmd = msnp.Command()
-        cmd.parse(first.strip())
-        if cmd.name in msnp.Command.INCOMING_PAYLOAD or \
-                (cmd.is_error() and (cmd.arguments is not None) and len(cmd.arguments) > 0):
-            try:
-                payload_len = int(cmd.arguments[-1])
-            except:
-                payload_len = 0
-            if payload_len > 0:
-                cmd.payload = rest[:payload_len].strip()
-            logger.debug('<<< ' + unicode(cmd))
-            self.emit("command-received", cmd)
-            return rest[payload_len:]
-        else:
-            logger.debug('<<< ' + unicode(cmd))
-            self.emit("command-received", cmd)
-            return rest
+        try:
+            cmd = msnp.Command()
+            cmd.parse(first.strip())
+            if cmd.payload_len > 0:
+                cmd.payload = rest[:cmd.payload_len].strip()
+                rest = rest[cmd.payload_len:]
+        except Exception, err:
+            logger.error("Received invalid command, closing connection")
+            self.lose_connection(err)
+            return []
 
-
-
+        logger.debug('<<< ' + unicode(cmd))
+        self.emit("command-received", cmd)
+        return rest

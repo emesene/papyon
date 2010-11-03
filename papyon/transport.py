@@ -238,7 +238,6 @@ class DirectConnection(BaseTransport):
         self.__pending_chunk = None
         self.__resetting = False
         self.__error = False
-        self.__png_timeout = None
 
     __init__.__doc__ = BaseTransport.__init__.__doc__
 
@@ -263,9 +262,6 @@ class DirectConnection(BaseTransport):
     def lose_connection(self):
         self.__resetting = False
         self._transport.close()
-        if self.__png_timeout is not None:
-            gobject.source_remove(self.__png_timeout)
-            self.__png_timeout = None
 
     def reset_connection(self, server=None):
         if server:
@@ -273,9 +269,6 @@ class DirectConnection(BaseTransport):
             self._transport.set_property("port", server[1])
             self.server = server
         self.__resetting = True
-        if self.__png_timeout is not None:
-            gobject.source_remove(self.__png_timeout)
-            self.__png_timeout = None
         self._transport.close()
         self._transport.open()
 
@@ -295,17 +288,11 @@ class DirectConnection(BaseTransport):
         cmd = msnp.Command()
         cmd.build("PNG", None)
         self.send_command(cmd, False)
-        self.__png_timeout = None
-        return False
 
     def __on_command_sent(self, command, user_callback, user_cb_args):
         self.emit("command-sent", command)
         if user_callback:
             user_callback(*user_cb_args)
-
-    def __handle_ping_reply(self, command):
-        timeout = int(command.arguments[0])
-        self.__png_timeout = gobject.timeout_add_seconds(timeout, self.enable_ping)
 
     ### callbacks
     def __on_status_change(self, transport, param):
@@ -348,10 +335,7 @@ class DirectConnection(BaseTransport):
                     self._receiver.delimiter = payload_len
                     return
         logger.debug('<<< ' + unicode(cmd))
-        if cmd.name == 'QNG':
-            self.__handle_ping_reply(cmd)
-        else:
-            self.emit("command-received", cmd)
+        self.emit("command-received", cmd)
 gobject.type_register(DirectConnection)
 
 

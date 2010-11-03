@@ -33,6 +33,7 @@ from papyon.gnet.message.HTTP import HTTPMessage
 from papyon.util.queue import PriorityQueue, LastElementQueue
 from papyon.util.decorator import throttled
 from papyon.util.encoding import decode_rfc2047_string
+from papyon.util.timer import Timer
 import papyon.util.element_tree as ElementTree
 import papyon.profile as profile
 import papyon.service.SingleSignOn as SSO
@@ -51,7 +52,7 @@ __all__ = ['NotificationProtocol']
 logger = logging.getLogger('papyon.protocol.notification')
 
 
-class NotificationProtocol(BaseProtocol, gobject.GObject):
+class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
     """Protocol used to communicate with the Notification Server
 
         @undocumented: do_get_property, do_set_property
@@ -113,6 +114,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         """
         BaseProtocol.__init__(self, client, transport, proxies)
         gobject.GObject.__init__(self)
+        Timer.__init__(self)
         self.__state = ProtocolState.CLOSED
         self._protocol_version = version
         self._url_callbacks = {} # tr_id=>callback
@@ -419,6 +421,10 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
 
     def _handle_SBS(self, command): # unknown command
         pass
+
+    def _handle_QNG(self, command):
+        timeout = int(command.arguments[0])
+        self.start_timeout("ping", timeout)
 
     def _handle_OUT(self, command):
         reason = None
@@ -742,6 +748,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
         self._send_command('VER', versions)
 
     def _disconnect_cb(self, transport, reason):
+        self.stop_all_timeout()
         self._state = ProtocolState.CLOSED
 
     def _sso_cb(self, tokens, nonce):
@@ -758,6 +765,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject):
             arguments = ("SSO", "S", token, blob)
 
         self._send_command("USR", arguments)
+
+    def on_ping_timeout(self):
+        self._transport.enable_ping()
 
     def _address_book_state_changed_cb(self, address_book, pspec):
         MAX_PAYLOAD_SIZE = 7500

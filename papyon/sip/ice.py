@@ -94,12 +94,14 @@ class ICECandidateEncoder(MediaCandidateEncoder):
 
     def get_default_candidates(self, desc):
         candidates = []
-        candidates.append(MediaCandidate(component_id=COMPONENTS.RTP,
-            ip=desc.ip, port=desc.port, transport="UDP", priority=1,
-            type="host"))
-        candidates.append(MediaCandidate(component_id=COMPONENTS.RTCP,
-            ip=desc.ip, port=desc.rtcp, transport="UDP", priority=1,
-            type="host"))
+        if desc.ip and desc.port:
+            candidates.append(MediaCandidate(component_id=COMPONENTS.RTP,
+                ip=desc.ip, port=desc.port, transport="UDP", priority=1,
+                type="host"))
+        if desc.ip and desc.rtcp:
+            candidates.append(MediaCandidate(component_id=COMPONENTS.RTCP,
+                ip=desc.ip, port=desc.rtcp, transport="UDP", priority=1,
+                type="host"))
         return candidates
 
 

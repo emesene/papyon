@@ -45,4 +45,6 @@ class MSMepidExtension(SIPExtension):
 
         #FIXME hack
         if ";mepid=" in message.uri:
-            message.uri = message.uri.split(";")[0]
+            message.uri, target_mepid = message.uri.split(";", 1)
+            if message.To and ";mepid=" not in message.To.uri:
+                message.To.uri += ";" + target_mepid

@@ -49,16 +49,17 @@ class MediaSession(gobject.GObject, EventsDispatcher):
             ())
     }
 
-    def __init__(self, type):
+    def __init__(self, client, type):
         """Initialize the session
 
+           @param client: Papyon client instance
+           @type client: L{papyon.Client}
            @param type: Session type
-           @type type: L{papyon.media.constants.MediaSessionType}
-           @param msg_class: The session message class to use (e.g SDPMessage)
-           @type msg_class: subclass of L{papyon.media.message.MediaSessionMessage}"""
+           @type type: L{papyon.media.constants.MediaSessionType}"""
 
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
+        self._client = client
         self._type = type
 
         self._streams = []
@@ -125,7 +126,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
            @returns the new stream"""
 
         logger.debug("Create stream %s" % name)
-        stream = MediaStream(self, name, direction, created_locally)
+        stream = MediaStream(self._client, self, name, direction, created_locally)
         self._dispatch("on_stream_created", stream)
         return stream
 

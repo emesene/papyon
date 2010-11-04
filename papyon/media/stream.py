@@ -49,9 +49,11 @@ class MediaStream(gobject.GObject, EventsDispatcher, Timer):
             ())
     }
 
-    def __init__(self, session, name, direction, created):
+    def __init__(self, client, session, name, direction, created):
         """Initialize the media stream.
 
+           @param client: Papyon client instance
+           @type client: L{papyon.Client}
            @param session: Session that contains this stream
            @type session: L{papyon.media.session.MediaSession}
            @param name: Stream name
@@ -64,6 +66,7 @@ class MediaStream(gobject.GObject, EventsDispatcher, Timer):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
         Timer.__init__(self)
+        self._client = client
         self._session = weakref.ref(session)
         self._name = name
         self._active = False

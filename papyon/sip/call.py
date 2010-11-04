@@ -44,12 +44,11 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
 
     def __init__(self, client, core, id, peer=None, invite=None):
         gobject.GObject.__init__(self)
-        MediaCall.__init__(self, MediaSessionType.TUNNELED_SIP)
+        MediaCall.__init__(self, client, MediaSessionType.TUNNELED_SIP)
         RTCActivity.__init__(self, client)
         EventsDispatcher.__init__(self)
         Timer.__init__(self)
 
-        self._client = client
         self._core = core
         self._id = id
         self._peer = peer

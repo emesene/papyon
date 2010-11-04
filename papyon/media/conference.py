@@ -168,6 +168,15 @@ class MediaStreamHandler(MediaStreamEventInterface):
         MediaStreamEventInterface.__init__(self, stream)
 
     def setup(self, conference, pipeline, participant, type):
+        relays = []
+        for r in self._stream.relays:
+            relay = gst.Structure("relay")
+            relay.set_value("username", r.username)
+            relay.set_value("password", r.password)
+            relay.set_value("ip", r.ip)
+            relay.set_value("port", r.port, "uint")
+            relays.append(relay)
+
         if type in (MediaSessionType.SIP, MediaSessionType.TUNNELED_SIP):
             if type is MediaSessionType.TUNNELED_SIP:
                 compatibility_mode = 3
@@ -176,7 +185,7 @@ class MediaStreamHandler(MediaStreamEventInterface):
             params = {"stun-ip" : "64.14.48.28", "stun-port" : 3478,
                     "compatibility-mode" : compatibility_mode,
                     "controlling-mode": self._stream.created_locally,
-                    "relay-info": self._stream.relays}
+                    "relay-info": relays}
         else:
             params = {}
         media_type = media_types[self._stream.name]

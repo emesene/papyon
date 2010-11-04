@@ -177,7 +177,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         """Parse the received session message and create media streams
            accordingly. The created streams are added but we only emit the
            'prepared' and 'ready' signals once all the descriptions are
-           processed. 
+           processed.
 
            @param msg: Session message received from a peer
            @type msg: L{papyon.media.message.MediaSessionMessage}

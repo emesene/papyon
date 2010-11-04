@@ -33,9 +33,9 @@ class Storage(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "SchematizedStore", proxies)
 
-    def GetProfile(self, callback, errback, scenario, cid, profile_rid, 
-                   p_date_modified, expression_rid, e_date_modified, 
-                   display_name, dn_last_modified, personal_status, 
+    def GetProfile(self, callback, errback, scenario, cid, profile_rid,
+                   p_date_modified, expression_rid, e_date_modified,
+                   display_name, dn_last_modified, personal_status,
                    ps_last_modified, user_tile_url, photo, flags):
         self.__soap_request(self._service.GetProfile, scenario,
                  (cid, 
@@ -52,9 +52,9 @@ class Storage(SOAPService):
                   XMLTYPE.bool.encode(flags)),
                  callback, errback)
 
-    def _HandleGetProfileResponse(self, callback, errback, response, user_date):
-        profile_rid = response.findtext('./st:ResourceID')        
-        
+    def _HandleGetProfileResponse(self, callback, errback, response, user_data):
+        profile_rid = response.findtext('./st:ResourceID')
+
         expression_profile = response.find('./st:ExpressionProfile')
         expression_profile_rid = expression_profile.findtext('./st:ResourceID')
 
@@ -85,7 +85,7 @@ class Storage(SOAPService):
     def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
-    def CreateRelationships(self, callback, errback, scenario, 
+    def CreateRelationships(self, callback, errback, scenario,
                             source_rid, target_rid):
         self.__soap_request(self._service.CreateRelationships, scenario,
                             (source_rid, target_rid),
@@ -94,7 +94,7 @@ class Storage(SOAPService):
     def _HandleCreateRelationshipsResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
-    def DeleteRelationships(self, callback, errback, scenario, 
+    def DeleteRelationships(self, callback, errback, scenario,
                             target_id, cid=None, source_id=None):
         self.__soap_request(self._service.DeleteRelationships, scenario,
                             (cid, source_id, target_id), callback, errback)
@@ -116,10 +116,10 @@ class Storage(SOAPService):
         self.__soap_request(self._service.FindDocuments, scenario,
                             (cid,), callback, errback)
 
-    def _HandleFindDocumentsResponse(self, callback, errback, response, user_date):
+    def _HandleFindDocumentsResponse(self, callback, errback, response, user_data):
         document = response.find('./st:Document')
 
-        document_rid = response.findtext('./st:ResourceID')        
+        document_rid = response.findtext('./st:ResourceID')
         document_name = response.findtext('./st:Name')        
         callback[0](document_rid, document_name, *callback[1:])
 

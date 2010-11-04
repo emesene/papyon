@@ -87,8 +87,3 @@ class RSI(SOAPService):
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
         errback[0](None, *errback[1:])
-
-
-
-
-        

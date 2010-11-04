@@ -31,7 +31,7 @@ from msnp2p.webcam import WebcamSession
 from msnp2p import EufGuid, ApplicationID
 from msnp2p.exceptions import ParseError
 from msnp2p.constants import SLPStatus
-from profile import NetworkID, Contact, Profile
+from profile import NetworkID, BaseContact, Contact, Profile
 
 from papyon.util.encoding import b64_decode
 import papyon.util.element_tree as ElementTree
@@ -99,7 +99,7 @@ class MSNObject(object):
             @type data: File
         """
         # Backward compatible with older clients that pass a Contact/Profile
-        if type(creator) is Contact or type(creator) is Profile:
+        if isinstance(creator, BaseContact):
             creator = creator.account
         self._creator = creator
         self._size = size
@@ -254,6 +254,12 @@ class P2PSessionHandler(gobject.GObject):
         self._disconnect_session(session)
         self._sessions.remove(session)
 
+    def _can_handle_message (self, message):
+        raise NotImplementedError
+
+    def _handle_message(self, peer, guid, message):
+        raise NotImplementedError
+
 
 class MSNObjectStore(P2PSessionHandler):
     """Stores published MSN objects.
@@ -271,6 +277,14 @@ class MSNObjectStore(P2PSessionHandler):
         P2PSessionHandler.__init__(self, client)
         self._callbacks = {} # session => (callback, errback, msn_object)
         self._published_objects = set()
+
+    def _get_published_object(self, msn_object):
+        if msn_object is None:
+            return None
+        for obj in self._published_objects:
+            if obj._data_sha == msn_object._data_sha:
+                return obj
+        return None
 
     def _can_handle_message (self, message):
         euf_guid = message.body.euf_guid
@@ -298,12 +312,6 @@ class MSNObjectStore(P2PSessionHandler):
         self._callbacks[session] = (None, None, msn_object)
         session.accept(obj._data)
         return session
-
-    def _get_published_object(self, msn_object):
-        for obj in self._published_objects:
-            if obj._data_sha == msn_object._data_sha:
-                return obj
-        return None
 
     def _connect_session(self, session):
         P2PSessionHandler._connect_session(self, session)

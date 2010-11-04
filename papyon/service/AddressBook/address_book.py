@@ -232,13 +232,10 @@ class AddressBook(gobject.GObject):
         self._state = AddressBookState.SYNCHRONIZING
 
         def callback(address_book, memberships):
-            ab = address_book.ab
-            contacts = address_book.contacts
-            groups = address_book.groups
-            for group in groups:
+            for group in address_book.groups:
                 g = profile.Group(group.Id, group.Name.encode("utf-8"))
                 self.groups.add(g)
-            for contact in contacts:
+            for contact in address_book.contacts:
                 c = self.__build_contact(contact, Membership.FORWARD)
                 if c is None:
                     continue

@@ -218,10 +218,7 @@ class SingleSignOn(SOAPService):
             self._service.url = soap_response.fault.tree.findtext("psf:redirectUrl")
             self.__pending_response = False
             self.RequestMultipleSecurityTokens(callback, errback, *requested_services)
-            
-            
-            
-        
+
 
 if __name__ == '__main__':
     import sys

@@ -40,11 +40,6 @@ class StoreProfileScenario(BaseScenario):
         self.__expression_profile_id = expression_profile_id
         self.__display_picture_id = display_picture_id
 
-        print self.__cid
-        print self.__profile_id
-        print self.__expression_profile_id
-        print self.__display_picture_id
-
         self.display_name = display_name
         self.personal_message = personal_message
         self.display_picture = display_picture
@@ -81,7 +76,7 @@ class StoreProfileScenario(BaseScenario):
             (self.__create_document_callback,),
             (self.__store_profile_errback,),
             self._scenario, self.__cid,
-            "roaming", self.display_picture[0], 
+            "roaming", self.display_picture[0],
             self.display_picture[1].encode('base64'))
         
     def __create_document_callback(self, document_rid):

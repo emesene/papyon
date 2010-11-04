@@ -52,9 +52,10 @@ class GetStoredProfileScenario(BaseScenario):
             personal_msg, photo_rid, *callback[1:])
 
         if photo_rid is not None:
-            self.__storage.get_display_picture(photo_url, user_tile_url,
+            self.__storage.get_display_picture(
                                (self.__get_display_picture_callback,),
-                               (self.__get_display_picture_errback,))
+                               (self.__get_display_picture_errback,),
+                               photo_url, user_tile_url)
 
     def __get_profile_errback(self, error_code):
         errcode = ContentRoamingError.UNKNOWN

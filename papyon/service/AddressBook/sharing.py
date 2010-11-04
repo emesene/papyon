@@ -146,8 +146,9 @@ class Sharing(SOAPService):
             @param deltas_only: True if the method should only check changes
                                 since last_change, False else
         """
-        self.__soap_request(self._service.FindMembership, scenario,
-                (services, deltas_only, self._last_changes), callback, errback)
+        self.__soap_request(callback, errback,
+                self._service.FindMembership, scenario,
+                (services, deltas_only, self._last_changes))
 
     def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
         if response[1] is not None:
@@ -175,8 +176,9 @@ class Sharing(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__soap_request(self._service.AddMember, scenario,
-                (member_role, type, state, account), callback, errback)
+        self.__soap_request(callback, errback,
+                self._service.AddMember, scenario,
+                (member_role, type, state, account))
 
     def _HandleAddMemberResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
@@ -190,17 +192,19 @@ class Sharing(SOAPService):
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
         """
-        self.__soap_request(self._service.DeleteMember, scenario,
-                            (member_role, type, state, account),
-                            callback, errback)
+        self.__soap_request(callback, errback,
+                self._service.DeleteMember, scenario,
+                (member_role, type, state, account))
 
     def _HandleDeleteMemberResponse(self, callback, errback, response, user_data):
         callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def __soap_request(self, method, scenario, args, callback, errback):
+    def __soap_request(self, callback, errback, method, scenario, args,
+            user_data=None):
         token = str(self._tokens[LiveService.CONTACTS])
-        self._soap_request(method, (scenario, token), args, callback, errback)
+        self._soap_request(method, (scenario, token), args, callback, errback,
+                user_data)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):

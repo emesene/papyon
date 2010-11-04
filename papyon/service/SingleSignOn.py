@@ -106,7 +106,7 @@ class RequireSecurityTokens(object):
         def method(object, callback, errback, *args, **kwargs):
             callback = (sso_callback, object, callback, errback, args, kwargs)
             object._sso.RequestMultipleSecurityTokens(callback,
-                    None, *self._tokens)
+                    errback, *self._tokens)
         method.__name__ = func.__name__
         method.__doc__ = func.__doc__
         method.__dict__.update(func.__dict__)

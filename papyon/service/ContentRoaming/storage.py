@@ -37,8 +37,9 @@ class Storage(SOAPService):
                    p_date_modified, expression_rid, e_date_modified,
                    display_name, dn_last_modified, personal_status,
                    ps_last_modified, user_tile_url, photo, flags):
-        self.__soap_request(self._service.GetProfile, scenario,
-                 (cid, 
+        self.__soap_request(callback, errback,
+                 self._service.GetProfile, scenario,
+                 (cid,
                   XMLTYPE.bool.encode(profile_rid),
                   XMLTYPE.bool.encode(p_date_modified),
                   XMLTYPE.bool.encode(expression_rid),
@@ -49,8 +50,7 @@ class Storage(SOAPService):
                   XMLTYPE.bool.encode(ps_last_modified),
                   XMLTYPE.bool.encode(user_tile_url),
                   XMLTYPE.bool.encode(photo),
-                  XMLTYPE.bool.encode(flags)),
-                 callback, errback)
+                  XMLTYPE.bool.encode(flags)))
 
     def _HandleGetProfileResponse(self, callback, errback, response, user_data):
         profile_rid = response.findtext('./st:ResourceID')
@@ -78,43 +78,45 @@ class Storage(SOAPService):
 
     def UpdateProfile(self, callback, errback, scenario, profile_rid,
                       display_name, personal_status, flags):
-        self.__soap_request(self._service.UpdateProfile, scenario,
-                            (profile_rid, display_name, personal_status, flags),
-                            callback, errback)
+        self.__soap_request(callback, errback,
+                            self._service.UpdateProfile, scenario,
+                            (profile_rid, display_name, personal_status, flags))
 
     def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
     def CreateRelationships(self, callback, errback, scenario,
                             source_rid, target_rid):
-        self.__soap_request(self._service.CreateRelationships, scenario,
-                            (source_rid, target_rid),
-                            callback, errback)
+        self.__soap_request(callback, errback,
+                            self._service.CreateRelationships, scenario,
+                            (source_rid, target_rid))
 
     def _HandleCreateRelationshipsResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
     def DeleteRelationships(self, callback, errback, scenario,
                             target_id, cid=None, source_id=None):
-        self.__soap_request(self._service.DeleteRelationships, scenario,
-                            (cid, source_id, target_id), callback, errback)
+        self.__soap_request(callback, errback,
+                            self._service.DeleteRelationships, scenario,
+                            (cid, source_id, target_id))
 
     def _HandleDeleteRelationshipsResponse(self, callback, errback, response, user_date):
         callback[0](*callback[1:])
 
     def CreateDocument(self, callback, errback, scenario, cid, photo_name,
                        photo_mime_type, photo_data):
-        self.__soap_request(self._service.CreateDocument, scenario,
-                            (cid, photo_name, photo_mime_type, photo_data),
-                            callback, errback)
+        self.__soap_request(callback, errback,
+                            self._service.CreateDocument, scenario,
+                            (cid, photo_name, photo_mime_type, photo_data))
 
     def _HandleCreateDocumentResponse(self, callback, errback, response, user_date):
         document_rid = response.text
         callback[0](document_rid, *callback[1:])
 
     def FindDocuments(self, callback, errback, scenario, cid):
-        self.__soap_request(self._service.FindDocuments, scenario,
-                            (cid,), callback, errback)
+        self.__soap_request(callback, errback,
+                            self._service.FindDocuments, scenario,
+                            (cid,))
 
     def _HandleFindDocumentsResponse(self, callback, errback, response, user_data):
         document = response.find('./st:Document')
@@ -124,12 +126,12 @@ class Storage(SOAPService):
         callback[0](document_rid, document_name, *callback[1:])
 
     @RequireSecurityTokens(LiveService.STORAGE)
-    def __soap_request(self, method, scenario, args, callback, errback):
+    def __soap_request(self, callback, errback, method, scenario, args):
         token = str(self._tokens[LiveService.STORAGE])
         self._soap_request(method, (scenario, token), args, callback, errback)
 
     @RequireSecurityTokens(LiveService.STORAGE)
-    def get_display_picture(self, pre_auth_url, user_tile_url, callback, errback):
+    def get_display_picture(self, callback, errback, pre_auth_url, user_tile_url):
         token = str(self._tokens[LiveService.STORAGE])
 
         def success(transport, http_response):

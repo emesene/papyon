@@ -20,8 +20,10 @@
 
 """HTTP Messages structures."""
 import cgi
+import gzip
 from papyon.gnet.constants import *
 from papyon.util.odict import odict
+import papyon.util.string_io as StringIO
 
 __all__ = ['HTTPMessage', 'HTTPResponse', 'HTTPRequest']
 
@@ -69,6 +71,22 @@ class HTTPMessage(object):
                 break
             name, value = line.split(":", 1)
             self.add_header(name.rstrip(), value.lstrip())
+
+    def decode_body(self):
+        """Decodes body content using "Content-Encoding" header. As of now
+           only 'gzip' encoding is supported.
+           @note Only 'gzip' encoding is supported for now
+           @raises NotImplementedError: if encoding is unknown"""
+
+        encoding = self.headers.get("Content-Encoding", "")
+        if encoding == "":
+            return self.body
+        elif encoding == "gzip":
+            body_stream = StringIO.StringIO(self.body)
+            unzipper = gzip.GzipFile(fileobj=body_stream)
+            return unzipper.read()
+        else:
+            raise NotImplementedError("%s is not implemented" % encoding)
 
     def __str__(self):
         result = []

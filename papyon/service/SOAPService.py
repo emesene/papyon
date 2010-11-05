@@ -26,7 +26,6 @@ from SOAPUtils import *
 import papyon.gnet.protocol
 import papyon.util.element_tree as ElementTree
 import papyon.util.string_io as StringIO
-import gzip
 import re
 import logging
 
@@ -200,20 +199,18 @@ class SOAPService(object):
     def _response_handler(self, transport, http_response):
         logger.debug("<<< " + unicode(http_response))
 
-        soap_response = ""
-        if "Content-Encoding" in http_response.headers:
-            if http_response.headers["Content-Encoding"] == "gzip":
-                body_stream = StringIO.StringIO(http_response.body)
-                unzipper = gzip.GzipFile(fileobj=body_stream)
-                unzipped_data = unzipper.read()
-                soap_response = SOAPResponse(unzipped_data)
-            elif http_response.headers["Content-Encoding"] == "":
-                soap_response = SOAPResponse(http_response.body)
-            else:
-                raise Exception("Invalid or unknown encoding")
-        else:
-            soap_response = SOAPResponse(http_response.body)
-        request_id, callback, errback, user_data = self._unref_transport(transport)
+        request = self._unref_transport(transport)
+        if request is None:
+            logger.warning("No active request for HTTP response received")
+            return
+        request_id, callback, errback, user_data = request
+
+        try:
+            decoded_body = http_response.decode_body()
+            soap_response = SOAPResponse(decoded_body)
+        except Exception, err:
+            logger.error("Couldn't decode SOAP response body")
+            return
 
         if not soap_response.is_valid():
             logger.warning("Invalid SOAP Response")

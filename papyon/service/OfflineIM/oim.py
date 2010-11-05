@@ -18,10 +18,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.msnp.notification import ProtocolConstant
 from papyon.service.OfflineIM.constants import *
 from papyon.service.SOAPService import SOAPService
-from papyon.msnp.notification import ProtocolConstant
 from papyon.service.SingleSignOn import *
+from papyon.util.async import *
 
 __all__ = ['OIM']
 
@@ -57,10 +58,7 @@ class OIM(SOAPService):
                            (message_type, content),
                            callback, errback)
 
-    def _HandleStore2Response(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
-
-    def _HandleStore2Fault(self, callback, errback, soap_response, user_data): 
+    def _HandleStore2Fault(self, callback, errback, soap_response, user_data):
         error_code = OfflineMessagesBoxError.UNKNOWN
         auth_policy = None
         lock_key_challenge = None
@@ -81,7 +79,7 @@ class OIM(SOAPService):
         elif soap_response.fault.faultcode.endswith("SenderThrottleLimitExceeded"):
             error_code = OfflineMessagesBoxError.SENDER_THROTTLE_LIMIT_EXCEEDED
             
-        errback[0](error_code, auth_policy, lock_key_challenge, *errback[1:])
+        run(errback, error_code, auth_policy, lock_key_challenge)
 
     def __build_mail_data(self, run_id, sequence_number, content):
         import base64
@@ -94,6 +92,10 @@ class OIM(SOAPService):
         mail_data += base64.b64encode(content)
         return mail_data
 
-    def _HandleSOAPFault(self, request_id, callback, errback,
-            soap_response, user_data):
-        errback[0](None, *errback[1:])
+    def _HandleSOAPResponse(self, request_id, callback, errback, soap_response,
+            user_data):
+        run(callback)
+
+    def _HandleSOAPFault(self, request_id, callback, errback, soap_response,
+            user_data):
+        run(errback, None)

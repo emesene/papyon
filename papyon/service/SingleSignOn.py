@@ -21,6 +21,8 @@
 from SOAPService import *
 from description.SingleSignOn.RequestMultipleSecurityTokens import LiveService
 
+from papyon.util.async import *
+
 import base64
 import struct
 import time
@@ -198,8 +200,7 @@ class SingleSignOn(SOAPService):
 
         self.__pending_response = False
 
-        if callback is not None:
-            callback[0](result, *callback[1:])
+        run(callback, result)
 
         if len(self.__pending_requests):
             callback, errback, services = self.__pending_requests.pop(0)
@@ -212,7 +213,7 @@ class SingleSignOn(SOAPService):
     def _HandleSOAPFault(self, request_id, callback, errback,
              soap_response, user_data):
         if soap_response.fault.faultcode.endswith("FailedAuthentication"):
-            errback[0](*errback[1:])
+            run(errback, 0)
         elif soap_response.fault.faultcode.endswith("Redirect"):
             requested_services, response_tokens = user_data
             self._service.url = soap_response.fault.tree.findtext("psf:redirectUrl")

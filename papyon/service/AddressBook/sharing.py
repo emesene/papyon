@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.service.SOAPService import SOAPService
+from papyon.util.async import *
 from papyon.util.element_tree import XMLTYPE
 from papyon.service.SingleSignOn import *
 from papyon.service.AddressBook.common import *
@@ -165,7 +166,7 @@ class Sharing(SOAPService):
                 else:
                     member_obj.Roles[role] = membership_id
                     memberships[member_id] = member_obj
-        callback[0](memberships.values(), *callback[1:])
+        run(callback, memberships.values())
 
     def AddMember(self, callback, errback, scenario, member_role, type,
                   state, account):
@@ -180,8 +181,13 @@ class Sharing(SOAPService):
                 self._service.AddMember, scenario,
                 (member_role, type, state, account))
 
-    def _HandleAddMemberResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
+    def _HandleAddMemberFault(self, callback, errback, response, user_data):
+        errcode, errstring = get_detailled_error(response.fault)
+        if errcode == 'MemberAlreadyExists':
+            run(callback)
+            return
+        self._HandleSOAPFault('AddMember', callback, errback, response,
+                user_data)
 
     def DeleteMember(self, callback, errback, scenario, member_role, type,
                      state, account):
@@ -196,8 +202,13 @@ class Sharing(SOAPService):
                 self._service.DeleteMember, scenario,
                 (member_role, type, state, account))
 
-    def _HandleDeleteMemberResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
+    def _HandleDeleteMemberFault(self, callback, errback, response, user_data):
+        errcode, errstring = get_detailled_error(response.fault)
+        if errcode == 'MemberDoesNotExist':
+            run(callback)
+            return
+        self._HandleSOAPFault('DeleteMember', callback, errback, response,
+                user_data)
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def __soap_request(self, callback, errback, method, scenario, args,
@@ -206,18 +217,14 @@ class Sharing(SOAPService):
         self._soap_request(method, (scenario, token), args, callback, errback,
                 user_data)
 
+    def _HandleSOAPResponse(self, request_id, callback, errback,
+            soap_response, user_data):
+        run(callback)
+
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
         errcode, errstring = get_detailled_error(soap_response.fault)
-        if (request_id == 'AddMember' and errcode == 'MemberAlreadyExists') or \
-           (request_id == 'DeleteMember' and errcode == 'MemberDoesNotExist'):
-            callback[0](*callback[1:])
-        else:
-            errback[0](errcode, *errback[1:])
-
-    def _HandleTransportError(self, request_id, callback, errback, error):
-        errcode = AddressBookError.UNKNOWN
-        errback[0](errcode, *errback[1:])
+        run(errback, errcode)
 
 if __name__ == '__main__':
     import sys

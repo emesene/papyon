@@ -21,6 +21,7 @@ import scenario
 
 from papyon.service.ContentRoaming.constants import *
 from papyon.service.ContentRoaming.scenario import *
+from papyon.util.async import *
 
 import gobject
 import imghdr
@@ -28,6 +29,13 @@ import imghdr
 __all__ = ['ContentRoaming', 'ContentRoamingState', 'ContentRoamingError']
 
 class ContentRoaming(gobject.GObject):
+
+    __gsignals__ = {
+        "error" : (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            (object,)),
+        }
+
 
     __gproperties__ = {
         "state"            : (gobject.TYPE_INT,
@@ -107,7 +115,7 @@ class ContentRoaming(gobject.GObject):
     ### Public API -----------------------------------------------------------
 
     def store(self, display_name=None, personal_message=None, 
-              display_picture=None):
+              display_picture=None, callback=None, errback=None):
         if display_name is None:
             display_name = self.__display_name
         if personal_message is None:
@@ -122,10 +130,11 @@ class ContentRoaming(gobject.GObject):
             self.__display_name = display_name
             self.__personal_message = personal_message
             self.__display_picture = display_picture
+            run(callback)
 
         up = StoreProfileScenario(self._storage,
-                                   (store_profile_cb,),
-                                   (self.__common_errback,),
+                                  (store_profile_cb,),
+                                  (self.__common_errback, errback),
                                   self._ab.profile.cid,
                                   self._profile_id,
                                   self._expression_profile_id,
@@ -161,8 +170,9 @@ class ContentRoaming(gobject.GObject):
 
         self._state = ContentRoamingState.SYNCHRONIZED
 
-    def __common_errback(self, error_code, *args):
-        print "The content roaming service got the error (%s)" % error_code
+    def __common_errback(self, error, errback, *args):
+        run(errback, error)
+        self.emit("error", error)
 
 gobject.type_register(ContentRoaming)
 

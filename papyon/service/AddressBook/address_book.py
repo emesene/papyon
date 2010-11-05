@@ -31,6 +31,7 @@ from papyon.profile import ContactType
 from papyon.service.AddressBook.constants import *
 from papyon.service.description.AB.constants import *
 from papyon.service.AddressBook.scenario.contacts import *
+from papyon.util.async import run
 
 import gobject
 
@@ -248,7 +249,7 @@ class AddressBook(gobject.GObject):
 
         initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
                 (callback,),
-                (self.__common_errback, None),
+                (self.__common_errback,),
                 self._client.profile.account)
         initial_sync()
 
@@ -633,19 +634,11 @@ class AddressBook(gobject.GObject):
     def __common_callback(self, signal, callback, *args):
         if signal is not None:
             self.emit(signal, *args)
-        if callback is not None:
-            cb_args = args + callback[1:]
-            callback[0](*cb_args)
+        run(callback, *args)
 
-    def __common_errback(self, error_code, *args):
-        callback = args[-1]
-        args = args[:-1]
-        if callback is not None:
-            cb_args = args + callback[1:]
-            callback[0](error_code, *cb_args)
-        if error_code == AddressBookError.UNKNOWN:
-            # known errors are not fatal, just ignore them
-            self.emit('error', error_code)
+    def __common_errback(self, error, errback=None):
+        run(errback, error)
+        self.emit('error', error)
 
 gobject.type_register(AddressBook)
 

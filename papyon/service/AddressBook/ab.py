@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.service.SOAPService import SOAPService
+from papyon.util.async import *
 from papyon.util.element_tree import XMLTYPE
 from papyon.service.SingleSignOn import *
 from papyon.service.AddressBook.common import *
@@ -194,7 +195,7 @@ class AB(SOAPService):
 
         #FIXME: add support for the ab param
         address_book =  ABResult(None, contacts, groups)
-        callback[0](address_book, *callback[1:])
+        run(callback, address_book)
 
     def ContactAdd(self, callback, errback, scenario,
             contact_info, invite_info, auto_manage_allow_list=True):
@@ -231,7 +232,7 @@ class AB(SOAPService):
                     auto_manage_allow_list))
 
     def _HandleABContactAddResponse(self, callback, errback, response, user_data):
-        callback[0](response.text, *callback[1:])
+        run(callback, response.text)
 
     def ContactDelete(self, callback, errback, scenario,
             contact_id):
@@ -294,7 +295,7 @@ class AB(SOAPService):
                 (group_name,))
 
     def _HandleABGroupAddResponse(self, callback, errback, response, user_data):
-        callback[0](response.text, *callback[1:])
+        run(callback, response.text)
 
     def GroupDelete(self, callback, errback, scenario,
             group_id):
@@ -360,16 +361,12 @@ class AB(SOAPService):
 
     def _HandleSOAPResponse(self, request_id, callback, errback,
             soap_response, user_data):
-        callback[0](*callback[1:])
+        run(callback)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
         errcode, errstring = get_detailled_error(soap_response.fault)
-        errback[0](errcode, *errback[1:])
-
-    def _HandleTransportError(self, request_id, callback, errback, error):
-        errcode = AddressBookError.UNKNOWN
-        errback[0](errcode, *errback[1:])
+        run(errback, errcode)
 
 if __name__ == '__main__':
     import sys

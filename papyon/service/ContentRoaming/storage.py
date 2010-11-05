@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.service.SOAPService import SOAPService, url_split
+from papyon.util.async import *
 from papyon.util.element_tree import XMLTYPE
 from papyon.service.SingleSignOn import *
 
@@ -72,9 +73,9 @@ class Storage(SOAPService):
         else:
             photo_rid = photo_mime_type = photo_data_size = photo_url = None
         
-        callback[0](profile_rid, expression_profile_rid, display_name, personal_msg,
-                    user_tile_url, photo_rid, photo_mime_type, photo_data_size, photo_url,
-                    *callback[1:])
+        run(callback, profile_rid, expression_profile_rid, display_name,
+                personal_msg, user_tile_url, photo_rid, photo_mime_type,
+                photo_data_size, photo_url)
 
     def UpdateProfile(self, callback, errback, scenario, profile_rid,
                       display_name, personal_status, flags):
@@ -82,17 +83,11 @@ class Storage(SOAPService):
                             self._service.UpdateProfile, scenario,
                             (profile_rid, display_name, personal_status, flags))
 
-    def _HandleUpdateProfileResponse(self, callback, errback, response, user_date):
-        callback[0](*callback[1:])
-
     def CreateRelationships(self, callback, errback, scenario,
                             source_rid, target_rid):
         self.__soap_request(callback, errback,
                             self._service.CreateRelationships, scenario,
                             (source_rid, target_rid))
-
-    def _HandleCreateRelationshipsResponse(self, callback, errback, response, user_date):
-        callback[0](*callback[1:])
 
     def DeleteRelationships(self, callback, errback, scenario,
                             target_id, cid=None, source_id=None):
@@ -100,18 +95,14 @@ class Storage(SOAPService):
                             self._service.DeleteRelationships, scenario,
                             (cid, source_id, target_id))
 
-    def _HandleDeleteRelationshipsResponse(self, callback, errback, response, user_date):
-        callback[0](*callback[1:])
-
     def CreateDocument(self, callback, errback, scenario, cid, photo_name,
                        photo_mime_type, photo_data):
         self.__soap_request(callback, errback,
                             self._service.CreateDocument, scenario,
                             (cid, photo_name, photo_mime_type, photo_data))
 
-    def _HandleCreateDocumentResponse(self, callback, errback, response, user_date):
-        document_rid = response.text
-        callback[0](document_rid, *callback[1:])
+    def _HandleCreateDocumentResponse(self, callback, errback, response, user_data):
+        run(callback, response.text)
 
     def FindDocuments(self, callback, errback, scenario, cid):
         self.__soap_request(callback, errback,
@@ -122,8 +113,16 @@ class Storage(SOAPService):
         document = response.find('./st:Document')
 
         document_rid = response.findtext('./st:ResourceID')
-        document_name = response.findtext('./st:Name')        
-        callback[0](document_rid, document_name, *callback[1:])
+        document_name = response.findtext('./st:Name')
+        run(callback, document_rid, document_name)
+
+    def _HandleSOAPResponse(self, request_id, callback, errback, response,
+            user_data=None):
+        run(callback)
+
+    def _HandleSOAPFault(self, request_id, callback, errback, response,
+            user_data=None):
+        run(errback, 0)
 
     @RequireSecurityTokens(LiveService.STORAGE)
     def __soap_request(self, callback, errback, method, scenario, args):

@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+from papyon.util.async import *
+
 __all__ = ['BaseScenario', 'Scenario']
 
 class BaseScenario(object):
@@ -32,14 +34,10 @@ class BaseScenario(object):
     scenario = property(__get_scenario, __set_scenario)
 
     def callback(self, *args):
-        callback = self._callback[0]
-        args = args + self._callback[1:]
-        callback(*args)
+        run(self._callback, *args)
 
     def errback(self, *args):
-        errback = self._errback[0]
-        args = args + self._errback[1:]
-        errback(*args)
+        run(self._errback, *args)
 
     def execute(self):
         pass

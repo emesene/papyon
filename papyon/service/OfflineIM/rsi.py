@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.util.async import *
 from papyon.util.element_tree import XMLTYPE
 from papyon.service.SingleSignOn import *
 from papyon.service.SOAPService import SOAPService
@@ -42,7 +43,7 @@ class RSI(SOAPService):
                             ())
 
     def _HandleGetMetadataResponse(self, callback, errback, response, user_data):
-        callback[0](response.text, *callback[1:])
+        run(callback, response.text)
 
     def GetMessage(self, callback, errback, message_id, mark_as_read):
         self.__soap_request(callback, errback,
@@ -58,22 +59,22 @@ class RSI(SOAPService):
             # http://www.amsn-project.net/forums/viewtopic.php?p=21744
             # set a mobile sender flag
             return
-        callback[0](run_id, seq_num, m.get_payload().decode('base64'), 
-                    *callback[1:])
+        run(callback, run_id, seq_num, m.get_payload().decode('base64'))
 
     def DeleteMessages(self, callback, errback, message_ids):
         self.__soap_request(callback, errback,
                             self._service.DeleteMessages,
                             (message_ids,))
-    
-    def _HandleDeleteMessagesResponse(self, callback, errback, response, user_data):
-        callback[0](*callback[1:])
 
     @RequireSecurityTokens(LiveService.MESSENGER)
     def __soap_request(self, callback, errback, method, args):
         token = str(self._tokens[LiveService.MESSENGER])
         self._soap_request(method, (token,), args, callback, errback)
 
+    def _HandleSOAPResponse(self, request_id, callback, errback,
+            soap_response, user_data):
+        run(callback)
+
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        errback[0](None, *errback[1:])
+        run(errback, None)

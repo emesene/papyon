@@ -20,6 +20,7 @@
 
 from papyon.service.SOAPService import SOAPService
 from papyon.service.SingleSignOn import *
+from papyon.util.async import *
 
 __all__ = ['ContactCardService']
 
@@ -110,11 +111,11 @@ class ContactCardService(SOAPService):
                            callback, errback)
     
     def _HandleGetXmlFeedResponse(self, callback, errback, response, user_data):
+        contact_card = None
         if response is not None:
-            callback[0](ContactCard(response.find("./spaces:contactCard")), *callback[1:])
-        else:
-            callback[0](None, *callback[1:])
+            contact_card = ContactCard(response.find("./spaces:contactCard"))
+        run(callback, contact_card)
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        errback[0](None, *errback[1:])
+        run(errback, None)

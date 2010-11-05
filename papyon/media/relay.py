@@ -28,5 +28,5 @@ class MediaRelay(object):
         self.port = 0
 
     def __repr__(self):
-        return "<Media Relay: %s %i username=\"%s\" password=\"%s\">" % (self.ip,
+        return "<Media Relay: %s:%i username=\"%s\" password=\"%s\">" % (self.ip,
                 self.port, self.username, self.password)

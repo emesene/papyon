@@ -30,6 +30,7 @@ import weakref
 import papyon.msnp as msnp
 from papyon.profile import Presence
 from papyon.transport import ServerType
+from papyon.util.async import run
 from papyon.util.weak import WeakSet
 from papyon.event import ConversationErrorType, ContactInviteError, MessageError
 
@@ -195,13 +196,11 @@ class SwitchboardHandler(object):
 
     def __on_message_delivered(self, trid):
         callback, errback = self._delivery_callbacks.pop(trid, (None, None))
-        if callback:
-            callback[0](*callback[1:])
+        run(callback)
 
     def __on_message_undelivered(self, trid):
         callback, errback = self._delivery_callbacks.pop(trid, (None, None))
-        if errback:
-            errback[0](*errback[1:])
+        run(errback)
         self._on_error(ConversationErrorType.MESSAGE,
                 MessageError.DELIVERY_FAILED)
 
@@ -338,7 +337,7 @@ class SwitchboardManager(gobject.GObject):
         logger.info("Requesting new switchboard")
         self._requested_switchboards[participants] = set([handler])
         self._client._protocol.request_switchboard(priority,
-                self._ns_switchboard_request_response, participants)
+                (self._ns_switchboard_request_response, participants))
 
     def close_handler(self, handler):
         logger.info("Closing switchboard handler %s" % repr(handler))

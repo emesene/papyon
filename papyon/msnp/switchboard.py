@@ -27,6 +27,7 @@ from base import BaseProtocol, ProtocolState
 from message import Message
 import papyon.profile
 
+from papyon.util.async import run
 from papyon.util.parsing import build_account, parse_account
 
 import logging
@@ -165,32 +166,16 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             return
         self.__invitations[self._transport.transaction_id] = contact
         self._inviting = True
-        self._send_command('CAL', (contact.account,) )
+        self._send_command('CAL', (contact.account,))
 
-    def send_message(self, message, ack, callback=None):
+    def send_message(self, message, ack, callback=None, errback=None):
         """Send a message to all contacts in this switchboard
 
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
-
-        cb = None
-        cb_args = ()
-        if callback:
-            cb = callback[0]
-            cb_args = callback[1:]
-
-        return self._send_command('MSG',
-                (ack,),
-                message,
-                True,
-                self.__on_message_sent,
-                message, cb, cb_args)
-
-    def __on_message_sent(self, message, user_callback, user_cb_args):
-        self.emit("message-sent", message)
-        if user_callback:
-            user_callback(*user_cb_args)
+        return self._send_command('MSG', (ack,), message, True,
+                (self._on_message_sent, message, callback), errback)
 
     def leave(self):
         """Leave the conversation"""
@@ -332,6 +317,10 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _disconnect_cb(self, transport, reason):
         logger.info("Disconnected (%s)" % self.__session_id)
         self._state = ProtocolState.CLOSED
+
+    def _on_message_sent(self, message, user_callback):
+        run(user_callback)
+        self.emit("message-sent", message)
 
     def _on_end_point_added(self, profile, end_point):
         if self.state != ProtocolState.OPEN:

@@ -23,6 +23,7 @@ import socket
 
 import gobject
 
+from papyon.util.async import run
 from papyon.util.decorator import async
 
 __all__ = ['HostnameResolver']
@@ -74,7 +75,7 @@ class HostnameResolver(object):
 
     #@async
     def _emit_response(self, callback, response):
-        callback[0](HostnameResponse(response), *callback[1:])
+        run(callback, HostnameResponse(response))
         return False
 
 

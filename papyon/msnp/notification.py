@@ -30,6 +30,7 @@ from challenge import _msn_challenge
 
 import papyon
 from papyon.gnet.message.HTTP import HTTPMessage
+from papyon.util.async import run
 from papyon.util.queue import PriorityQueue, LastElementQueue
 from papyon.util.decorator import throttled
 from papyon.util.encoding import decode_rfc2047_string
@@ -224,8 +225,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         self._transport.lose_connection()
 
     @throttled(7, list())
-    def request_switchboard(self, priority, callback, *callback_args):
-        self.__switchboard_callbacks.add((callback, callback_args), priority)
+    def request_switchboard(self, priority, callback):
+        self.__switchboard_callbacks.add(callback, priority)
         self._send_command('XFR', ('SB',))
 
     def add_contact_to_membership(self, account,
@@ -362,8 +363,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
                 host = command.arguments[1]
                 port = self._transport.server[1]
             session_id = command.arguments[3]
-            callback, callback_args = self.__switchboard_callbacks.pop(0)
-            callback(((host, port), session_id, None), *callback_args)
+            callback = self.__switchboard_callbacks.pop(0)
+            run(callback, ((host, port), session_id, None))
 
     def _handle_USR(self, command):
         args_len = len(command.arguments)
@@ -762,14 +763,11 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def _command_answered_cb(self, tr_id, *args):
         callback, errback = self._callbacks.get(tr_id, (None, None))
-        if callback is not None:
-            args.extend(*callback[1:])
-            callback[0](*args)
+        run(callback, *args)
 
     def _command_error_cb(self, tr_id, error):
         callback, errback = self._callbacks.get(tr_id, (None, None))
-        if errback is not None:
-            errback[0](error, *errback[1:])
+        run(errback, error)
 
     def _address_book_state_changed_cb(self, address_book, pspec):
         MAX_PAYLOAD_SIZE = 7500

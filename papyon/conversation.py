@@ -426,9 +426,8 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
     @staticmethod
     def _can_handle_message(message, switchboard_handler=None):
         content_type = message.content_type[0]
-        if switchboard_handler is None:
-            return content_type in ('text/plain', 'text/x-msnmsgr-datacast')
-        # FIXME : we need to not filter those 'text/x-mms-emoticon', 'text/x-mms-animemoticon'
+        if not switchboard_handler and content_type in ('text/x-msmsgscontrol'):
+            return False # don't create conversation on typing notification
         return content_type in ('text/plain', 'text/x-msmsgscontrol',
                 'text/x-msnmsgr-datacast', 'text/x-mms-emoticon',
                 'text/x-mms-animemoticon')

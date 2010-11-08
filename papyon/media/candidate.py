@@ -23,9 +23,9 @@ __all__ = ['MediaCandidate', 'MediaCandidateEncoder']
 class MediaCandidate(object):
     """Class representing a transport candidate."""
 
-    def __init__(self, foundation=None, component_id=None, transport=None,
-                 priority=None, username=None, password=None, type=None,
-                 ip=None, port=None, base_ip=None, base_port=None):
+    def __init__(self, foundation="", component_id=0, transport="",
+                 priority=1, username="", password="", type="",
+                 ip="", port=0, base_ip="", base_port=0):
         self.foundation = foundation
         self.component_id = component_id
         self.transport = transport

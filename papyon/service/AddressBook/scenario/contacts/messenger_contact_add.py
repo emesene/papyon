@@ -72,7 +72,7 @@ class MessengerContactAddScenario(BaseScenario):
             return
 
         self._ab.ContactAdd((self.__contact_add_callback,),
-                            (self.__contact_add_errback,),
+                            self._errback,
                             self._scenario,
                             self.contact_info,
                             invite_info,
@@ -96,13 +96,3 @@ class MessengerContactAddScenario(BaseScenario):
 
     def __find_contact_callback(self, contact):
         self.callback(contact, self.memberships)
-
-    def __contact_add_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'ContactAlreadyExists':
-            errcode = AddressBookError.CONTACT_ALREADY_EXISTS
-        elif error_code in ('BadEmailArgument', 'InvalidPassportUser'):
-            errcode = AddressBookError.INVALID_CONTACT_ADDRESS
-        elif error_code == 'RequestLimitReached':
-            errcode = AddressBookError.LIMIT_REACHED
-        self.errback(errcode)

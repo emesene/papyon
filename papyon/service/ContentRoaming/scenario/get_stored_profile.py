@@ -18,7 +18,7 @@
 #
 from base import *
 
-from papyon.service.ContentRoaming.constants import *
+from papyon.util.async import *
 
 __all__ = ['GetStoredProfileScenario']
 
@@ -37,8 +37,7 @@ class GetStoredProfileScenario(BaseScenario):
         self.cid = cid
 
     def execute(self):
-        self.__storage.GetProfile((self.__get_profile_callback,),
-                                  (self.__get_profile_errback,),
+        self.__storage.GetProfile((self.__get_profile_callback,), self._errback,
                                   self._scenario, self.cid,
                                   True, True, True, True, True, True,
                                   True, True, True, True, True)
@@ -47,29 +46,10 @@ class GetStoredProfileScenario(BaseScenario):
                                display_name, personal_msg, user_tile_url,
                                photo_rid, photo_mime_type, photo_data_size,
                                photo_url):
-        callback = self._callback
-        callback[0](profile_rid, expression_profile_rid, display_name,
-            personal_msg, photo_rid, *callback[1:])
+        run(self._callback, profile_rid, expression_profile_rid,
+                display_name, personal_msg, photo_rid)
 
         if photo_rid is not None:
-            self.__storage.get_display_picture(
-                               (self.__get_display_picture_callback,),
-                               (self.__get_display_picture_errback,),
-                               photo_url, user_tile_url)
-
-    def __get_profile_errback(self, error_code):
-        errcode = ContentRoamingError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
-
-    def __get_display_picture_callback(self, type, data):
-        callback = self.__dp_callback
-        callback[0](type, data, *callback[1:])
-
-    def __get_display_picture_errback(self, error_code):
-        # TODO : adapt this to the transport way of handling errors
-        errcode = ContentRoamingError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+            self.__storage.get_display_picture(self.__dp_callback,
+                                               self._errback,
+                                               photo_url, user_tile_url)

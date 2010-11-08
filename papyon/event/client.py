@@ -63,6 +63,7 @@ class ProtocolError(object):
 ClientErrorType = papyon.errors.ClientErrorType
 
 NetworkError = papyon.gnet.IoError
+AuthenticationError = papyon.service.SingleSignOn.AuthenticationError
 AddressBookError = papyon.service.AddressBook.constants.AddressBookError
 OfflineMessagesBoxError = papyon.service.OfflineIM.constants.OfflineMessagesBoxError
 

@@ -34,16 +34,4 @@ class GetContactCardScenario(BaseScenario):
         self.__contact = contact
 
     def execute(self):
-        self.__ccard.GetXmlFeed((self.__get_xml_feed_callback,),
-                          (self.__get_xml_feed_errback,), 
-                          self.__contact)
-        pass
-            
-    def __get_xml_feed_callback(self, ccard):
-        callback = self._callback
-        callback[0](ccard, *callback[1:])
-
-    def __get_xml_feed_errback(self, error_code):
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(error_code, *args)
+        self.__ccard.GetXmlFeed(self._callback, self._errback, self.__contact)

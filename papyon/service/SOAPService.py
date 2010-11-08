@@ -108,6 +108,7 @@ class SOAPResponse(ElementTree.XMLResponse):
             "psf" : XMLNS.MICROSOFT.PASSPORT_FAULT,
             "ab" : XMLNS.MICROSOFT.LIVE.ADDRESSBOOK,
             "st" : XMLNS.MICROSOFT.LIVE.STORAGE,
+            "stv1" : XMLNS.MICROSOFT.LIVE.STORAGEV1,
             "oim" : XMLNS.MICROSOFT.LIVE.OIM,
             "rsi" : XMLNS.MICROSOFT.LIVE.RSI,
             "spaces" : XMLNS.MICROSOFT.LIVE.SPACES }

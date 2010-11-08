@@ -16,8 +16,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from papyon.service.OfflineIM.constants import *
 from papyon.service.OfflineIM.scenario.base import BaseScenario
+from papyon.util.async import *
 
 __all__ = ['FetchMessagesScenario']
 
@@ -39,19 +39,11 @@ class FetchMessagesScenario(BaseScenario):
     def execute(self):
         for message_id in self.message_ids:
             self.__rsi.GetMessage((self.__get_message_callback, message_id),
-                                  (self.__get_message_errback,),
+                                  self._errback,
                                   message_id, False)
 
     def __get_message_callback(self, run_id, seq_num, message, id):
-        callback = self._callback
-        callback[0](id, run_id, seq_num, message, *callback[1:])
+        run(self._callback, id, run_id, seq_num, message)
         self.message_ids.remove(id)
         if self.message_ids == []:
-            global_callback = self.__global_callback
-            global_callback[0](*global_callback[1:])
-
-    def __get_message_errback(self, error_code):
-        errcode = OfflineMessagesBoxError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+            run(self.__global_callback)

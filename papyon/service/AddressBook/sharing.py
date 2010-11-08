@@ -149,7 +149,8 @@ class Sharing(SOAPService):
         """
         self.__soap_request(callback, errback,
                 self._service.FindMembership, scenario,
-                (services, deltas_only, self._last_changes))
+                (services, deltas_only, self._last_changes),
+                (scenario, services))
 
     def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
         if response[1] is not None:
@@ -168,6 +169,15 @@ class Sharing(SOAPService):
                     memberships[member_id] = member_obj
         run(callback, memberships.values())
 
+    def _HandleFindMembershipFault(self, callback, errback, response, user_data):
+        error = AddressBookError.from_fault(response.fault)
+        if error == AddressBookError.FULL_SYNC_REQUIRED:
+            scenario, services = user_data
+            self.FindMembership(callback, errback, scenario, services, False)
+            return
+        self._HandleSOAPFault('FindMembership', callback, errback, response,
+                user_data)
+
     def AddMember(self, callback, errback, scenario, member_role, type,
                   state, account):
         """Adds a member to a membership list.
@@ -182,8 +192,8 @@ class Sharing(SOAPService):
                 (member_role, type, state, account))
 
     def _HandleAddMemberFault(self, callback, errback, response, user_data):
-        errcode, errstring = get_detailled_error(response.fault)
-        if errcode == 'MemberAlreadyExists':
+        error = AddressBookError.from_fault(response.fault)
+        if error == AddressBookError.MEMBER_ALREADY_EXISTS:
             run(callback)
             return
         self._HandleSOAPFault('AddMember', callback, errback, response,
@@ -203,8 +213,8 @@ class Sharing(SOAPService):
                 (member_role, type, state, account))
 
     def _HandleDeleteMemberFault(self, callback, errback, response, user_data):
-        errcode, errstring = get_detailled_error(response.fault)
-        if errcode == 'MemberDoesNotExist':
+        error = AddressBookError.from_fault(response.fault)
+        if error == AddressBookError.MEMBER_DOES_NOT_EXIST:
             run(callback)
             return
         self._HandleSOAPFault('DeleteMember', callback, errback, response,
@@ -223,8 +233,8 @@ class Sharing(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        errcode, errstring = get_detailled_error(soap_response.fault)
-        run(errback, errcode)
+        error = AddressBookError.from_fault(soap_response.fault)
+        run(errback, error)
 
 if __name__ == '__main__':
     import sys

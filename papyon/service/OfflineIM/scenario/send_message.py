@@ -18,7 +18,6 @@
 #
 from papyon.service.OfflineIM.constants import *
 from papyon.service.OfflineIM.scenario.base import BaseScenario
-from papyon.msnp.challenge import _msn_challenge
 
 __all__ = ['SendMessageScenario']
 
@@ -45,8 +44,8 @@ class SendMessageScenario(BaseScenario):
         self.__msg = message
 
     def execute(self):
-        self.__oim.Store2((self.__store2_callback,),
-                          (self.__store2_errback,), 
+        self.__oim.Store2(self._callback,
+                          self._errback,
                           self.__from.account,
                           self.__from.display_name,
                           self.__to.account,
@@ -54,22 +53,3 @@ class SendMessageScenario(BaseScenario):
                           self.sequence_num,
                           "text",
                           self.__msg)
-            
-    def __store2_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
-
-    def __store2_errback(self, error_code,  auth_policy, lock_key_challenge):
-        if error_code == OfflineMessagesBoxError.AUTHENTICATION_FAILED:
-            if lock_key_challenge != None:
-                self.__oim.set_lock_key(_msn_challenge(lock_key_challenge))
-            if auth_policy != None:
-                self._client._sso.DiscardSecurityTokens([LiveService.CONTACTS])
-                self._client._sso.RequestMultipleSecurityTokens((self.execute, ), None, LiveService.CONTACTS)
-                return
-
-            self.execute()
-            return
-
-        errback = self._errback
-        errback[0](error_code, *errback[1:])

@@ -69,7 +69,7 @@ class MobileContactAddScenario(BaseScenario):
     def __contact_add_errback(self, reason):
         # TODO : analyse the reason, and maybe call execute again
         # instead of transmitting it via _errback.
-        self._errback(reason)
+        self.errback(reason)
 
     def __find_all_callback(self):
         # TODO : complete the contact list in the client, need to access to
@@ -77,4 +77,4 @@ class MobileContactAddScenario(BaseScenario):
         pass
 
     def __find_all_errback(self, reason):
-        self._errback(reason)
+        self.errback(reason)

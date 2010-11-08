@@ -38,5 +38,15 @@ class OfflineMessagesBoxError(object):
     AUTHENTICATION_FAILED = 1
     SYSTEM_UNAVAILABLE = 2
     SENDER_THROTTLE_LIMIT_EXCEEDED = 3
-    
 
+    @staticmethod
+    def from_fault(fault):
+        error_code = OfflineMessagesBoxError.UNKNOWN
+        faultcode = fault.faultcode
+        if faultcode.endswith("AuthenticationFailed"):
+            error_code = OfflineMessagesBoxError.AUTHENTICATION_FAILED
+        elif faultcode.endswith("SystemUnavailable"):
+            error_code = OfflineMessagesBoxError.SYSTEM_UNAVAILABLE
+        elif faultcode.endswith("SenderThrottleLimitExceeded"):
+            error_code = OfflineMessagesBoxError.SENDER_THROTTLE_LIMIT_EXCEEDED
+        return error_code

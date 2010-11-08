@@ -19,8 +19,6 @@
 from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
 
-from papyon.service.AddressBook.constants import *
-
 __all__ = ['CheckPendingInviteScenario']
 
 class CheckPendingInviteScenario(BaseScenario):
@@ -35,19 +33,5 @@ class CheckPendingInviteScenario(BaseScenario):
         self.__sharing = sharing
 
     def execute(self):
-        self.__sharing.FindMembership((self.__membership_findall_callback,),
-                (self.__membership_findall_errback,),
+        self.__sharing.FindMembership(self._callback, self._errback,
                 self._scenario, ['Messenger'], True)
-
-    def __membership_findall_callback(self, result):
-        self.callback(result)
-
-    def __membership_findall_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'FullSyncRequired':
-            self.__sharing.FindMembership((self.__membership_findall_callback,),
-                    (self.__membership_findall_errback,),
-                    self._scenario, ['Messenger'], False)
-            return
-        self.errback(errcode)
-

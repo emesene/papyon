@@ -20,6 +20,7 @@
 
 from papyon.util.async import *
 from papyon.util.element_tree import XMLTYPE
+from papyon.service.OfflineIM.constants import *
 from papyon.service.SingleSignOn import *
 from papyon.service.SOAPService import SOAPService
 
@@ -77,4 +78,5 @@ class RSI(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        run(errback, None)
+        error = OfflineMessagesBoxError.from_fault(soap_response.fault)
+        run(errback, error)

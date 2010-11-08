@@ -33,15 +33,4 @@ class SyncHeadersScenario(BaseScenario):
         self.__rsi = rsi
 
     def execute(self):
-        self.__rsi.GetMetadata((self.__get_metadata_callback,),
-                               (self.__get_metadata_errback,))
-            
-    def __get_metadata_callback(self, metadata):
-        callback = self._callback
-        callback[0](metadata, *callback[1:])
-
-    def __get_metadata_errback(self, error_code):
-        errcode = OfflineMessagesBoxError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
+        self.__rsi.GetMetadata(self._callback, self._errback)

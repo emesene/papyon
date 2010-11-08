@@ -19,8 +19,6 @@
 from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
 
-from papyon.service.AddressBook.constants import *
-
 __all__ = ['ContactDeleteScenario']
 
 class ContactDeleteScenario(BaseScenario):
@@ -38,11 +36,5 @@ class ContactDeleteScenario(BaseScenario):
 
     def execute(self):
         self.__ab.ContactDelete(self._callback,
-                                (self.__contact_delete_errback,),
+                                self._errback,
                                 self._scenario, self.contact_guid)
-
-    def __contact_delete_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'ContactDoesNotExist':
-            errcode = AddressBookError.CONTACT_DOES_NOT_EXIST
-        self.errback(errcode)

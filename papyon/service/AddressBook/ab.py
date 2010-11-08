@@ -148,11 +148,13 @@ class Contact(object):
 
 
 class AB(SOAPService):
-    def __init__(self, sso, proxies=None):
+    def __init__(self, sso, client, proxies=None):
         self._sso = sso
+        self._client = client
         self._tokens = {}
         SOAPService.__init__(self, "AB", proxies)
 
+        self._creating_ab = False
         self._last_changes = DEFAULT_TIMESTAMP
 
     def Add(self, callback, errback, scenario, account):
@@ -162,9 +164,24 @@ class AB(SOAPService):
             @param errback: tuple(callable, *args)
             @param scenario: "Initial"
             @param account: the owner account"""
+        if self._creating_ab:
+            return
+        self._creating_ab = True
         self.__soap_request(callback, errback,
-                            self._service.ABAdd, scenario,
-                            (account,))
+                            self._service.ABAdd, scenario, (account,),
+                            (scenario,))
+
+    def HandleABAddResponse(self, callback, errback, response, user_data):
+        self._creating_ab = False
+        self.FindAll(callback, errback, user_data[0], False)
+
+    def HandleABAddFault(self, callback, errback, response, user_data):
+        self._creating_ab = False
+        error = AddressBookError.from_fault(response.fault)
+        if error == AddressBookError.AB_ALREADY_EXISTS:
+            self.FindAll(callback, errback, user_data[0], False)
+            return
+        self._HandleSOAPFault('ABAdd', callback, errback, response, user_data)
 
     def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
@@ -178,7 +195,8 @@ class AB(SOAPService):
             deltas_only = False
         self.__soap_request(callback, errback,
                 self._service.ABFindAll, scenario,
-                (XMLTYPE.bool.encode(deltas_only), self._last_changes))
+                (XMLTYPE.bool.encode(deltas_only), self._last_changes),
+                (scenario, deltas_only))
 
     def _HandleABFindAllResponse(self, callback, errback, response, user_data):
         last_changes = response[0].find("./ab:lastChange")
@@ -196,6 +214,17 @@ class AB(SOAPService):
         #FIXME: add support for the ab param
         address_book =  ABResult(None, contacts, groups)
         run(callback, address_book)
+
+    def _HandleABFindAllFault(self, callback, errback, response, user_data):
+        error = AddressBookError.from_fault(response.fault)
+        scenario, deltas_only = user_data
+        if error == AddressBookError.AB_DOES_NOT_EXIST:
+            self.Add(callback, errback, scenario, self._client.profile.account)
+            return
+        elif error == AddressBookError.FULL_SYNC_REQUIRED:
+            self.FindAll(callback, errback, scenario, False)
+            return
+        self._HandleSOAPFault('ABFindAll', callback, errback, response, user_data)
 
     def ContactAdd(self, callback, errback, scenario,
             contact_info, invite_info, auto_manage_allow_list=True):
@@ -355,9 +384,11 @@ class AB(SOAPService):
                 (group_id, contact_id))
 
     @RequireSecurityTokens(LiveService.CONTACTS)
-    def __soap_request(self, callback, errback, method, scenario, args):
+    def __soap_request(self, callback, errback, method, scenario, args,
+            user_data=None):
         token = str(self._tokens[LiveService.CONTACTS])
-        self._soap_request(method, (scenario, token), args, callback, errback)
+        self._soap_request(method, (scenario, token), args, callback, errback,
+                user_data)
 
     def _HandleSOAPResponse(self, request_id, callback, errback,
             soap_response, user_data):
@@ -365,8 +396,8 @@ class AB(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        errcode, errstring = get_detailled_error(soap_response.fault)
-        run(errback, errcode)
+        error = AddressBookError.from_fault(soap_response.fault)
+        run(errback, error)
 
 if __name__ == '__main__':
     import sys

@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
-from papyon.service.AddressBook import *
 
 __all__ = ['GroupRenameScenario']
 
@@ -37,20 +36,6 @@ class GroupRenameScenario(BaseScenario):
         self.group_name = group_name
 
     def execute(self):
-        self.__ab.GroupUpdate((self.__group_rename_callback,),
-                              (self.__group_rename_errback,),
+        self.__ab.GroupUpdate(self._callback, self._errback,
                               self._scenario, self.group_guid,
                               self.group_name)
-
-    def __group_rename_callback(self):
-        self.callback()
-
-    def __group_rename_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'GroupAlreadyExists':
-            errcode = AddressBookError.GROUP_ALREADY_EXIST
-        elif error_code == 'GroupDoesNotExist':
-            errcode = AddressBookError.GROUP_DOES_NOT_EXIST
-        elif error_code == 'BadArgumentLength':
-            errcode = AddressBookError.GROUP_NAME_TOO_LONG
-        self.errback(errcode)

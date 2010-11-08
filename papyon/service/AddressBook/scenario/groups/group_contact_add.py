@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
-from papyon.service.AddressBook import *
 
 __all__ = ['GroupContactAddScenario']
 
@@ -37,16 +36,6 @@ class GroupContactAddScenario(BaseScenario):
         self.contact_guid = contact_guid
 
     def execute(self):
-        self.__ab.GroupContactAdd((self.__group_contact_add_callback,),
-                                  (self.__group_contact_add_errback,),
+        self.__ab.GroupContactAdd(self._callback, self._errback,
                                   self._scenario, self.group_guid,
                                   self.contact_guid)
-
-    def __group_contact_add_callback(self):
-        self.callback()
-
-    def __group_contact_add_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'ContactAlreadyExists':
-            errcode = AddressBookError.CONTACT_ALREADY_IN_GROUP
-        self.errback(errcode)

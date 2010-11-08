@@ -34,6 +34,25 @@ from Crypto.Cipher import DES3
 
 __all__ = ['SingleSignOn', 'LiveService', 'RequireSecurityTokens']
 
+
+class AuthenticationError(object):
+    "Authentication related errors"
+    UNKNOWN = 0
+    INVALID_USERNAME = 1
+    INVALID_PASSWORD = 2
+    INVALID_USERNAME_OR_PASSWORD = 3
+    REDIRECT = 4
+
+    @staticmethod
+    def from_fault(fault):
+        error_code = AuthenticationError.UNKNOWN
+        if fault.faultcode.endswith("FailedAuthentication"):
+            error_code = AuthenticationError.INVALID_USERNAME_OR_PASSWORD
+        elif fault.faultcode.endswith("Redirect"):
+            error_code = AuthenticationError.REDIRECT
+        return error_code
+
+
 class SecurityToken(object):
     
     def __init__(self):
@@ -212,13 +231,14 @@ class SingleSignOn(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
              soap_response, user_data):
-        if soap_response.fault.faultcode.endswith("FailedAuthentication"):
-            run(errback, 0)
-        elif soap_response.fault.faultcode.endswith("Redirect"):
+        error = AuthenticationError.from_fault(soap_response.fault)
+        if error == AuthenticationError.REDIRECT:
             requested_services, response_tokens = user_data
             self._service.url = soap_response.fault.tree.findtext("psf:redirectUrl")
             self.__pending_response = False
             self.RequestMultipleSecurityTokens(callback, errback, *requested_services)
+            return
+        run(errback, error)
 
 
 if __name__ == '__main__':

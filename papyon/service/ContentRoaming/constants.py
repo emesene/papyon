@@ -21,6 +21,31 @@ __all__ = ["ContentRoamingError", "ContentRoamingState"]
 class ContentRoamingError(object):
     UNKNOWN = 0
 
+    ITEM_ALREADY_EXISTS = 1
+    ITEM_DOES_NOT_EXIST = 2
+
+    @staticmethod
+    def get_detailled_error(fault):
+        if fault.detail is not None:
+            errorcode = fault.detail.findtext("./stv1:errorcode")
+            errorstring = fault.detail.findtext("./stv1:errorstring")
+        else:
+            errorcode = fault.faultcode
+            errorstring = fault.faultstring
+        return errorcode, errorstring
+
+    @staticmethod
+    def from_fault(fault):
+        errorcode, errorstring = ContentRoamingError.get_detailled_error(fault)
+        code = ContentRoamingError.UNKNOWN
+
+        if errorcode == "ItemDoesNotExist":
+            code = ContentRoamingError.ITEM_ALREADY_EXISTS
+        elif errorcode == "ItemDoesNotExist":
+            code = ContentRoamingError.ITEM_DOES_NOT_EXIST
+
+        return code
+
 class ContentRoamingState(object):
     """Content roaming service synchronization state.
 

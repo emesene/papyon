@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
-from papyon.service.AddressBook.constants import *
 
 from papyon.profile import NetworkID
 from papyon.profile import Membership
@@ -133,9 +132,4 @@ class UpdateMembershipsScenario(BaseScenario):
             self.__process_add(memberships, Membership.NONE)
 
     def __common_errback(self, error_code, done, failed):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'MemberAlreadyExists':
-            errcode = AddressBookError.MEMBER_ALREADY_EXISTS
-        elif error_code == 'MemberDoesNotExist':
-            errcode = AddressBookError.MEMBER_DOES_NOT_EXIST
-        self.errback(errcode, done, failed)
+        self.errback(error_code)

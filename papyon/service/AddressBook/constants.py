@@ -18,24 +18,77 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+
 __all__ = ['AddressBookError', 'AddressBookState', 'DEFAULT_TIMESTAMP']
+
 
 class AddressBookError(object):
     "Address book related errors"
     UNKNOWN                   = 0
 
-    CONTACT_ALREADY_EXISTS    = 1
-    CONTACT_DOES_NOT_EXIST    = 2
-    INVALID_CONTACT_ADDRESS   = 3
+    AB_DOES_NOT_EXIST         = 1
+    AB_ALREADY_EXISTS         = 2
 
-    GROUP_ALREADY_EXISTS      = 4
-    GROUP_DOES_NOT_EXIST      = 5
-    GROUP_NAME_TOO_LONG       = 6
-    CONTACT_ALREADY_IN_GROUP  = 7
-    CONTACT_NOT_IN_GROUP      = 8
+    CONTACT_ALREADY_EXISTS    = 3
+    CONTACT_ALREADY_IN_GROUP  = 3 # deprecated
+    CONTACT_DOES_NOT_EXIST    = 4
+    CONTACT_NOT_IN_GROUP      = 4 # deprecated
+    INVALID_CONTACT_ADDRESS   = 5
 
-    MEMBER_ALREADY_EXISTS     = 9
-    MEMBER_DOES_NOT_EXIST     = 10
+    GROUP_ALREADY_EXISTS      = 6
+    GROUP_DOES_NOT_EXIST      = 7
+
+    MEMBER_ALREADY_EXISTS     = 8
+    MEMBER_DOES_NOT_EXIST     = 9
+
+    INVALID_ARGUMENT          = 10
+    GROUP_NAME_TOO_LONG       = 10 # deprecated
+    LIMIT_REACHED             = 11
+    FULL_SYNC_REQUIRED        = 12
+
+
+
+    @staticmethod
+    def get_detailled_error(fault):
+        if fault.detail is not None:
+            errorcode = fault.detail.findtext("./ab:errorcode")
+            errorstring = fault.detail.findtext("./ab:errorstring")
+        else:
+            errorcode = fault.faultcode
+            errorstring = fault.faultstring
+        return errorcode, errorstring
+
+    @staticmethod
+    def from_fault(fault):
+        code = AddressBookError.UNKNOWN
+        errcode, errstring = AddressBookError.get_detailled_error(fault)
+        if errcode == 'ABDoesNotExist':
+            code = AddressBookError.AB_DOES_NOT_EXIST
+        elif errcode == 'ABAlreadyExists':
+            code = AddressBookError.AB_ALREADY_EXISTS
+        elif errcode == 'ContactDoesNotExist':
+            code = AddressBookError.CONTACT_DOES_NOT_EXIST
+        elif errcode == 'ContactAlreadyExists':
+            code = AddressBookError.CONTACT_ALREADY_EXISTS
+        elif errcode == 'ContactDoesNotExist':
+            code = AddressBookError.CONTACT_DOES_NOT_EXIST
+        elif errcode in ('BadEmailArgument', 'InvalidPassportUser'):
+            code = AddressBookError.INVALID_CONTACT_ADDRESS
+        elif errcode == 'MemberAlreadyExists':
+            code = AddressBookError.MEMBER_ALREADY_EXISTS
+        elif errcode == 'MemberDoesNotExist':
+            code = AddressBookError.MEMBER_DOES_NOT_EXIST
+        elif errcode == 'GroupAlreadyExists':
+            code = AddressBookError.GROUP_ALREADY_EXISTS
+        elif errcode == 'GroupDoesNotExist':
+            code = AddressBookError.GROUP_DOES_NOT_EXIST
+        elif errcode == 'BadArgumentLength':
+            code = AddressBookError.INVALID_ARGUMENT
+        elif errcode == 'RequestLimitReached':
+            code = AddressBookError.LIMIT_REACHED
+        elif errcode == 'FullSyncRequired':
+            code = AddressBookError.FULL_SYNC_REQUIRED
+        return code
 
 
 class AddressBookState(object):

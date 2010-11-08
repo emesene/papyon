@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.msnp.challenge import _msn_challenge
 from papyon.msnp.notification import ProtocolConstant
 from papyon.service.OfflineIM.constants import *
 from papyon.service.SOAPService import SOAPService
@@ -44,6 +45,8 @@ class OIM(SOAPService):
         fname = "=?utf-8?B?%s?=" % base64.b64encode(friendly_name)
 
         content = self.__build_mail_data(session_id, message_number, message_content)
+        user_data = (from_member_name, friendly_name, to_member_name, session_id,
+                message_number, message_type, message_content)
 
         self._soap_request(self._service.Store2,
                            (from_member_name, fname, 
@@ -56,30 +59,24 @@ class OIM(SOAPService):
                             ProtocolConstant.PRODUCT_ID,
                             self.__lock_key),
                            (message_type, content),
-                           callback, errback)
+                           callback, errback,
+                           user_data)
 
     def _HandleStore2Fault(self, callback, errback, soap_response, user_data):
-        error_code = OfflineMessagesBoxError.UNKNOWN
-        auth_policy = None
-        lock_key_challenge = None
-
-        if soap_response.fault.faultcode.endswith("AuthenticationFailed"):
-            error_code = OfflineMessagesBoxError.AUTHENTICATION_FAILED
+        error = OfflineMessagesBoxError.from_fault(soap_response.fault)
+        if error == OfflineMessagesBoxError.AUTHENTICATION_FAILED:
             auth_policy = soap_response.fault.detail.findtext("./oim:RequiredAuthPolicy")
             lock_key_challenge = soap_response.fault.detail.findtext("./oim:LockKeyChallenge")
 
-            if auth_policy == "":
-                auth_policy = None
-            if lock_key_challenge == "":
-                lock_key_challenge = None
+            if lock_key_challenge:
+                self.__oim.set_lock_key(_msn_challenge(lock_key_challenge))
+            if auth_policy:
+                self._sso.DiscardSecurityTokens([LiveService.MESSENGER_SECURE])
+                self.Store2(callback, errback, *user_data)
+                return
 
-            #print "Authentication failed - policy = %s - lockkey = %s" % (auth_policy, lock_key_challenge)
-        elif soap_response.fault.faultcode.endswith("SystemUnavailable"):
-            error_code = OfflineMessagesBoxError.SYSTEM_UNAVAILABLE
-        elif soap_response.fault.faultcode.endswith("SenderThrottleLimitExceeded"):
-            error_code = OfflineMessagesBoxError.SENDER_THROTTLE_LIMIT_EXCEEDED
-            
-        run(errback, error_code, auth_policy, lock_key_challenge)
+        self._HandleSOAPFault("Store2", callback, errback, soap_response,
+                user_data)
 
     def __build_mail_data(self, run_id, sequence_number, content):
         import base64
@@ -98,4 +95,5 @@ class OIM(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback, soap_response,
             user_data):
-        run(errback, None)
+        error = OfflineMessagesBoxError.from_fault(soap_response.fault)
+        run(errback, error)

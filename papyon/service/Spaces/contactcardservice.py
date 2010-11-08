@@ -20,6 +20,7 @@
 
 from papyon.service.SOAPService import SOAPService
 from papyon.service.SingleSignOn import *
+from papyon.service.Spaces.constants import SpacesError
 from papyon.util.async import *
 
 __all__ = ['ContactCardService']
@@ -118,4 +119,4 @@ class ContactCardService(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        run(errback, None)
+        run(errback, SpacesError.UNKNOWN)

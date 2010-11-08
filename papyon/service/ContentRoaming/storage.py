@@ -19,6 +19,7 @@
 from papyon.service.SOAPService import SOAPService, url_split
 from papyon.util.async import *
 from papyon.util.element_tree import XMLTYPE
+from papyon.service.ContentRoaming.constants import *
 from papyon.service.SingleSignOn import *
 
 from papyon.gnet.protocol import ProtocolFactory
@@ -95,6 +96,13 @@ class Storage(SOAPService):
                             self._service.DeleteRelationships, scenario,
                             (cid, source_id, target_id))
 
+    def _HandleDeleteRelationships(self, callback, errback, response, user_data):
+        error = ContentRoamingError.from_fault(response.fault)
+        if error == ContentRoamingError.ITEM_DOES_NOT_EXIST:
+            run(callback)
+            return True
+        return False
+
     def CreateDocument(self, callback, errback, scenario, cid, photo_name,
                        photo_mime_type, photo_data):
         self.__soap_request(callback, errback,
@@ -122,7 +130,8 @@ class Storage(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback, response,
             user_data=None):
-        run(errback, 0)
+        error = ContentRoamingError.from_fault(response.fault)
+        run(errback, error)
 
     @RequireSecurityTokens(LiveService.STORAGE)
     def __soap_request(self, callback, errback, method, scenario, args):

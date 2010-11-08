@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
-from papyon.service.AddressBook.constants import *
 
 __all__ = ['FindContactScenario']
 
@@ -37,8 +36,7 @@ class FindContactScenario(BaseScenario):
 
     def execute(self):
         self.__ab.FindAll((self.__find_all_callback, self.id),
-                         (self.__find_all_errback, self.id),
-                         self._scenario, True)
+                         self._errback, self._scenario, True)
 
     def __find_all_callback(self, address_book_delta, id):
         found_contact = None
@@ -48,12 +46,3 @@ class FindContactScenario(BaseScenario):
                 found_contact = contact
                 break
         self.callback(found_contact)
-
-    def __find_all_errback(self, error_code, id):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'FullSyncRequired':
-            self.__ab.FindAll((self.__find_all_callback, id),
-                              (self.__find_all_errback, id),
-                              self._scenario, False)
-            return
-        self.errback(errcode)

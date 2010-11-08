@@ -51,7 +51,7 @@ class DeclineInviteScenario(BaseScenario):
             new_memberships |= Membership.BLOCK
         um = UpdateMembershipsScenario(self.__sharing,
                                        self._callback,
-                                       (self.__update_memberships_errback,),
+                                       self._errback,
                                        self._scenario,
                                        self.account,
                                        self.network,
@@ -59,7 +59,3 @@ class DeclineInviteScenario(BaseScenario):
                                        self.memberships,
                                        new_memberships)
         um()
-
-    def __update_memberships_errback(self, error_code, done, failed):
-        errcode = AddressBookError.UNKNOWN
-        self.errback(errcode)

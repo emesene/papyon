@@ -19,8 +19,6 @@
 from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
 
-from papyon.service.AddressBook.constants import *
-
 __all__ = ['ContactUpdatePropertiesScenario']
 
 class ContactUpdatePropertiesScenario(BaseScenario):
@@ -40,14 +38,7 @@ class ContactUpdatePropertiesScenario(BaseScenario):
         self.enable_allow_list_management = False
 
     def execute(self):
-        self.__ab.ContactUpdate(self._callback,
-                                (self.__contact_update_errback,),
+        self.__ab.ContactUpdate(self._callback, self._errback,
                                 self._scenario, self.contact_guid,
                                 self.contact_properties,
                                 self.enable_allow_list_management)
-
-    def __contact_update_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'ContactDoesNotExist':
-            errcode = AddressBookError.CONTACT_DOES_NOT_EXIST
-        self.errback(errcode)

@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2007 Johann Prieur <johann.prieur@gmail.com>
+# Copyright (C) 2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,15 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ['annotations_to_dict']
+__all__ = ['SpacesError']
 
-def annotations_to_dict(annotations):
-    if annotations is None:
-        return {}
+class SpacesError(object):
+    "Spaces related errors"
 
-    result = {}
-    for annotation in annotations:
-        key = annotation.findtext("./ab:Name")
-        value = annotation.findtext("./ab:Value")
-        result[key] = value
-    return result
+    UNKNOWN = 0
+    "Generic errors"

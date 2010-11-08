@@ -21,7 +21,6 @@ from papyon.service.AddressBook.scenario.base import Scenario
 from messenger_contact_add import MessengerContactAddScenario
 from update_memberships import UpdateMembershipsScenario
 
-from papyon.service.AddressBook.constants import *
 from papyon.profile import NetworkID, Membership
 
 __all__ = ['AcceptInviteScenario']

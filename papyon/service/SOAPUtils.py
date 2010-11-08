@@ -57,6 +57,7 @@ class XMLNS(object):
         class LIVE:
             ADDRESSBOOK = "http://www.msn.com/webservices/AddressBook"
             STORAGE = "http://www.msn.com/webservices/storage/w10"
+            STORAGEV1 = "http://www.msn.com/webservices/storage/v1"
             OIM = "http://messenger.msn.com/ws/2004/09/oim/"
             RSI = "http://www.hotmail.msn.com/ws/2004/09/oim/rsi"
             SPACES = "http://www.msn.com/webservices/spaces/v1/"

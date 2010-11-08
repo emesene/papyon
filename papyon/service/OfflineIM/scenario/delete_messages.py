@@ -16,7 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-from papyon.service.OfflineIM.constants import *
 from papyon.service.OfflineIM.scenario.base import BaseScenario
 
 __all__ = ['DeleteMessagesScenario']
@@ -35,16 +34,5 @@ class DeleteMessagesScenario(BaseScenario):
         self.message_ids = message_ids
 
     def execute(self):
-        self.__rsi.DeleteMessages((self.__delete_messages_callback,),
-                                  (self.__delete_messages_errback,),
+        self.__rsi.DeleteMessages(self._callback, self._errback,
                                   self.message_ids)
-            
-    def __delete_messages_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
-
-    def __delete_messages_errback(self, error_code):
-        errcode = OfflineMessagesBoxError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)

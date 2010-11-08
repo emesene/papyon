@@ -199,7 +199,7 @@ class AddressBook(gobject.GObject):
         """The address book object."""
         gobject.GObject.__init__(self)
 
-        self._ab = ab.AB(sso, proxies)
+        self._ab = ab.AB(sso, client, proxies)
         self._sharing = sharing.Sharing(sso, proxies)
         self._client = client
 

@@ -18,7 +18,7 @@
 #
 from base import *
 
-from papyon.service.ContentRoaming.constants import *
+from papyon.util.async import *
 
 __all__ = ['StoreProfileScenario']
 
@@ -46,52 +46,35 @@ class StoreProfileScenario(BaseScenario):
 
     def execute(self):
         self.__storage.UpdateProfile((self.__update_profile_callback,),
-                                     (self.__store_profile_errback,),
-                                     self._scenario, self.__profile_id,
-                                     self.display_name, self.personal_message, 
-                                     0)
+                                     self._errback, self._scenario,
+                                     self.__profile_id, self.display_name,
+                                     self.personal_message, 0)
 
     def __update_profile_callback(self):
         if self.display_picture is not None:
             self.__storage.DeleteRelationships(
                 (self.__delete_relationship_profile_callback,),
-                (self.__store_profile_errback,),
+                self._errback,
                 self._scenario,
                 self.__display_picture_id,
                 self.__cid, None)
         else:
-            callback = self._callback
-            callback[0](*callback[1:])
+            run(self._callback)
 
     def __delete_relationship_profile_callback(self):
         self.__storage.DeleteRelationships(
                 (self.__delete_relationship_expression_callback,),
-                (self.__store_profile_errback,),
-                self._scenario, self.__display_picture_id,
+                self._errback, self._scenario, self.__display_picture_id,
                 None, self.__expression_profile_id)
 
     def __delete_relationship_expression_callback(self):
         # FIXME : add support for dp name
         self.__storage.CreateDocument(
-            (self.__create_document_callback,),
-            (self.__store_profile_errback,),
+            (self.__create_document_callback,), self._errback,
             self._scenario, self.__cid,
             "roaming", self.display_picture[0],
             self.display_picture[1].encode('base64'))
         
     def __create_document_callback(self, document_rid):
-        self.__storage.CreateRelationships(
-            (self.__create_relationship_callback,),
-            (self.__store_profile_errback,),
+        self.__storage.CreateRelationships(self._callback, self._errback,
             self._scenario, self.__expression_profile_id, document_rid)
-
-    def __create_relationship_callback(self):
-        callback = self._callback
-        callback[0](*callback[1:])
-
-    def __store_profile_errback(self, error_code):
-        errcode = ContentRoamingError.UNKNOWN
-        errback = self._errback[0]
-        args = self._errback[1:]
-        errback(errcode, *args)
-

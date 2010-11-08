@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
-from papyon.service.AddressBook import *
 
 __all__ = ['GroupDeleteScenario']
 
@@ -35,15 +34,5 @@ class GroupDeleteScenario(BaseScenario):
         self.group_guid = group_guid
 
     def execute(self):
-        self.__ab.GroupDelete((self.__group_delete_callback,),
-                              (self.__group_delete_errback,),
+        self.__ab.GroupDelete(self._callback, self._errback,
                               self._scenario, self.group_guid)
-
-    def __group_delete_callback(self):
-        self.callback()
-
-    def __group_delete_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'GroupDoesNotExist':
-            errcode = AddressBookError.GROUP_DOES_NOT_EXIST
-        self.errback(errcode)

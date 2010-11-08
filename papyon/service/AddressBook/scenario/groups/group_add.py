@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
-from papyon.service.AddressBook import *
 
 __all__ = ['GroupAddScenario']
 
@@ -35,17 +34,5 @@ class GroupAddScenario(BaseScenario):
         self.group_name = group_name
 
     def execute(self):
-        self.__ab.GroupAdd((self.__group_add_callback,),
-                           (self.__group_add_errback,),
+        self.__ab.GroupAdd(self.callback, self._errback,
                            self._scenario, self.group_name)
-
-    def __group_add_callback(self, group_guid):
-        self.callback(group_guid)
-
-    def __group_add_errback(self, error_code):
-        errcode = AddressBookError.UNKNOWN
-        if error_code == 'GroupAlreadyExists':
-            errcode = AddressBookError.GROUP_ALREADY_EXISTS
-        elif error_code == 'BadArgumentLength':
-            errcode = AddressBookError.GROUP_NAME_TOO_LONG
-        self.errback(errcode)

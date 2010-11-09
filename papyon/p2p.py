@@ -33,6 +33,7 @@ from msnp2p.exceptions import ParseError
 from msnp2p.constants import SLPStatus
 from profile import NetworkID, BaseContact, Contact, Profile
 
+from papyon.util.async import *
 from papyon.util.encoding import b64_decode
 import papyon.util.element_tree as ElementTree
 import papyon.util.string_io as StringIO
@@ -357,22 +358,32 @@ class MSNObjectStore(P2PSessionHandler):
 
            @raise NotImplementedError: if object's type is not supported"""
 
+        if msn_object is None:
+            logger.warning("Requested MSN object is 'None'")
+            return
+
         obj = self._get_published_object(msn_object)
         if obj is not None:
             msn_object._data = obj._data
         if msn_object._data is not None:
-            callback[0](msn_object, *callback[1:])
+            run(callback, msn_object)
             return
 
         if peer is None:
+            logger.warning("Deprecated: Using MSNObject creator to guess peer")
             peer = self._client.address_book.search_contact(msn_object._creator,
                     NetworkID.MSN)
+            if peer is None:
+                logger.error("MSN Object creator is not in address book")
+                return
 
         if msn_object._type == MSNObjectType.CUSTOM_EMOTICON:
             app_id = ApplicationID.CUSTOM_EMOTICON_TRANSFER
         elif msn_object._type == MSNObjectType.DISPLAY_PICTURE:
             app_id = ApplicationID.DISPLAY_PICTURE_TRANSFER
         else:
+            logger.error("MSN Object type '%i' is not implemented" %
+                    (msn_object._type))
             raise NotImplementedError
 
         context = repr(msn_object)

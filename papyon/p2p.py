@@ -333,6 +333,11 @@ class MSNObjectStore(P2PSessionHandler):
             if errback:
                 errback[0](msn_object, *errback[1:])
 
+    def _on_session_disposed(self, session):
+        P2PSessionHandler._on_session_disposed(self, session)
+        if session in self._callbacks:
+            del self._callbacks[session]
+
     ### Public API -----------------------------------------------------------
 
     def request(self, msn_object, callback, errback=None, peer=None):

@@ -104,7 +104,8 @@ class ContentRoaming(gobject.GObject):
         gp.cid = self._ab.profile.cid
         gp()
 
-    # Public API
+    ### Public API -----------------------------------------------------------
+
     def store(self, display_name=None, personal_message=None, 
               display_picture=None):
         if display_name is None:
@@ -135,7 +136,8 @@ class ContentRoaming(gobject.GObject):
         up.display_picture = display_picture
 
         up()
-    # End of public API
+
+    ### End of public API ----------------------------------------------------
 
     # Callbacks
     def __get_dn_and_pm_cb(self, profile_id, expression_profile_id, 

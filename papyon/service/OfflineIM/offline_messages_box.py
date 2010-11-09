@@ -296,7 +296,8 @@ class OfflineMessagesBox(gobject.GObject):
         message.body = body
         self._client._protocol.send_unmanaged_message(recipient, message)
 
-    # Public API
+    ### Public API -----------------------------------------------------------
+
     def fetch_messages(self, messages=None):
         if messages is None:
             messages = self.messages
@@ -351,7 +352,9 @@ class OfflineMessagesBox(gobject.GObject):
         dm.message_ids = [m.id for m in messages]
         dm()
 
-    # Callbacks
+
+    ### Callbacks ------------------------------------------------------------
+
     def __fetch_message_cb(self, id, run_id, sequence_num, text):
         message = self._messages.search_by_id(id)[0]
         message._run_id = run_id

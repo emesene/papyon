@@ -142,32 +142,39 @@ class Storage(SOAPService):
     def get_display_picture(self, callback, errback, pre_auth_url, user_tile_url):
         token = str(self._tokens[LiveService.STORAGE])
 
-        def success(transport, http_response):
-            type = http_response.get_header('Content-Type')
-            data = http_response.body
-            callback[0](type, data, *callback[1:])
-
-        def total_fail(transport, error_code):
-            errback[0](*errback[1:])
-
-        def request_static_tile(transport, error_code):
+        def request_static_tile(error):
             # Request using the PreAuthURL didn't work, try with static tilephoto
             scheme, host, port, resource = url_split(user_tile_url)
-            self.get_resource(scheme, host, resource, success, total_fail)
+            self.get_resource(scheme, host, resource, callback, errback)
 
         scheme, host, port, resource = url_split(pre_auth_url)
-        resource += '?t=' + urllib.quote(token.split('&')[0][2:])
-        self.get_resource(scheme, host, resource, success, request_static_tile)
+        resource += '?t=' + urllib.quote(token.split('&')[0][2:], '')
+        self.get_resource(scheme, host, resource, callback,
+                (request_static_tile,))
 
     def get_resource(self, scheme, host, resource, callback, errback):
         http_headers = {}
         http_headers["Accept"] = "*/*"
         http_headers["Proxy-Connection"] = "Keep-Alive"
         http_headers["Connection"] = "Keep-Alive"
+
+        def done_cb(transport, http_response, handles):
+            type = http_response.get_header('Content-Type')
+            data = http_response.body
+            for handle in handles:
+                transport.disconnect(handle)
+            run(callback, type, data)
+
+        def failed_cb(transport, error, handles):
+            for handle in handles:
+                transport.disconnect(handle)
+            run(errback, error)
         
         transport = ProtocolFactory(scheme, host, proxies=self._proxies)
-        transport.connect("response-received", callback)
-        transport.connect("request-sent", self._request_handler)
-        transport.connect("error", errback)
+
+        handles = []
+        handles.append(transport.connect("response-received", done_cb, handles))
+        handles.append(transport.connect("request-sent", self._request_handler))
+        handles.append(transport.connect("error", failed_cb, handles))
 
         transport.request(resource, http_headers, method='GET')

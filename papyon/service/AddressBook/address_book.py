@@ -254,16 +254,22 @@ class AddressBook(gobject.GObject):
 
     # Public API
     def search_contact(self, account, network_id):
+        if account.lower() == self._client.profile.account.lower() and \
+                network_id == NetworkID.MSN:
+            return self._client.profile
+
         contacts = self.contacts.search_by_network_id(network_id).\
                 search_by_account(account)
         if len(contacts) == 0:
             return None
         return contacts[0]
 
-    def search_or_build_contact(self, account, network_id):
+    def search_or_build_contact(self, account, network_id, display_name=None):
         contact = self.search_contact(account, network_id)
         if contact is None:
-            contact = profile.Contact(None, network_id, account, account)
+            if not display_name:
+                display_name = account
+            contact = profile.Contact(None, network_id, account, display_name)
         return contact
 
     def check_pending_invitations(self, done_cb=None, failed_cb=None):
@@ -316,6 +322,9 @@ class AddressBook(gobject.GObject):
 
         contact = self.search_contact(account, network_id)
         old_memberships = (contact and contact.memberships) or Membership.NONE
+
+        if contact is self._client.profile:
+            return # can't add ourself to the address book
 
         if contact is not None and contact.is_mail_contact():
             self.upgrade_mail_contact(contact, groups, done_cb, failed_cb)
@@ -604,10 +613,12 @@ class AddressBook(gobject.GObject):
                 account = member.Account.encode("utf-8")
                 display_name = (member.DisplayName or member.Account).encode("utf-8")
                 msg = member.Annotations.get('MSN.IM.InviteMessage', u'')
-                c = profile.Contact(None, network, account, display_name, cid)
-                c._server_attribute_changed('invite_message', msg.encode("utf-8"))
-                self.contacts.add(c)
-                contact = c
+                contact = profile.Contact(None, network, account, display_name, cid)
+                contact._server_attribute_changed('invite_message', msg.encode("utf-8"))
+                self.contacts.add(contact)
+
+            if contact is self._client.profile:
+                continue # don't update our own memberships
 
             for role in member.Roles:
                 membership = role_to_membership.get(role, None)

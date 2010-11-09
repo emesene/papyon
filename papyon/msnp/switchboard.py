@@ -221,6 +221,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     # --------- Invitation ---------------------------------------------------
     def __parse_account(self, account):
         """Parse account string and extract end-point info if available."""
+        account = account.lower() # normalize account
         if ';' in account:
             account, guid = account.split(';', 1)
             return account, guid[1:-1]
@@ -229,22 +230,13 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
 
     def __search_account(self, account, display_name):
         """Search account in address book and make sure it's not ourself."""
-        if account == self._client.profile.account:
-            return self._client.profile
-
-        contacts = self._client.address_book.contacts.\
-                search_by_account(account)
-        if len(contacts) == 0:
-            return papyon.profile.Contact(id=0,
-                    network_id=papyon.profile.NetworkID.MSN,
-                    account=account,
-                    display_name=display_name)
-        else:
-            return contacts[0]
+        contact = self._client.address_book.search_or_build_contact(account,
+                papyon.profile.NetworkID.MSN, display_name)
+        return contact
 
     def __discard_invitation(self, account):
         for trid, contact in self.__invitations.items():
-            if contact.account == account:
+            if contact.account.lower() == account:
                 del self.__invitations[trid]
                 return
             
@@ -253,7 +245,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             places = self.end_points.setdefault(account, [])
             places.append(guid)
             return # wait for the command without GUID
-        if account == self._client.profile.account:
+        if account == self._client.profile.account.lower():
             return # ignore our own user
         if account in self.participants:
             return # ignore duplicate users
@@ -267,7 +259,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             places = self.end_points.setdefault(account, [])
             places.remove(guid)
             return # wait for the command without GUID to remove from participants
-        if account == self._client.profile.account:
+        if account == self._client.profile.account.lower():
             return # ignore our own user
         participant = self.participants.pop(account)
         self.emit("user-left", participant)
@@ -294,7 +286,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _handle_BYE(self, command):
         account, guid = self.__parse_account(command.arguments[0])
         self.__participant_left(account, guid)
-        end_points = self.end_points.get(self._client.profile.account, [])
+        end_points = self.end_points.get(self._client.profile.account.lower(), [])
         if len(self.participants) == 0 and len(end_points) == 0:
             self.leave()
 

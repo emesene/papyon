@@ -94,11 +94,8 @@ class P2PSessionManager(gobject.GObject):
         else:
             guid = None
 
-        if account == self._client.profile.account:
-            peer = self._client.profile
-        else:
-            peer = self._client.address_book.search_or_build_contact(
-                    account, papyon.profile.NetworkID.MSN)
+        peer = self._client.address_book.search_or_build_contact(
+                account, papyon.profile.NetworkID.MSN)
 
         return peer, guid
 

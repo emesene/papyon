@@ -305,18 +305,13 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     # Helpers ----------------------------------------------------------------
     def __search_account(self, account, network_id=profile.NetworkID.MSN):
-        if account == self._client.profile.account:
-            return [self._client.profile]
+        contact = self._client.address_book.search_contact(account, network_id)
 
-        contacts = self._client.address_book.contacts.\
-                search_by_network_id(network_id).\
-                search_by_account(account)
-
-        if len(contacts) == 0:
+        if contact is None:
             logger.warning("Contact (network_id=%d) %s not found" % \
                     (network_id, account))
 
-        return contacts
+        return contact
 
     def __parse_network_and_account(self, command, idx=0):
         if self._protocol_version >= 18:
@@ -462,8 +457,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def _handle_FLN(self, command):
         idx, network_id, account = self.__parse_network_and_account(command)
-        contacts = self.__search_account(account, network_id)
-        for contact in contacts:
+        contact = self.__search_account(account, network_id)
+        if contact is not None:
             contact._remove_flag(profile.ContactFlag.EXTENDED_PRESENCE_KNOWN)
             contact._server_property_changed("presence",
                     profile.Presence.OFFLINE)
@@ -488,8 +483,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         if len(command.arguments) > idx:
             icon_url = command.arguments[idx]
 
-        contacts = self.__search_account(account, network_id)
-        for contact in contacts:
+        contact = self.__search_account(account, network_id)
+        if contact is not None:
             # don't change local presence and capabilities
             if contact is not self._client.profile:
                 contact._server_property_changed("presence", presence)
@@ -518,7 +513,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         if not command.payload:
             return
         idx, account, guid = self.__parse_account_and_guid(command)
-        contact = self.__search_account(account)[0]
+        contact = self.__search_account(account)
         type = int(command.arguments[1])
         payload = command.payload
         self.emit("buddy-notification-received", contact, guid, type, payload)
@@ -566,8 +561,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             end_point.client_type = int(self.__find_node(pep, "ClientType", 0))
             end_point.state = self.__find_node(pep, "State", "")
 
-        contacts = self.__search_account(account, network_id)
-        for contact in contacts:
+        contact = self.__search_account(account, network_id)
+        if contact is not None:
             contact._add_flag(profile.ContactFlag.EXTENDED_PRESENCE_KNOWN)
             contact._server_property_changed("end-points", end_points)
             contact._server_property_changed("msn-object", msn_object)
@@ -663,9 +658,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def _handle_UBM(self, command):
         idx, network_id, account = self.__parse_network_and_account(command)
-        contacts = self.__search_account(account, network_id)
-        if len(contacts) > 0:
-            contact = contacts[0]
+        contact = self.__search_account(account, network_id)
+        if contact is not None:
             message = Message(contact, command.payload)
             self.emit("unmanaged-message-received", contact, message)
 

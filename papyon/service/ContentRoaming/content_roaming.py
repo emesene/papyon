@@ -25,6 +25,9 @@ from papyon.util.async import *
 
 import gobject
 import imghdr
+import logging
+
+logger = logging.getLogger("papyon.service.content_roaming")
 
 __all__ = ['ContentRoaming', 'ContentRoamingState', 'ContentRoamingError']
 
@@ -105,6 +108,7 @@ class ContentRoaming(gobject.GObject):
             return
         self._state = ContentRoamingState.SYNCHRONIZING
 
+        logger.info("Synchronizing")
         gp = GetStoredProfileScenario(self._storage,
                                       (self.__get_dn_and_pm_cb,),
                                       (self.__get_display_picture_cb,),
@@ -121,10 +125,12 @@ class ContentRoaming(gobject.GObject):
         if personal_message is None:
             personal_message = self.__personal_message
 
+        picture_type = None
         if display_picture is not None:
-            type = imghdr.what('', display_picture)
-            if type is None: type = 'png'
-            display_picture = ('image/%s' % type, display_picture)
+            picture_type = imghdr.what('', display_picture)
+            if picture_type is None:
+                picture_type = 'png'
+            display_picture = ('image/%s' % picture_type, display_picture)
 
         def store_profile_cb():
             self.__display_name = display_name
@@ -132,6 +138,8 @@ class ContentRoaming(gobject.GObject):
             self.__display_picture = display_picture
             run(callback)
 
+        logger.info("Store profile (dn='%s', pm='%s', dp='%s')" %
+                (display_name, personal_message, picture_type))
         up = StoreProfileScenario(self._storage,
                                   (store_profile_cb,),
                                   (self.__common_errback, errback),
@@ -151,6 +159,7 @@ class ContentRoaming(gobject.GObject):
     # Callbacks
     def __get_dn_and_pm_cb(self, profile_id, expression_profile_id, 
                            display_name, personal_message, display_picture_id):
+        logger.info("Retrieved store profile")
         self._profile_id = profile_id
         self._expression_profile_id = expression_profile_id
         self._display_picture_id = display_picture_id
@@ -165,12 +174,14 @@ class ContentRoaming(gobject.GObject):
             self._state = ContentRoamingState.SYNCHRONIZED
 
     def __get_display_picture_cb(self, type, data):
+        logger.info("Retrieved display picture")
         self.__display_picture = (type, data)
         self.notify("display-picture")
 
         self._state = ContentRoamingState.SYNCHRONIZED
 
     def __common_errback(self, error, errback, *args):
+        logger.error("Content Roaming service got error: %s" % str(error))
         run(errback, error)
         self.emit("error", error)
 

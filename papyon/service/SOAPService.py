@@ -212,11 +212,13 @@ class SOAPService(object):
             soap_response = SOAPResponse(decoded_body)
         except Exception, err:
             logger.error("Couldn't decode SOAP response body")
+            run(errback, 0)
             return
 
         if not soap_response.is_valid():
             logger.warning("Invalid SOAP Response")
-            return #FIXME: propagate the error up
+            run(errback, 0)
+            return
 
         if not soap_response.is_fault():
             handler = getattr(self, "_Handle" + request_id + "Response", None)

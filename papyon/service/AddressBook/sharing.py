@@ -174,9 +174,8 @@ class Sharing(SOAPService):
         if error == AddressBookError.FULL_SYNC_REQUIRED:
             scenario, services = user_data
             self.FindMembership(callback, errback, scenario, services, False)
-            return
-        self._HandleSOAPFault('FindMembership', callback, errback, response,
-                user_data)
+            return True
+        return False
 
     def AddMember(self, callback, errback, scenario, member_role, type,
                   state, account):
@@ -195,9 +194,8 @@ class Sharing(SOAPService):
         error = AddressBookError.from_fault(response.fault)
         if error == AddressBookError.MEMBER_ALREADY_EXISTS:
             run(callback)
-            return
-        self._HandleSOAPFault('AddMember', callback, errback, response,
-                user_data)
+            return True
+        return False
 
     def DeleteMember(self, callback, errback, scenario, member_role, type,
                      state, account):
@@ -216,9 +214,8 @@ class Sharing(SOAPService):
         error = AddressBookError.from_fault(response.fault)
         if error == AddressBookError.MEMBER_DOES_NOT_EXIST:
             run(callback)
-            return
-        self._HandleSOAPFault('DeleteMember', callback, errback, response,
-                user_data)
+            return True
+        return False
 
     @RequireSecurityTokens(LiveService.CONTACTS)
     def __soap_request(self, callback, errback, method, scenario, args,

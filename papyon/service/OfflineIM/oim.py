@@ -73,10 +73,9 @@ class OIM(SOAPService):
             if auth_policy:
                 self._sso.DiscardSecurityTokens([LiveService.MESSENGER_SECURE])
                 self.Store2(callback, errback, *user_data)
-                return
+                return True
 
-        self._HandleSOAPFault("Store2", callback, errback, soap_response,
-                user_data)
+        return False
 
     def __build_mail_data(self, run_id, sequence_number, content):
         import base64

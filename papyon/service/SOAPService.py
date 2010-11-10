@@ -231,10 +231,10 @@ class SOAPService(object):
         else:
             handler = getattr(self, "_Handle" + request_id + "Fault", None)
             if handler is not None:
-                handler(callback, errback, soap_response, user_data)
-            else:
-                self._HandleSOAPFault(request_id, callback, errback, soap_response,
-                                      user_data)
+                if handler(callback, errback, soap_response, user_data):
+                    return # if handler returns true, don't call generic handler
+            self._HandleSOAPFault(request_id, callback, errback, soap_response,
+                                  user_data)
 
     def _request_handler(self, transport, http_request):
         #hide password from logs

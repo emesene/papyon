@@ -180,8 +180,8 @@ class AB(SOAPService):
         error = AddressBookError.from_fault(response.fault)
         if error == AddressBookError.AB_ALREADY_EXISTS:
             self.FindAll(callback, errback, user_data[0], False)
-            return
-        self._HandleSOAPFault('ABAdd', callback, errback, response, user_data)
+            return True
+        return False
 
     def FindAll(self, callback, errback, scenario, deltas_only):
         """Requests the contact list.
@@ -220,11 +220,11 @@ class AB(SOAPService):
         scenario, deltas_only = user_data
         if error == AddressBookError.AB_DOES_NOT_EXIST:
             self.Add(callback, errback, scenario, self._client.profile.account)
-            return
+            return True
         elif error == AddressBookError.FULL_SYNC_REQUIRED:
             self.FindAll(callback, errback, scenario, False)
-            return
-        self._HandleSOAPFault('ABFindAll', callback, errback, response, user_data)
+            return True
+        return False
 
     def ContactAdd(self, callback, errback, scenario,
             contact_info, invite_info, auto_manage_allow_list=True):

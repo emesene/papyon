@@ -70,10 +70,10 @@ class FileTransferSession(P2PSession):
         self._invite(context)
 
     def accept(self):
-        self._respond(200)
+        self._accept()
 
     def reject(self):
-        self._respond(603)
+        self._decline(603)
 
     def cancel(self):
         self._close()

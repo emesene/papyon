@@ -185,6 +185,13 @@ class P2PSession(gobject.GObject):
         # close other end points so we are the only one answering
         self._close_end_points(status_code)
 
+    def _accept(self):
+        self._respond(200)
+
+    def _decline(self, status_code):
+        self._respond(status_code)
+        self._dispose()
+
     def _respond_transreq(self, transreq, status, body):
         self._cseq += 1
         response = SLPResponseMessage(status,

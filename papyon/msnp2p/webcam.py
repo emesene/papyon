@@ -77,13 +77,13 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         self._answered = True
         temp_application_id = self._application_id
         self._application_id = 0
-        self._respond(200)
+        self._accept()
         self._application_id = temp_application_id
         self.send_binary_syn()
 
     def reject(self):
         self._answered = True
-        self._respond(603)
+        self._decline(603)
 
     def end(self, reason=None):
         if not self._answered:

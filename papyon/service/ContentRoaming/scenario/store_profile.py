@@ -51,21 +51,26 @@ class StoreProfileScenario(BaseScenario):
                                      self.personal_message, 0)
 
     def __update_profile_callback(self):
-        if self.display_picture is not None:
+        if not self.display_picture or not self.__display_picture_id:
+            run(self._callback)
+        elif not self.__cid:
+            self.__delete_relationship_profile_callback()
+        else:
             self.__storage.DeleteRelationships(
                 (self.__delete_relationship_profile_callback,),
                 self._errback,
                 self._scenario,
                 self.__display_picture_id,
                 self.__cid, None)
-        else:
-            run(self._callback)
 
     def __delete_relationship_profile_callback(self):
-        self.__storage.DeleteRelationships(
-                (self.__delete_relationship_expression_callback,),
-                self._errback, self._scenario, self.__display_picture_id,
-                None, self.__expression_profile_id)
+        if not self.__expression_profile_id:
+            self.__delete_relationship_expression_callback()
+        else:
+            self.__storage.DeleteRelationships(
+                    (self.__delete_relationship_expression_callback,),
+                    self._errback, self._scenario, self.__display_picture_id,
+                    None, self.__expression_profile_id)
 
     def __delete_relationship_expression_callback(self):
         # FIXME : add support for dp name

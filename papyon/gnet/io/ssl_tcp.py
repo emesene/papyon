@@ -44,4 +44,8 @@ class SSLTCPClient(SSLSocketClient, ProxyfiableClient):
             @type port: integer > 0 and < 65536"""
         SSLSocketClient.__init__(self, host, port, AF_INET, SOCK_STREAM)
         ProxyfiableClient.__init__(self)
+
+    @property
+    def protocol(self):
+        return "SSL TCP"
 gobject.type_register(SSLTCPClient)

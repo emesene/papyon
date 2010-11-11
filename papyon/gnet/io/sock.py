@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from iochannel import GIOChannelClient
 
 import gobject
@@ -56,7 +57,7 @@ class SocketClient(GIOChannelClient):
                                gobject.IO_ERR | gobject.IO_HUP)
             self._status = IoStatus.OPEN
         else:
-            self.emit("error", IoError.CONNECTION_FAILED)
+            self.emit("error", IoConnectionFailed(self, str(opts)))
             self._status = IoStatus.CLOSED
         return False
 
@@ -87,8 +88,8 @@ class SocketClient(GIOChannelClient):
                 # Deal with broken pipe from the socket.
                 try:
                     item.sent(self._channel.write(item.read()))
-                except gobject.GError:
-                    self.emit("error", IoError.CONNECTION_FAILED)
+                except gobject.GError, err:
+                    self.emit("error", IoConnectionFailed(self, str(err)))
                     return True
 
                 if item.is_complete(): # sent item

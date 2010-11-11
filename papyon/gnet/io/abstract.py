@@ -56,7 +56,7 @@ class AbstractClient(gobject.GObject):
     __gsignals__ = {
             "error": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (gobject.TYPE_ULONG,)),
+                (object,)),
 
             "received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -159,6 +159,10 @@ class AbstractClient(gobject.GObject):
     @property
     def type(self):
         return self._type
+
+    @property
+    def protocol(self):
+        raise NotImplementedError
 
     def __get_status(self):
         return self.__status

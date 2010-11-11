@@ -20,6 +20,7 @@
 from abstract import AbstractProxy
 from papyon.gnet.io import TCPClient
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from papyon.gnet.parser import DelimiterParser
 
 import gobject
@@ -102,6 +103,10 @@ class SOCKS5Proxy(AbstractProxy):
         self._send_nego_msg()
         
     # Public API
+    @property
+    def protocol(self):
+        return "SOCKS5"
+
     def open(self):
         """Open the connection."""
         if not self._configure():
@@ -178,7 +183,7 @@ class SOCKS5Proxy(AbstractProxy):
         version, code = struct.unpack('!BB', response[0:2])
         if (version != SOCKS5Proxy.VERSION or
             code != SOCKS5Proxy.CODE_SUCCEEDED):
-            raise Exception("Authentication didn't succeed")
+            raise Exception("Authentication didn't succeed (%s)" % code)
         logger.info("Authentication succeeded")
         return True
 
@@ -190,7 +195,7 @@ class SOCKS5Proxy(AbstractProxy):
             msg += struct.pack('!BI', SOCKS5Proxy.ATYP_IPV4, addr)
         except:
             if len(self.host) > SOCKS5Proxy.MAX_LEN:
-                raise Exception
+                raise Exception("Hostname is longer than max allowed length")
             msg += struct.pack('!BB', SOCKS5Proxy.ATYP_DOMAINNAME, len(self.host))
             msg += self.host
 
@@ -234,11 +239,9 @@ class SOCKS5Proxy(AbstractProxy):
         else:
             self._status = transport.status
 
-    def _on_transport_error(self, transport, error_code):
-        if error_code == IoError.CONNECTION_FAILED:
-            error_code = IoError.PROXY_CONNECTION_FAILED
+    def _on_transport_error(self, transport, error):
         self.close()
-        self.emit("error", error_code)
+        self.emit("error", error)
 
     def _on_proxy_response(self, parser, response):
         try:
@@ -264,7 +267,7 @@ class SOCKS5Proxy(AbstractProxy):
             logger.error("Handshake failed")
             logger.exception(err)
             self.close()
-            self.emit("error", IoError.PROXY_CONNECTION_FAILED)
+            self.emit("error", SOCKS5Error(self, str(err)))
         return False
 
 gobject.type_register(SOCKS5Proxy)

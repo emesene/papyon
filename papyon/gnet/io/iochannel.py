@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from papyon.gnet.resolver import *
 from abstract import AbstractClient
 
@@ -92,7 +93,7 @@ class GIOChannelClient(AbstractClient):
 
     def __open(self, resolve_response, host, port):
         if resolve_response.status != 0:
-            self.emit("error", IoError.CONNECTION_FAILED)
+            self.emit("error", IoConnectionFailed(self, "Couldn't resolve hostname"))
             self._transport.close()
             return
         else:
@@ -112,7 +113,7 @@ class GIOChannelClient(AbstractClient):
             return
         elif err in (EHOSTUNREACH, EHOSTDOWN, ECONNREFUSED, ECONNABORTED,
                 ENETUNREACH, ENETDOWN, EBADFD):
-            self.emit("error", IoError.CONNECTION_FAILED)
+            self.emit("error", IoConnectionFailed(self, str(err)))
             self._transport.close()
 
     # convenience methods

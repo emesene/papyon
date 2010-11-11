@@ -20,12 +20,16 @@
 from abstract import AbstractProxy
 from papyon.gnet.io import TCPClient
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from papyon.gnet.parser import HTTPParser
 
 import gobject
 import base64
+import logging
 
 __all__ = ['HTTPConnectProxy']
+
+logger = logging.getLogger('papyon.proxy.HTTP')
 
 class HTTPConnectProxy(AbstractProxy):
     def __init__(self, client, proxy_infos):
@@ -60,6 +64,10 @@ class HTTPConnectProxy(AbstractProxy):
         self._transport.send(proxy_protocol)
 
     # public API
+    @property
+    def protocol(self):
+        return "HTTPConnect"
+
     def open(self):
         """Open the connection."""
         if not self._configure():
@@ -89,11 +97,9 @@ class HTTPConnectProxy(AbstractProxy):
         else:
             self._status = transport.status
 
-    def _on_transport_error(self, transport, error_code):
-        if error_code == IoError.CONNECTION_FAILED:
-            error_code = IoError.PROXY_CONNECTION_FAILED
+    def _on_transport_error(self, transport, error):
         self.close()
-        self.emit("error", error_code)
+        self.emit("error", error)
 
     def _on_proxy_response(self, parser, response):
         if self.status == IoStatus.OPENING:
@@ -103,10 +109,9 @@ class HTTPConnectProxy(AbstractProxy):
                 self._client._proxy_open()
             elif response.status == 100:
                 return True
-            elif response.status == 407:
-                self.close()
-                self.emit("error", IoError.PROXY_AUTHENTICATION_REQUIRED)
             else:
-                raise NotImplementedError("Unknown Proxy response code")
+                logger.error("Connection failed (%s)" % response.status)
+                self.close()
+                self.emit("error", HTTPConnectError(self, response.status))
             return False
 gobject.type_register(HTTPConnectProxy)

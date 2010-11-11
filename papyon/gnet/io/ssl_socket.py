@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from iochannel import GIOChannelClient
 
 import gobject
@@ -55,7 +56,7 @@ class SSLSocketClient(GIOChannelClient):
             self._watch_set_cond(gobject.IO_IN | gobject.IO_PRI | gobject.IO_OUT |
                                gobject.IO_ERR | gobject.IO_HUP)
         else:
-            self.emit("error", IoError.CONNECTION_FAILED)
+            self.emit("error", IoConnectionFailed(self))
             self._status = IoStatus.CLOSED
         return False
 
@@ -68,8 +69,8 @@ class SSLSocketClient(GIOChannelClient):
             except (OpenSSL.WantX509LookupError,
                     OpenSSL.WantReadError, OpenSSL.WantWriteError):
                 return True
-            except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
-                self.emit("error", IoError.SSL_CONNECTION_FAILED)
+            except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError), err:
+                self.emit("error", SSLError(str(err)))
                 self.close()
                 return False
             else:

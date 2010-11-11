@@ -315,13 +315,13 @@ class DirectConnection(BaseTransport):
                 self.emit("connection-lost", None)
             self.__error = False
     
-    def __on_error(self, transport, reason):
+    def __on_error(self, transport, error):
         status = transport.get_property("status")
         self.__error = True
         if status == gnet.IoStatus.OPEN:
-            self.emit("connection-lost", reason)
+            self.emit("connection-lost", error)
         else:
-            self.emit("connection-failure", reason)
+            self.emit("connection-failure", error)
 
     def __on_received(self, receiver, chunk):
         if self.__pending_command is None:
@@ -442,11 +442,9 @@ class HTTPPollConnection(BaseTransport):
             self.send_command(None)
         return True
     
-    def __on_error(self, transport, reason):
+    def __on_error(self, transport, error):
         self.__error = True
-        if reason == 403:
-            reason = TransportError.PROXY_FORBIDDEN
-        self.emit("connection-lost", reason)
+        self.emit("connection-lost", error)
         self.lose_connection()
         
     def __on_received(self, transport, http_response):

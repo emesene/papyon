@@ -36,18 +36,3 @@ class IoStatus(object):
     CLOSED  = 1
     OPENING = 2
     OPEN    = 3
-
-class IoError(object):
-    """I/O error codes"""
-    UNKNOWN = 0
-
-    CONNECTION_FAILED = 1
-    CONNECTION_TIMED_OUT = 2
-
-    SSL_CONNECTION_FAILED = 10
-    SSL_PROTOCOL_ERROR = 11
-
-    PROXY_CONNECTION_FAILED = 20
-    PROXY_AUTHENTICATION_REQUIRED = 21
-    PROXY_FORBIDDEN = 22
-

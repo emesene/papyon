@@ -18,6 +18,7 @@
 #
 
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from papyon.gnet.proxy import ProxyInfos
 from papyon.gnet.message.HTTP import HTTPRequest
 from papyon.gnet.io import TCPClient
@@ -40,7 +41,7 @@ class HTTP(gobject.GObject):
     __gsignals__ = {
             "error" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
-                (gobject.TYPE_ULONG,)),
+                (object,)), # IoError
 
             "response-received": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
@@ -140,7 +141,7 @@ class HTTP(gobject.GObject):
         if response.status >= 400:
             logger.error("Received error code %i (%s) from %s:%i" %
                 (response.status, response.reason, self._host, self._port))
-            self.emit("error", response.status)
+            self.emit("error", HTTPError(response))
         else:
             self.emit("response-received", response)
         self._waiting_response = False

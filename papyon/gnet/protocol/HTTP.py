@@ -122,6 +122,9 @@ class HTTP(gobject.GObject):
     def _on_response_received(self, parser, response):
         if response.status >= 100 and response.status < 200:
             return
+        if not self._waiting_response:
+            logger.warning("Received response but wasn't waiting for one")
+            return
         #if response.status in (301, 302): # UNTESTED: please test
         #    location = response.headers['Location']
 
@@ -137,14 +140,15 @@ class HTTP(gobject.GObject):
         #        self._outgoing_queue[0].headers['Host'] = response.headers['Location']
         #        self._setup_transport()
         #        return
-        self._outgoing_queue.pop(0) # pop the request from the queue
+        self._waiting_response = False
+        if len(self._outgoing_queue) > 0:
+            self._outgoing_queue.pop(0) # pop the request from the queue
         if response.status >= 400:
             logger.error("Received error code %i (%s) from %s:%i" %
                 (response.status, response.reason, self._host, self._port))
             self.emit("error", HTTPError(response))
         else:
             self.emit("response-received", response)
-        self._waiting_response = False
         self._process_queue() # next request ?
 
     def _on_error(self, transport, error):

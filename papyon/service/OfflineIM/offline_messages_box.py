@@ -263,13 +263,8 @@ class OfflineMessagesBox(gobject.GObject):
                 network_id = NetworkID.MSN
 
             account = m.findtext('./E')
-
-            try:
-                sender = self._client.address_book.contacts.\
-                    search_by_account(account).\
-                    search_by_network_id(network_id)[0]
-            except IndexError:
-                sender = None
+            sender = self._client.address_book.search_or_build_contact(account,
+                network_id)
 
             # Get the name of the sender
             name = m.findtext('./N');

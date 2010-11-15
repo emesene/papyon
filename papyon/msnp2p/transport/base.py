@@ -180,13 +180,11 @@ class BaseP2PTransport(gobject.GObject):
             return True
         if not self.has_data_to_send():
             self._queue_lock.release()
-            self._stop_processing()
             return False
         if not self._ready_to_send():
             logger.info("Transport is not ready to send, bail out")
             self._queue_lock.release()
-            self._stop_processing()
-            return True
+            return False
 
         # FIXME find a better algorithm to choose session
         if 0 in self._data_blob_queue:

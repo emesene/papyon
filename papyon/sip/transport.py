@@ -26,6 +26,7 @@ from papyon.sip.message import SIPResponse, SIPRequest, SIPMessageParser, SIPVia
 import base64
 import gobject
 import logging
+import uuid
 import xml.dom.minidom
 
 logger = logging.getLogger('papyon.sip.transport')
@@ -106,9 +107,7 @@ class SIPTunneledTransport(SIPBaseTransport):
         guid = None
         if ";mepid=" in contact:
             contact, guid = contact.split(";mepid=")
-            guid = "%s-%s-%s-%s-%s" % (guid[0:8], guid[8:12], guid[12:16],
-                    guid[16:20], guid[20:32])
-            guid = guid.lower()
+            guid = uuid.UUID(guid)
         self.log_message(">>", str(message))
         data = base64.b64encode(str(message))
         data = '<sip e="base64" fid="1" i="%s"><msg>%s</msg></sip>' % \

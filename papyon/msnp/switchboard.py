@@ -27,6 +27,8 @@ from base import BaseProtocol, ProtocolState
 from message import Message
 import papyon.profile
 
+from papyon.util.parsing import build_account, parse_account
+
 import logging
 import urllib
 import gobject
@@ -219,15 +221,6 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
     def _handle_OUT(self, command):
         pass
     # --------- Invitation ---------------------------------------------------
-    def __parse_account(self, account):
-        """Parse account string and extract end-point info if available."""
-        account = account.lower() # normalize account
-        if ';' in account:
-            account, guid = account.split(';', 1)
-            return account, guid[1:-1]
-        else:
-            return account, None
-
     def __search_account(self, account, display_name):
         """Search account in address book and make sure it's not ourself."""
         contact = self._client.address_book.search_or_build_contact(account,
@@ -265,7 +258,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self.emit("user-left", participant)
 
     def _handle_IRO(self, command):
-        account, guid = self.__parse_account(command.arguments[2])
+        account, guid = parse_account(command.arguments[2])
         display_name = urllib.unquote(command.arguments[3])
         client_id = command.arguments[4]
         self.__participant_join(account, guid, display_name, client_id)
@@ -274,7 +267,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         pass
 
     def _handle_JOI(self, command):
-        account, guid = self.__parse_account(command.arguments[0])
+        account, guid = parse_account(command.arguments[0])
         display_name = urllib.unquote(command.arguments[1])
         client_id = command.arguments[2]
         self.__participant_join(account, guid, display_name, client_id)
@@ -284,7 +277,7 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                 self._inviting = False
 
     def _handle_BYE(self, command):
-        account, guid = self.__parse_account(command.arguments[0])
+        account, guid = parse_account(command.arguments[0])
         self.__participant_left(account, guid)
         end_points = self.end_points.get(self._client.profile.account.lower(), [])
         if len(self.participants) == 0 and len(end_points) == 0:
@@ -326,7 +319,8 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
         self._state = ProtocolState.OPENING
         account = self._client.profile.account
         if self._client.protocol_version >= 16:
-            account += ";{%s}" % self._client.machine_guid
+            account = build_account(self._client.profile.account,
+                    self._client.machine_guid)
         if self.__key is not None:
             arguments = (account, self.__key, self.__session_id)
             self._send_command('ANS', arguments)

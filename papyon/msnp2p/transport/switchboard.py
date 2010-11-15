@@ -22,6 +22,7 @@ from papyon.msnp.message import MessageAcknowledgement
 from papyon.msnp2p.transport.TLP import MessageChunk
 from papyon.msnp2p.transport.base import BaseP2PTransport
 from papyon.switchboard_manager import SwitchboardHandler
+from papyon.util.parsing import build_account, parse_account
 
 import gobject
 import struct
@@ -92,12 +93,11 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
     def _send_chunk(self, peer, peer_guid, chunk):
         logger.debug(">>> %s" % repr(chunk))
         if chunk.version is 1 or peer_guid is None:
-            headers = {'P2P-Dest': self.peer.account}
+            headers = {'P2P-Dest': peer.account}
         elif chunk.version is 2:
-            headers = {'P2P-Src' : self._client.profile.account + ";{" +
-                                   self._client.machine_guid + "}",
-                       'P2P-Dest': peer.account + ";{" +
-                                   peer_guid + "}"}
+            headers = {'P2P-Src' : build_account(self._client.profile.account,
+                                                 self._client.machine_guid),
+                       'P2P-Dest': build_account(peer.account, peer_guid)}
         content_type = 'application/x-msnmsgrp2p'
         body = str(chunk) + struct.pack('>L', chunk.application_id)
         self._oustanding_sends += 1
@@ -110,7 +110,14 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         version = 1
         peer = message.sender
         peer_guid = message.sender_guid
-        dest_guid = message.parse_guid('P2P-Dest')
+
+        try:
+            dest, dest_guid = parse_account(message.get_header('P2P-Dest'))
+        except Exception, err:
+            logger.exception(err)
+            logger.warning("Couldn't parse destination GUID")
+            return
+
         # if destination contains a GUID, the protocol should be TLPv2
         if dest_guid and peer_guid:
             version = 2

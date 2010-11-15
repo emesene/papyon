@@ -303,7 +303,7 @@ class Client(EventsDispatcher):
     @property
     def machine_guid(self):
         if not hasattr(self, '_guid'):
-            self._guid = str(uuid.uuid4())
+            self._guid = uuid.uuid4()
         return self._guid
 
     @rw_property

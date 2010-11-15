@@ -23,6 +23,7 @@ from papyon.msnp2p.constants import *
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
 from papyon.msnp2p.exceptions import *
+from papyon.util.parsing import build_account
 import papyon.util.element_tree as ElementTree
 
 import gobject
@@ -129,14 +130,14 @@ class P2PSession(gobject.GObject):
     @property
     def local_id(self):
         if self._version >= 2:
-            return "%s;{%s}" % (self._client.profile.account,
+            return build_account(self._client.profile.account,
                     self._client.machine_guid)
         return self._client.profile.account
 
     @property
     def remote_id(self):
         if self._version >= 2:
-            return "%s;{%s}" % (self._peer.account, self._peer_guid)
+            return build_account(self._peer.account, self._peer_guid)
         return self._peer.account
 
     def set_receive_data_buffer(self, buffer, size):

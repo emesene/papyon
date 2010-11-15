@@ -33,6 +33,7 @@ from papyon.gnet.message.HTTP import HTTPMessage
 from papyon.util.queue import PriorityQueue, LastElementQueue
 from papyon.util.decorator import throttled
 from papyon.util.encoding import decode_rfc2047_string
+from papyon.util.parsing import build_account, parse_account
 from papyon.util.timer import Timer
 import papyon.util.element_tree as ElementTree
 import papyon.profile as profile
@@ -43,6 +44,7 @@ import papyon.service.OfflineIM as OIM
 import hashlib
 import time
 import logging
+import uuid
 import urllib
 import gobject
 import xml.sax.saxutils as xml_utils
@@ -186,7 +188,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
                 '<PSM>%s</PSM>'\
                 '<CurrentMedia>%s</CurrentMedia>'\
                 '<MachineGuid>%s</MachineGuid>'\
-            '</Data>' % (message, cm, self._client.machine_guid.upper())
+            '</Data>' % (message, cm, str(self._client.machine_guid).upper())
         self._send_command('UUX', payload=pm)
         self._client.profile._server_property_changed("personal-message",
                 personal_message)
@@ -280,9 +282,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
     def send_user_notification(self, message, contact, contact_guid, type,
             callback=None, errback=None):
-        account = contact
-        if contact_guid:
-            account += ';{' + contact_guid + '}'
+        account = build_account(contact, contact_guid)
         arguments = (account, type)
         tr_id = self._send_command("UUN", arguments, message, True)
         self._callbacks[tr_id] = (callback, errback)
@@ -324,14 +324,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             network_id = int(command.arguments[idx])
         idx += 1
         return idx, network_id, account
-
-    def __parse_account_and_guid(self, command, idx=0):
-        account = command.arguments[idx]
-        guid = None
-        if ';' in account:
-            account, guid = account.split(';', 1)
-            guid = guid [1:-1]
-        return idx + 1, account, guid
 
     def __find_node(self, parent, name, default):
         node = parent.find(name)
@@ -512,7 +504,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
     def _handle_UBN(self, command): # contact infos
         if not command.payload:
             return
-        idx, account, guid = self.__parse_account_and_guid(command)
+        account, guid = parse_account(command.arguments[0])
         contact = self.__search_account(account)
         type = int(command.arguments[1])
         payload = command.payload
@@ -548,12 +540,12 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         eps = tree.findall("./EndpointData")
         end_points = {}
         for ep in eps:
-            guid = ep.get("id").encode("utf-8")[1:-1]
+            guid = uuid.UUID(ep.get("id"))
             caps = self.__find_node(ep, "Capabilities", "0:0")
             end_points[guid] = profile.EndPoint(guid, caps)
         peps = tree.findall("./PrivateEndpointData")
         for pep in peps:
-            guid = pep.get("id").encode("utf-8")[1:-1]
+            guid = uuid.UUID(pep.get("id"))
             if guid not in end_points: continue
             end_point = end_points[guid]
             end_point.name = self.__find_node(pep, "EpName", "")
@@ -759,7 +751,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         blob = clear_token.mbi_crypt(nonce)
         if self._protocol_version >= 16:
             arguments = ("SSO", "S", token, blob, "{%s}" %
-                    self._client.machine_guid.upper())
+                    str(self._client.machine_guid).upper())
         else:
             arguments = ("SSO", "S", token, blob)
 

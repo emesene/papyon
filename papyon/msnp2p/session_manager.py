@@ -23,6 +23,7 @@ from papyon.msnp2p.transport import *
 from papyon.msnp2p.exceptions import *
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.constants import SLPContentType, SLPRequestMethod
+from papyon.util.parsing import parse_account
 
 import papyon.profile
 
@@ -88,12 +89,7 @@ class P2PSessionManager(gobject.GObject):
         return None
 
     def _find_contact(self, account):
-        if ';' in account:
-            account, guid = account.split(';', 1)
-            guid = guid[1:-1]
-        else:
-            guid = None
-
+        account, guid = parse_account(account)
         peer = self._client.address_book.search_or_build_contact(
                 account, papyon.profile.NetworkID.MSN)
 

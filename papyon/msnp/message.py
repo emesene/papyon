@@ -21,7 +21,8 @@
 """MSN protocol special command : MSG"""
 
 from papyon.gnet.message.HTTP import HTTPMessage
-import papyon.util.debug as debug
+from papyon.util.debug import escape_string
+from papyon.util.parsing import parse_account
 
 from urllib import quote, unquote
 import struct
@@ -45,15 +46,9 @@ class Message(HTTPMessage):
     
         @ivar sender: sender
         @type sender: profile.Contact
-        
-        @ivar body: message body
-        @type body: string
-        
-        @ivar headers: message headers
-        @type headers: {header_name: string => header_value:string}
-        
-        @ivar content_type: the message content type
-        @type content_type: tuple(mime_type, encoding)"""
+
+        @ivar sender_guid: sender machine GUID (if any)
+        @type sender_guid: uuid4"""
 
     def __init__(self, sender=None, message=""):
         """Initializer
@@ -73,7 +68,7 @@ class Message(HTTPMessage):
             message += '\t%s: %s\\r\\n\n' % (header_name, repr(header_value))
         if self.headers['Content-Type'] != "application/x-msnmsgrp2p":
             message += '\t\\r\\n\n'
-            message += '\t' + debug.escape_string(self.body).\
+            message += '\t' + escape_string(self.body).\
                     replace("\r\n", "\\r\\n\n\t")
         else:
             message += "\t[P2P message (%d bytes)]" % (len(self.body) - 4)
@@ -98,9 +93,6 @@ class Message(HTTPMessage):
             doc="a tuple specifying the content type")
 
     def parse_guid(self, header):
-        if header not in self.headers or ';' not in self.headers[header]:
+        if header not in self.headers:
             return None
-        try:
-            return self.headers[header].split(';', 1)[1][1:-1]
-        except:
-            return None
+        return parse_account(self.headers[header])[1]

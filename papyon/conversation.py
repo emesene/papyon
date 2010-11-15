@@ -370,8 +370,11 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
             logger.debug(parts)
             for i in [i for i in range(len(parts)) if not i % 2]:
                 if parts[i] == '': break
-                msn_objects[parts[i]] = p2p.MSNObject.parse(self._client,
-                        parts[i+1])
+                try:
+                    msn_object = p2p.MSNObject.parse(self._client, parts[i+1])
+                except:
+                    msn_object = None
+                msn_objects[parts[i]] = msn_object
             self.__last_received_msn_objects = msn_objects
         elif message_type == 'text/x-msnmsgr-datacast' and \
                 message.body.strip() == "ID: 1":

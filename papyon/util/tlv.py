@@ -18,9 +18,17 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.errors import ParseError
+from papyon.util.debug import hexify_string
+
 import struct
 
-__all__ = ['TLV']
+__all__ = ['TLV', 'TLVParseError']
+
+class TLVParseError(ParseError):
+    """TLV Parsing Error"""
+    def __init__(self, message, infos=''):
+        ParseError.__init__(self, "TLV", message, infos)
 
 class TLV(object):
     """Utility class to build and parse data in a TLV representation.
@@ -85,6 +93,14 @@ class TLV(object):
             t = ord(data[offset])
             l = ord(data[offset + 1])
             f = self.size_to_packed_format(l)
+
             end = offset + 2 + l
-            self._data[t] = struct.unpack(">%s" % f, data[offset + 2:end])[0]
+            if end > size:
+                raise TLVParseError("Overflow (%i > %i)" % (end, size))
+
+            try:
+                self._data[t] = struct.unpack(">%s" % f, data[offset + 2:end])[0]
+            except:
+                infos = hexify_string(data[offset + 2:end])
+                raise TLVParseError("Couldn't unpack format %s" % f, infos)
             offset = end

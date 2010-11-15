@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-__all__ = ["ClientErrorType", "ClientError"]
+__all__ = ["ClientErrorType", "ClientError", "ParseError"]
 
 class ClientErrorType(object):
     """L{Client<papyon.Client>} error types
@@ -62,3 +62,16 @@ class ClientError(Exception):
 
     def __str__(self):
         return str(self._code)
+
+class ParseError(ClientError):
+    def __init__(self, protocol, message, infos):
+        ClientError.__init__(self, ClientErrorType.UNKNOWN, 0)
+        self.protocol = protocol
+        self.message = message
+        self.infos = infos
+
+    def __str__(self):
+        ret = "%s Parse Error: %s" % (self.protocol, self.message)
+        if self.infos:
+            ret += "\r\n" + self.infos
+        return ret

@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import ApplicationID, PeerInfo
+from papyon.msnp2p.errors import TLPParseError
 from papyon.util import debug
 from papyon.util.decorator import rw_property
 from papyon.util.tlv import TLV
@@ -175,7 +176,12 @@ class TLPHeader(object):
         return header
     
     def parse(self, data):
-        fields = struct.unpack(">BBHL", data[:8])
+        try:
+            fields = struct.unpack(">BBHL", data[:8])
+        except:
+            header = debug.hexify_string(data[:8])
+            raise TLPParseError(2, "invalid header", header)
+
         size = fields[0]
         self.op_code = fields[1]
         self.chunk_size = fields[2]
@@ -195,7 +201,12 @@ class TLPHeader(object):
         return size, header
 
     def parse_data_header(self, data):
-        fields = struct.unpack(">BBHI", data[:8])
+        try:
+            fields = struct.unpack(">BBHI", data[:8])
+        except:
+            header = debug.hexify_string(data[:8])
+            raise TLPParseError(2, "invalid data header", header)
+
         size = fields[0]
         self.tf_combination = fields[1]
         self.package_number = fields[2]

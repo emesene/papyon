@@ -29,8 +29,8 @@ from msnp2p.filetransfer import FileTransferSession
 from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
 from msnp2p import EufGuid, ApplicationID
-from msnp2p.exceptions import ParseError
 from msnp2p.constants import SLPStatus
+from msnp2p.errors import MSNObjectParseError
 from profile import NetworkID, BaseContact, Contact, Profile
 
 from papyon.util.async import *
@@ -154,8 +154,7 @@ class MSNObject(object):
         try:
             element = ElementTree.parse(data).getroot().attrib
         except:
-            logger.warning('Invalid MSNObject: %s' % xml_data)
-            return
+            raise MSNObjectParseError(xml_data)
 
         creator = element["Creator"]
         size = int(element["Size"])
@@ -191,8 +190,7 @@ class MSNObject(object):
             result = MSNObject(creator, size, type, location, friendly, shad, shac)
             result._repr = xml_data
         except ValueError:
-            logger.warning("Invalid MSNObject")
-            return None
+            raise MSNObjectParseError(xml_data)
 
         return result
 
@@ -299,10 +297,9 @@ class MSNObjectStore(P2PSessionHandler):
                 peer, guid, message.body.application_id, message)
         try:
             msn_object = MSNObject.parse(self._client, session.context)
-        except ParseError:
-            logger.error("Error while parsing MSN object from request")
+        except Exception, err:
             session.reject()
-            return
+            raise err
 
         obj = self._get_published_object(msn_object)
         if obj is None:
@@ -393,7 +390,6 @@ class MSNObjectStore(P2PSessionHandler):
         logger.info("Requesting a MSNObject from %s (%i end points)" %
                 (peer.account, session.count))
         session.invite()
-        return session
 
     def publish(self, msn_object):
         """Publish a MSN object that can be requested by peers.
@@ -431,6 +427,13 @@ class FileTransferManager(P2PSessionHandler):
     def _handle_message(self, peer, guid, message):
         session = FileTransferSession(self._client._p2p_session_manager,
                 peer, guid, message)
+
+        try:
+            session.parse_context(message.body.context)
+        except Exception, err:
+            session.reject()
+            raise err
+
         self._add_session(session)
         self.emit("transfer-requested", session)
         return session

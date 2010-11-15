@@ -50,7 +50,7 @@ class MessageChunk(object):
             return module.MessageChunk.create(app_id, session_id, blob_id,
                     offset, blob_size, max_size, sync)
         else:
-            return None
+            raise NotImplementedError("TLPv%s is not implemented" % version)
 
     @staticmethod
     def parse(version, data):
@@ -58,7 +58,7 @@ class MessageChunk(object):
             module = globals()["TLPv%i" % version]
             return module.MessageChunk.parse(data)
         else:
-            return None
+            raise NotImplementedError("TLPv%s is not implemented" % version)
 
 class MessageBlob(object):
     def __init__(self, application_id, data, total_size=None,

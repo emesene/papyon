@@ -19,10 +19,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp2p.transport import *
-from papyon.msnp2p.exceptions import *
-from papyon.msnp2p.SLP import *
 from papyon.msnp2p.constants import SLPContentType, SLPRequestMethod
+from papyon.msnp2p.transport import *
+from papyon.msnp2p.SLP import *
 from papyon.util.parsing import parse_account
 
 import papyon.profile
@@ -101,7 +100,7 @@ class P2PSessionManager(gobject.GObject):
             # This means that we received a data packet for an unknown session
             # We must RESET the session just like the official client does
             # TODO send a TLP
-            logger.error("SLPSessionError")
+            logger.error("Received data packet for unknown session %s" % session_id)
             return
         session._on_data_received(data)
 
@@ -140,9 +139,9 @@ class P2PSessionManager(gobject.GObject):
             if isinstance(message, SLPRequestMessage) and \
                     isinstance(message.body, SLPSessionRequestBody) and \
                     message.method == SLPRequestMethod.INVITE:
-                # Find the contact we received the message from
-                peer, guid = self._find_contact(message.frm)
                 try:
+                    # Find the contact we received the message from
+                    peer, guid = self._find_contact(message.frm)
                     for handler in self._handlers:
                         if handler._can_handle_message(message):
                             session = handler._handle_message(peer, guid, message)
@@ -151,9 +150,10 @@ class P2PSessionManager(gobject.GObject):
                     if session is None:
                         logger.error("No handler could handle euf-guid %s" % (message.body.euf_guid))
                         return
-                except SLPError:
+                except Exception, err:
                     #TODO: answer with a 603 Decline ?
-                    logger.error("SLPError")
+                    logger.exception(err)
+                    logger.error("Could not handle SLP invite message")
                     return None
             else:
                 logger.warning('Received initial blob with SessionID=0 and non INVITE SLP data')

@@ -22,7 +22,6 @@
 from papyon.msnp2p.constants import *
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
-from papyon.msnp2p.exceptions import *
 from papyon.util.parsing import build_account
 import papyon.util.element_tree as ElementTree
 

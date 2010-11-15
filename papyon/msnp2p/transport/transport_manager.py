@@ -158,7 +158,13 @@ class P2PTransportManager(gobject.GObject):
                     chunk.blob_size, session_id, chunk.blob_id)
             self._data_blobs[key] = blob
 
-        blob.append_chunk(chunk)
+        try:
+            blob.append_chunk(chunk)
+        except Exception, err:
+            logger.exception(err)
+            logger.warning("Couldn't append chunk to blob, ignoring it")
+            return
+
         self._on_chunk_transferred(peer, peer_guid, chunk)
         if blob.is_complete():
             del self._data_blobs[key]

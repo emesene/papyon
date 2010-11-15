@@ -195,7 +195,16 @@ class BaseP2PTransport(gobject.GObject):
         sync = self._first
         self._first = False
         (peer, peer_guid, blob) = self._data_blob_queue[session_id][0]
-        chunk = blob.get_chunk(self.version, self.max_chunk_size, sync)
+
+        try:
+            chunk = blob.get_chunk(self.version, self.max_chunk_size, sync)
+        except Exception, err:
+            logger.exception(err)
+            logger.warning("Couldn't get chunk for session %s" % session_id)
+            self._data_blob_queue[session_id].pop(0) #ignoring blob
+            self._queue_lock.release()
+            return True
+
         self._outgoing_chunks[chunk] = blob
         self.__send_chunk(peer, peer_guid, chunk)
 

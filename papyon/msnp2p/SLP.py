@@ -20,8 +20,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.gnet.message.HTTP import HTTPMessage
-from papyon.msnp2p.exceptions import ParseError
 from papyon.msnp2p.constants import SLPContentType, SLPStatus
+from papyon.msnp2p.errors import SLPParseError
+from papyon.util.encoding import b64_decode
 
 import base64
 import uuid
@@ -107,20 +108,34 @@ class SLPMessage(HTTPMessage):
 
     @staticmethod
     def build(raw_message):
-        if raw_message.find("MSNSLP/1.0") < 0:
-            raise ParseError("message doesn't seem to be an MSNSLP/1.0 message")
-        start_line, content = raw_message.split("\r\n", 1)
-        start_line = start_line.split(" ")
+        if raw_message.find("MSNSLP/1.0") < 0 or raw_message.find("\r\n") < 0:
+            raise SLPParseError("message doesn't seem to be an MSNSLP/1.0 message")
 
-        if start_line[0].strip() == "MSNSLP/1.0":
-            status = int(start_line[1].strip())
-            reason = " ".join(start_line[2:]).strip()
-            slp_message = SLPResponseMessage(status, reason)
-        else:
-            method = start_line[0].strip()
-            resource = start_line[1].strip()
-            slp_message = SLPRequestMessage(method, resource)
+        # parse start line to determine if it's a response or a request
+        try:
+            start_line, content = raw_message.split("\r\n", 1)
+            start_line = start_line.split(" ")
+
+            if start_line[0].strip() == "MSNSLP/1.0":
+                status = int(start_line[1].strip())
+                reason = " ".join(start_line[2:]).strip()
+                slp_message = SLPResponseMessage(status, reason)
+            else:
+                method = start_line[0].strip()
+                resource = start_line[1].strip()
+                slp_message = SLPRequestMessage(method, resource)
+        except:
+            raise SLPParseError("invalid start line: %s" % start_line)
+
+        # parse message content
         slp_message.parse(content)
+
+        # make sure mandatory headers are present and valid
+        for attr, name in (('to', 'To'), ('frm', 'From'), ('cseq', 'CSeq')):
+            try:
+                value = getattr(slp_message, attr)
+            except:
+                raise SLPParseError("invalid or missing %s header" % name)
         
         return slp_message
 
@@ -263,11 +278,8 @@ class SLPSessionRequestBody(SLPMessageBody):
     def context(self):
         try:
             context = self.get_header("Context")
-            # Make the b64 string correct by append '=' to get a length as a
-            # multiple of 4. Kopete client seems to use incorrect b64 strings.
-            context += '=' * (len(context) % 4)
-            return base64.b64decode(context)
-        except KeyError:
+            return b64_decode(context)
+        except (KeyError, TypeError):
             return None
 
     @property
@@ -390,7 +402,7 @@ class SLPSessionCloseBody(SLPMessageBody):
                 session_id, s_channel_state, capabilities_flags)
 
         if context is not None:
-            self.add_header("Context",  base64.b64encode(context));
+            self.add_header("Context", base64.b64encode(context));
         if reason is not None:
             if reason[0] == SLPStatus.ACCEPTED:
                 self.add_header("AcceptedBy", "{%s}" % reason[1].upper())
@@ -401,11 +413,8 @@ class SLPSessionCloseBody(SLPMessageBody):
     def context(self):
         try:
             context = self.get_header("Context")
-            # Make the b64 string correct by append '=' to get a length as a
-            # multiple of 4. Kopete client seems to use incorrect b64 strings.
-            context += '=' * (len(context) % 4)
-            return base64.b64decode(context)
-        except KeyError:
+            return b64_decode(context)
+        except (KeyError, TypeError):
             return None
 
 SLPMessageBody.register_content(SLPContentType.SESSION_CLOSE, SLPSessionCloseBody)

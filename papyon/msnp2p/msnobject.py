@@ -20,9 +20,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import *
+from papyon.msnp2p.errors import SLPParseError
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
-from papyon.msnp2p.exceptions import *
 from papyon.msnp2p.session import P2PSession
 from papyon.event import EventsDispatcher
 from papyon.util.decorator import rw_property
@@ -40,11 +40,11 @@ class MSNObjectSession(P2PSession):
 
         self._context = None
         if message is not None:
-            self._application_id = message.body.application_id
             try:
+                self._application_id = message.body.application_id
                 self._context = message.body.context.strip('\x00')
             except AttributeError:
-                raise SLPError("Incoming INVITE without context")
+                raise SLPParseError("Incoming INVITE without context")
         if context is not None:
             self._context = context
 

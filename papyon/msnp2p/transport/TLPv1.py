@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import ApplicationID
+from papyon.msnp2p.errors import TLPParseError
 from papyon.util import debug
 from papyon.util.decorator import rw_property
 
@@ -79,7 +80,12 @@ class TLPHeader(object):
                 self.qw1)
 
     def parse(self, data):
-        fields = struct.unpack("<LLQQLLLLQ", data[:48])
+        try:
+            fields = struct.unpack("<LLQQLLLLQ", data[:48])
+        except:
+            header = debug.hexify_string(data[:48])
+            raise TLPParseError(1, "invalid header", header)
+
         self.session_id = fields[0]
         self.blob_id = fields[1]
         self.blob_offset = fields[2]
@@ -234,6 +240,9 @@ class MessageChunk(object):
 
     @staticmethod
     def parse(data):
+        if len(data) < 48:
+            raise TLPParseError(1, "chunk should be at least 48 bytes")
+
         header = TLPHeader()
         header.parse(data[:48])
         body = data[48:]

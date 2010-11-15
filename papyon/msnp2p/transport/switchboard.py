@@ -125,8 +125,14 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
                peer_guid != self._peer_guid:
                 return # this chunk is not for us
 
-        chunk = MessageChunk.parse(version, message.body[:-4])
-        chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
+        try:
+            chunk = MessageChunk.parse(version, message.body[:-4])
+            chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
+        except Exception, err:
+            logger.exception(err)
+            logger.warning("Couldn't build TLP chunk from switchboard message")
+            return
+
         logger.debug("<<< %s" % repr(chunk))
         self._on_chunk_received(peer, peer_guid, chunk)
 
@@ -144,7 +150,8 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         BaseP2PTransport.close(self)
 
     def _on_error(self, error_type, error):
-        logger.info("Received error %i (type=%i)" % (error, error_type))
+        logger.info("Received error: %s (type=%i)" % (error, error_type))
+        self.close()
 
     def _on_contact_joined(self, contact):
         pass

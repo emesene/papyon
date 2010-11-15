@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from papyon.msnp2p.constants import ApplicationID, EufGuid
+from papyon.msnp2p.errors import FTParseError
 from papyon.msnp2p.session import P2PSession
 
 import gobject
@@ -43,9 +44,6 @@ class FileTransferSession(P2PSession):
         self._preview = None
         # data to be send if sending
         self._data = None
-
-        if message is not None:
-            self._parse_context(message.body.context)
 
     @property
     def filename(self):
@@ -83,11 +81,14 @@ class FileTransferSession(P2PSession):
         self._send_data("\x00" * 4)
         self._send_data(self._data)
 
-    def _parse_context(self, context):
-        info = struct.unpack("<5I", context[0:20])
-        self._size = info[2]
-        self._has_preview = not bool(info[4])
-        self._filename = unicode(context[20:570], "utf-16-le").rstrip("\x00")
+    def parse_context(self, context):
+        try:
+            info = struct.unpack("<5I", context[0:20])
+            self._size = info[2]
+            self._has_preview = not bool(info[4])
+            self._filename = unicode(context[20:570], "utf-16-le").rstrip("\x00")
+        except:
+            raise FTParseError(context)
 
     def _build_context(self):
         filename = self._filename.encode('utf-16_le')

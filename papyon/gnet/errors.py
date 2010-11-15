@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.errors import ClientError, ClientErrorType
+from papyon.errors import ClientError, ClientErrorType, ParseError
 
 class IoError(ClientError):
     """I/O error codes"""
@@ -108,3 +108,7 @@ class HTTPError(IoError):
     def __str__(self):
         return "HTTP Error (%s): %s" % (self.response.status,
                 self.response.reason)
+
+class HTTPParseError(ParseError):
+    def __init__(self, message):
+        ParseError.__init__(self, "HTTP", message)

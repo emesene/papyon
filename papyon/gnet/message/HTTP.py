@@ -22,6 +22,7 @@
 import cgi
 import gzip
 from papyon.gnet.constants import *
+from papyon.gnet.errors import *
 from papyon.util.odict import odict
 import papyon.util.string_io as StringIO
 
@@ -67,9 +68,13 @@ class HTTPMessage(object):
         lines = chunk.split("\r\n")
         for i, line in enumerate(lines):
             if line.strip() == "" or line == "\x00":
-                self.body = "\r\n".join(lines[i+1:])
+                if len(lines) >= i + 2:
+                    self.body = "\r\n".join(lines[i+1:])
                 break
-            name, value = line.split(":", 1)
+            try:
+                name, value = line.split(":", 1)
+            except:
+                raise HTTPParseError("Invalid header line: %s" % line)
             self.add_header(name.rstrip(), value.lstrip())
 
     def decode_body(self):
@@ -86,7 +91,7 @@ class HTTPMessage(object):
             unzipper = gzip.GzipFile(fileobj=body_stream)
             return unzipper.read()
         else:
-            raise NotImplementedError("%s is not implemented" % encoding)
+            raise HTTPParseError("%s is not implemented" % encoding)
 
     def __str__(self):
         result = []

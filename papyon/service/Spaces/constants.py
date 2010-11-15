@@ -18,10 +18,25 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.errors import ClientError, ClientErrorType
+
 __all__ = ['SpacesError']
 
-class SpacesError(object):
+class SpacesError(ClientError):
     "Spaces related errors"
 
     UNKNOWN = 0
     "Generic errors"
+
+    def __init__(self, code, fault="", details=""):
+        ClientError.__init__(self, ClientErrorType.SPACES, code)
+        self._fault = fault
+        self._details = details
+
+    @staticmethod
+    def from_fault(fault):
+        return SpacesError(SpacesError.UNKNOWN, fault.faultcode,
+                fault.faultstring)
+
+    def __str__(self):
+        return "Spaces Error (%s): %s" % (self._fault, self._details)

@@ -21,6 +21,7 @@
 from SOAPService import *
 from description.SingleSignOn.RequestMultipleSecurityTokens import LiveService
 
+from papyon.errors import ClientError, ClientErrorType
 from papyon.util.async import *
 
 import base64
@@ -35,13 +36,18 @@ from Crypto.Cipher import DES3
 __all__ = ['SingleSignOn', 'LiveService', 'RequireSecurityTokens']
 
 
-class AuthenticationError(object):
+class AuthenticationError(ClientError):
     "Authentication related errors"
     UNKNOWN = 0
     INVALID_USERNAME = 1
     INVALID_PASSWORD = 2
     INVALID_USERNAME_OR_PASSWORD = 3
     REDIRECT = 4
+
+    def __init__(self, code, fault="", details=""):
+        ClientError.__init__(self, ClientErrorType.AUTHENTICATION, code)
+        self._fault = fault
+        self._details = details
 
     @staticmethod
     def from_fault(fault):
@@ -50,7 +56,12 @@ class AuthenticationError(object):
             error_code = AuthenticationError.INVALID_USERNAME_OR_PASSWORD
         elif fault.faultcode.endswith("Redirect"):
             error_code = AuthenticationError.REDIRECT
-        return error_code
+
+        return AuthenticationError(error_code, fault.faultcode,
+                fault.faultstring)
+
+    def __str__(self):
+        return "Authentication Error (%s): %s" % (self._fault, self._details)
 
 
 class SecurityToken(object):

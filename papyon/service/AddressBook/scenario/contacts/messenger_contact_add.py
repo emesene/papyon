@@ -21,7 +21,6 @@ from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
 from contact_find import FindContactScenario
 
-from papyon.service.AddressBook.constants import *
 from papyon.service.description.AB.constants import ContactEmailType
 from papyon.profile import ContactType, Membership, NetworkID
 
@@ -68,8 +67,8 @@ class MessengerContactAddScenario(BaseScenario):
             self.contact_info.setdefault('email', {})[ContactEmailType.EXTERNAL] = self.account
             self.contact_info['capability'] = self.network_id
         else:
-            self.errback(AddressBookError.UNKNOWN)
-            return
+            raise NotImplementedError("Network ID '%s' is not implemented" %
+                    self.network_id)
 
         self._ab.ContactAdd((self.__contact_add_callback,),
                             self._errback,

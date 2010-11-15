@@ -119,4 +119,4 @@ class ContactCardService(SOAPService):
 
     def _HandleSOAPFault(self, request_id, callback, errback,
             soap_response, user_data):
-        run(errback, SpacesError.UNKNOWN)
+        run(errback, SpacesError.from_fault(soap_response.fault))

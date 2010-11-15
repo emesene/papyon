@@ -18,11 +18,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.errors import ClientError, ClientErrorType
 
 __all__ = ['AddressBookError', 'AddressBookState', 'DEFAULT_TIMESTAMP']
 
 
-class AddressBookError(object):
+class AddressBookError(ClientError):
     "Address book related errors"
     UNKNOWN                   = 0
 
@@ -47,6 +48,10 @@ class AddressBookError(object):
     FULL_SYNC_REQUIRED        = 12
 
 
+    def __init__(self, code, fault="", details=""):
+        ClientError.__init__(self, ClientErrorType.ADDRESSBOOK, code)
+        self._fault = fault
+        self._details = details
 
     @staticmethod
     def get_detailled_error(fault):
@@ -88,7 +93,22 @@ class AddressBookError(object):
             code = AddressBookError.LIMIT_REACHED
         elif errcode == 'FullSyncRequired':
             code = AddressBookError.FULL_SYNC_REQUIRED
-        return code
+        return AddressBookError(code, errcode, errstring)
+
+    def __str__(self):
+        return "Address Book error (%s): %s" % (self._fault, self._details)
+
+
+class ABUpdateMembershipWrapper(ClientError):
+    """Wrap an error that occured while updating membership"""
+    def __init__(self, error, done, failed):
+        ClientError.__init__(self, error._type, error._code)
+        self._error = error
+        self.done = done
+        self.failed = failed
+
+    def __str__(self):
+        return str(self._error)
 
 
 class AddressBookState(object):

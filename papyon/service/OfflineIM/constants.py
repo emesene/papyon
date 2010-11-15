@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-#
+
+from papyon.errors import ClientError, ClientErrorType
 
 __all__ = ["OfflineMessagesBoxState", "OfflineMessagesBoxError"]
 
@@ -32,21 +33,30 @@ class OfflineMessagesBoxState(object):
     SYNCHRONIZED = 2
     """The box is already synchronized"""
 
-class OfflineMessagesBoxError(object):
+class OfflineMessagesBoxError(ClientError):
     "Offline IM related errors"
     UNKNOWN = 0
     AUTHENTICATION_FAILED = 1
     SYSTEM_UNAVAILABLE = 2
     SENDER_THROTTLE_LIMIT_EXCEEDED = 3
 
+    def __init__(self, code, fault="", details=""):
+        ClientError.__init__(self, ClientErrorType.OFFLINE_MESSAGES, code)
+        self._fault = fault
+        self._details = details
+
     @staticmethod
     def from_fault(fault):
         error_code = OfflineMessagesBoxError.UNKNOWN
         faultcode = fault.faultcode
+        faultstring = fault.faultstring
         if faultcode.endswith("AuthenticationFailed"):
             error_code = OfflineMessagesBoxError.AUTHENTICATION_FAILED
         elif faultcode.endswith("SystemUnavailable"):
             error_code = OfflineMessagesBoxError.SYSTEM_UNAVAILABLE
         elif faultcode.endswith("SenderThrottleLimitExceeded"):
             error_code = OfflineMessagesBoxError.SENDER_THROTTLE_LIMIT_EXCEEDED
-        return error_code
+        return OfflineMessagesBoxError(error_code, faultcode, faultstring)
+
+    def __str__(self):
+        return "Offline Message Error (%s): %s" % (self._fault, self._details)

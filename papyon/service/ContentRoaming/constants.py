@@ -16,13 +16,20 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.errors import ClientError, ClientErrorType
+
 __all__ = ["ContentRoamingError", "ContentRoamingState"]
 
-class ContentRoamingError(object):
+class ContentRoamingError(ClientError):
     UNKNOWN = 0
 
     ITEM_ALREADY_EXISTS = 1
     ITEM_DOES_NOT_EXIST = 2
+
+    def __init__(self, code, fault="", details=""):
+        ClientError.__init__(self, ClientErrorType.CONTENT_ROAMING, code)
+        self._fault = fault
+        self._details = details
 
     @staticmethod
     def get_detailled_error(fault):
@@ -44,7 +51,10 @@ class ContentRoamingError(object):
         elif errorcode == "ItemDoesNotExist":
             code = ContentRoamingError.ITEM_DOES_NOT_EXIST
 
-        return code
+        return ContentRoamingError(code, errorcode, errorstring)
+
+    def __str__(self):
+        return "Content Roaming Error (%s): %s" % (self._fault, self._details)
 
 class ContentRoamingState(object):
     """Content roaming service synchronization state.

@@ -34,8 +34,12 @@ class ClientErrorType(object):
     "Protocol related errors"
     ADDRESSBOOK = 4
     "Address book related errors"
-    OFFLINE_MESSAGES = 5
+    CONTENT_ROAMING = 5
+    "Content roaming related errors"
+    OFFLINE_MESSAGES = 6
     "Offline IM related errors"
+    SPACES = 7
+    "Spaces related errors"
 
 class ClientError(Exception):
     def __init__(self, type=0, code=0):

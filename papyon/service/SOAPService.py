@@ -23,6 +23,7 @@
 import description
 from errors import SOAPParseError
 from SOAPUtils import *
+from papyon.gnet.errors import HTTPError
 from papyon.util.async import *
 
 import papyon.gnet.protocol
@@ -246,6 +247,13 @@ class SOAPService(object):
 
     def _error_handler(self, transport, error):
         logger.warning("Transport Error :" + str(error))
+
+        # try to process response if we received an HTTP error (status != 2xx)
+        if isinstance(error, HTTPError):
+            self._response_handler(transport, error.response)
+            return
+
+        # transport probably died, dispose all requests on it
         for request in self._dispose_transport(transport):
             request_id, callback, errback, user_data = request
             run(errback, error)

@@ -57,4 +57,4 @@ def soap_body(source_rid, target_rid):
         </CreateRelationships>""" % (source_rid, target_rid)
 
 def process_response(soap_response):
-    return None
+    return True

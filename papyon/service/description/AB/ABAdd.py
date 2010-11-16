@@ -45,8 +45,4 @@ def soap_body(account):
               </ABAdd>""" % account
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./ab:ABAddResponse/ab:ABAddResult")
-    except AttributeError:
-        return None
+    return soap_response.body.find("./ab:ABAddResponse/ab:ABAddResult")

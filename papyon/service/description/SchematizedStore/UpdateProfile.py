@@ -58,4 +58,4 @@ def soap_body(profile_rid, display_name, personal_status, flags=0):
         </UpdateProfile>""" % (profile_rid, display_name, personal_status, flags)
 
 def process_response(soap_response):
-    return None
+    return True

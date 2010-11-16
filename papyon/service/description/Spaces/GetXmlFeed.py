@@ -75,8 +75,4 @@ def soap_body(cid, market = "en-US", max_elements = 2, max_chars = 200, max_imag
 
 def process_response(soap_response):
     body = soap_response.body
-    try:
-        response = body.find("./spaces:GetXmlFeedResponse/spaces:GetXmlFeedResult")
-        return response
-    except AttributeError:
-        return None
+    return body.find("./spaces:GetXmlFeedResponse/spaces:GetXmlFeedResult")

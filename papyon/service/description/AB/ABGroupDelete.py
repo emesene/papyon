@@ -49,4 +49,4 @@ def soap_body(group_id):
         </ABGroupDelete>""" % { 'group_id' : group_id }
 
 def process_response(soap_response):
-    return None
+    return True

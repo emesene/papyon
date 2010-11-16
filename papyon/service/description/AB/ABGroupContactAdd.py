@@ -61,9 +61,5 @@ def soap_body(group_id, contact_id):
                                     'contact_id' : contact_id }
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./ab:ABGroupContactAddResponse/" \
-                "ab:ABGroupContactAddResult/ab:guid").text
-    except:
-        return None
+    return soap_response.body.find("./ab:ABGroupContactAddResponse/" \
+            "ab:ABGroupContactAddResult/ab:guid").text

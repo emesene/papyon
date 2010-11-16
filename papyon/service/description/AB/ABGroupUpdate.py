@@ -60,4 +60,4 @@ def soap_body(group_id, group_name):
                                 'group_name' : xml.escape(group_name) }
 
 def process_response(soap_response):
-    return None
+    return True

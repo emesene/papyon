@@ -183,8 +183,5 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
                                'allow_list_management' : str(enable_allow_list_management).lower()}
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./ab:ABContactAddResponse/ab:ABContactAddResult/ab:guid")
-    except AttributeError:
-        return None
+    return soap_response.body.\
+            find("./ab:ABContactAddResponse/ab:ABContactAddResult/ab:guid").text

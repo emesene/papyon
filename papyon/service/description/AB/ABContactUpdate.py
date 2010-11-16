@@ -183,4 +183,4 @@ def soap_body(contact_id, display_name, is_messenger_user, contact_type,
                                   'allow_list_management' : str(enable_allow_list_management).lower() }
 
 def process_response(soap_response):
-    return None
+    return True

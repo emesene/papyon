@@ -46,4 +46,4 @@ def soap_body(message_ids):
       </DeleteMessages>""" % ids
 
 def process_response(soap_response):
-    return None
+    return True

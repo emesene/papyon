@@ -63,4 +63,4 @@ def soap_body(cid, source_rid, target_rid):
         </DeleteRelationships>""" % (source_handle, target_rid)
 
 def process_response(soap_response):
-    return None
+    return True

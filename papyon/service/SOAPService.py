@@ -21,6 +21,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import description
+from errors import SOAPParseError
 from SOAPUtils import *
 from papyon.util.async import *
 
@@ -123,11 +124,10 @@ class SOAPResponse(ElementTree.XMLResponse):
             except:
                 self.fault = SOAPFault(self.tree.find("./soap:Fault"))
         except:
-            self.tree = None
-            self.header = None
-            self.body = None
-            self.fault = None
-            logger.warning("SOAPResponse: Invalid xml+soap data : %s" % soap_data)
+            raise SOAPParseError("invalid xml+soap data", soap_data)
+
+        if not self.is_valid():
+            raise SOAPParseError("no header, fault or body", soap_data)
 
     def is_fault(self):
         return self.fault.is_fault()
@@ -206,25 +206,25 @@ class SOAPService(object):
             logger.warning("No active request for HTTP response received")
             return
         request_id, callback, errback, user_data = request
+        method = getattr(self._service, request_id)
 
+        # decode, build and process SOAP response
         try:
             decoded_body = http_response.decode_body()
             soap_response = SOAPResponse(decoded_body)
+            if not soap_response.is_fault():
+                response = method.process_response(soap_response)
+                if not response:
+                    raise SOAPParseError("response wasn't found", decoded_body)
         except Exception, err:
-            logger.error("Couldn't decode SOAP response body")
-            run(errback, 0)
+            logger.exception(err)
+            logger.error("Couldn't build or process SOAP response")
+            run(errback, err)
             return
 
-        if not soap_response.is_valid():
-            logger.warning("Invalid SOAP Response")
-            run(errback, 0)
-            return
-
+        # handle SOAP response or fault
         if not soap_response.is_fault():
             handler = getattr(self, "_Handle" + request_id + "Response", None)
-            method = getattr(self._service, request_id)
-            response = method.process_response(soap_response)
-
             if handler is not None:
                 handler(callback, errback, response, user_data)
             else:

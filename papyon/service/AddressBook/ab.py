@@ -261,7 +261,7 @@ class AB(SOAPService):
                     auto_manage_allow_list))
 
     def _HandleABContactAddResponse(self, callback, errback, response, user_data):
-        run(callback, response.text)
+        run(callback, response)
 
     def ContactDelete(self, callback, errback, scenario,
             contact_id):
@@ -324,7 +324,7 @@ class AB(SOAPService):
                 (group_name,))
 
     def _HandleABGroupAddResponse(self, callback, errback, response, user_data):
-        run(callback, response.text)
+        run(callback, response)
 
     def GroupDelete(self, callback, errback, scenario,
             group_id):

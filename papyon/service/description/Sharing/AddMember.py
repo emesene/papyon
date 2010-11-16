@@ -77,4 +77,4 @@ def soap_body(member_role, type, state, account):
         </AddMember>""" % (member_role, type, type, state, stuff)
 
 def process_response(soap_response):
-    return None
+    return True

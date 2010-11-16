@@ -67,4 +67,4 @@ def soap_body(message_type, message_content):
             </Content>""" % (message_type, message_content)
 
 def process_response(soap_response):
-    return None
+    return True

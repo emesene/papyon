@@ -77,9 +77,5 @@ def soap_body(cid):
         </FindDocuments>""" % cid
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./st:FindDocumentsResponse/st:FindDocumentsResult")
-    except AttributeError:
-        return None
-
+    return soap_response.body.\
+            find("./st:FindDocumentsResponse/st:FindDocumentsResult")

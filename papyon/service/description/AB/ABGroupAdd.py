@@ -68,6 +68,5 @@ def soap_body(group_name):
         </ABGroupAdd>""" % { 'group_name' : xml.escape(group_name) }
 
 def process_response(soap_response):
-    guid = soap_response.body.find("./ab:ABGroupAddResponse/"
-                                   "ab:ABGroupAddResult/ab:guid")
-    return guid
+    return soap_response.body.find("./ab:ABGroupAddResponse/"
+                                   "ab:ABGroupAddResult/ab:guid").text

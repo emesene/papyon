@@ -75,8 +75,5 @@ def soap_body(cid, photo_name, photo_mime_type, photo_data):
         </CreateDocument>""" % (cid, photo_name, photo_mime_type, photo_data) 
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./st:CreateDocumentResponse/st:CreateDocumentResult")
-    except AttributeError:
-        return None
+    return soap_response.body.\
+            find("./st:CreateDocumentResponse/st:CreateDocumentResult")

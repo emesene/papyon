@@ -38,9 +38,4 @@ def soap_body():
         <GetMetadata xmlns="http://www.hotmail.msn.com/ws/2004/09/oim/rsi" />""" 
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./rsi:GetMetadataResponse")
-    except AttributeError:
-        return None
-
+    return soap_response.body.find("./rsi:GetMetadataResponse")

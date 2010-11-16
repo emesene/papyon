@@ -45,8 +45,5 @@ def soap_body(message_id, also_mark_as_read):
        </GetMessage>""" % (message_id, also_mark_as_read)
 
 def process_response(soap_response):
-    body = soap_response.body
-    try:
-        return body.find("./rsi:GetMessageResponse/rsi:GetMessageResult")
-    except AttributeError:
-        return None
+    return soap_response.body.\
+            find("./rsi:GetMessageResponse/rsi:GetMessageResult")

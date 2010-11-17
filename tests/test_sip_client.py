@@ -2,7 +2,7 @@
 #
 # papyon - a python client library for Msn
 #
-# Copyright (C) 2009 Collabora Ltd.
+# Copyright (C) 2010 Collabora Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,48 +18,42 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import getpass
-import gobject
-import logging
-import sys
-import time
-import unittest
+from base import *
 
 sys.path.insert(0, "")
 
 import papyon
 from papyon.media.conference import *
 from papyon.media.constants import *
-from papyon.transport import HTTPPollConnection
 
-def get_proxies():
-    import urllib
-    proxies = urllib.getproxies()
-    result = {}
-    if 'https' not in proxies and \
-            'http' in proxies:
-        url = proxies['http'].replace("http://", "https://")
-        result['https'] = papyon.Proxy(url)
-    for type, url in proxies.items():
-        if type == 'no': continue
-        if type == 'https' and url.startswith('http://'):
-            url = url.replace('http://', 'https://', 1)
-        result[type] = papyon.Proxy(url)
-    return result
+class SIPClient(TestClient):
 
-class SIPClient(papyon.Client):
+    def __init__(self):
+        opts = [('-a', '--answer', {'type': 'choice', 'default': 'ignore',
+                                    'choices': ('ignore', 'accept', 'reject'),
+                                    'help': 'what to do on incoming call'}),
+                ('-i', '--invite', {'type': 'string', 'default': '',
+                                    'help': 'peer to send call invite to'})
+                ]
+        args = []
+        TestClient.__init__(self, "SIP Call", opts, args, SIPClientEvents)
 
-    def __init__(self, account, password, peer, version):
-        server = ('messenger.hotmail.com', 1863)
-        papyon.Client.__init__(self, server, proxies = get_proxies(),
-                version=version)
+    def connected(self):
+        self.profile.presence = papyon.profile.Presence.ONLINE
+        self.profile.client_capabilities.has_webcam = True
+        self.profile.client_capabilities.supports_rtc_video = True
 
-        self.peer = peer
-        self._event_handler = ClientEvents(self)
-        gobject.idle_add(self.login, account, password)
+        if self.options.invite:
+            gobject.timeout_add_seconds(2, self.invite)
 
     def invite(self):
-        contact = self.address_book.contacts.search_by_account(self.peer)[0]
+        contact = self.address_book.search_contact(self.options.invite,
+                papyon.profile.NetworkID.MSN)
+
+        if contact is None:
+            print 'Unknown contact: %s' % self.options.invite
+            return False
+
         call = self.call_manager.create_call(contact)
         self.call_handler = CallEvents(call)
         self.session_handler = MediaSessionHandler(call.media_session)
@@ -70,35 +64,24 @@ class SIPClient(papyon.Client):
                 MediaStreamDirection.BOTH, True)
         call.media_session.add_stream(stream)
         call.invite()
+
         return False
 
 
-class ClientEvents(papyon.event.ClientEventInterface,
-                   papyon.event.InviteEventInterface):
+class SIPClientEvents(TestClientEvents):
 
     def __init__(self, client):
-        papyon.event.ClientEventInterface.__init__(self, client)
-        papyon.event.InviteEventInterface.__init__(self, client)
-
-    def on_client_state_changed(self, state):
-        if state == papyon.event.ClientState.CLOSED:
-            self._client.quit()
-        elif state == papyon.event.ClientState.OPEN:
-            self._client.profile.display_name = "Paypon (SIP test)"
-            self._client.profile.presence = papyon.Presence.ONLINE
-            self._client.profile.client_capabilities.has_webcam = True
-            self._client.profile.client_capabilities.supports_rtc_video = True
-            for contact in self._client.address_book.contacts:
-                print contact
-            gobject.timeout_add_seconds(2, self._client.invite)
+        TestClientEvents.__init__(self, client)
 
     def on_invite_conference(self, call):
         print "INVITED : call-id = %s" % call.id
         self.call_handler = CallEvents(call)
         self.session_handler = MediaSessionHandler(call.media_session)
-
-    def on_client_error(self, error_type, error):
-        print "ERROR :", error_type, " ->", error
+        call.ring()
+        if self._client.options.answer == 'accept':
+            call.accept()
+        elif self._client.options.answer == 'reject':
+            call.reject()
 
 
 class CallEvents(papyon.event.CallEventInterface):
@@ -106,33 +89,7 @@ class CallEvents(papyon.event.CallEventInterface):
     def __init__(self, call):
         papyon.event.CallEventInterface.__init__(self, call)
 
-    def on_call_incoming(self):
-        self._client.accept()
 
 if __name__ == "__main__":
-
-    if len(sys.argv) < 2:
-        version = int(raw_input('Version: '))
-    else:
-        version = int(sys.argv[1])
-
-    if len(sys.argv) < 3:
-        account = raw_input('Account: ')
-    else:
-        account = sys.argv[2]
-
-    if len(sys.argv) < 4:
-        password = getpass.getpass('Password: ')
-    else:
-        password = sys.argv[3]
-
-    if len(sys.argv) < 5:
-        invite = raw_input('Invite: ')
-    else:
-        invite = sys.argv[4]
-
-    logging.basicConfig(level=0)
-
-    mainloop = gobject.MainLoop(is_running=True)
-    client = SIPClient(account, password, invite, version)
-    mainloop.run()
+    client = SIPClient()
+    client.run()

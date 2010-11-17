@@ -177,7 +177,6 @@ class SIPDialog(gobject.GObject, Timer):
         self._state = "ENDED"
 
     def reset(self):
-        self.stop_all_timeout()
         self._pending_incoming_requests = set()
         self._pending_local_offer = False
         self._pending_remote_offer = False
@@ -185,6 +184,9 @@ class SIPDialog(gobject.GObject, Timer):
 
     def dispose(self):
         if self._pending_outgoing_requests:
+            logger.info("Waiting for %i outgoing request(s) before disposing" %
+                    len(self._pending_outgoing_requests))
+            self.start_timeout("dispose", 15)
             return
         self.stop_all_timeout()
         self._state = "DISPOSED"
@@ -534,3 +536,6 @@ class SIPDialog(gobject.GObject, Timer):
     def on_ack_timeout(self):
         self._state = "CONFIRMED"
         self.end()
+
+    def on_dispose_timeout(self):
+        self.force_dispose()

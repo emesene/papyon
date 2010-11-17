@@ -351,6 +351,15 @@ class SIPDialog(gobject.GObject, Timer):
     def handle_response(self, response):
         # 12.2.1 UAC Behavior (Requests within a Dialog)
         request = response.request
+
+        # Might happen if transaction was already completed (forked)
+        if request is None:
+            for outgoing_request in self._pending_outgoing_requests:
+                if response.match_header("CSeq", outgoing_request):
+                    request = outgoing_request
+                    break
+
+        # Check if it's the response we were waiting for before disposing
         if request in self._pending_outgoing_requests and response.status >= 200:
             self._pending_outgoing_requests.remove(request)
         if self._state == "ENDED" and not self._pending_outgoing_requests:

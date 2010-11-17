@@ -387,7 +387,7 @@ class SIPDialog(gobject.GObject, Timer):
             return False
 
         # Target refresh
-        if request.code == "INVITE" and request.contact:
+        if request.code in ("INVITE", "UPDATE") and request.contact:
             self._remote_target = request.contact.uri
 
         # Method specific handler
@@ -485,6 +485,11 @@ class SIPDialog(gobject.GObject, Timer):
     def _handle_ack_error(self, error):
         logger.error("Received Transport error while sending ACK")
         self.force_dispose()
+
+    # UPDATE Method ----------------------------------------------------------
+
+    def _handle_update_request(self, request):
+        self.answer(request, 200)
 
     # CANCEL Method ----------------------------------------------------------
 

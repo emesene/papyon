@@ -90,8 +90,8 @@ class SIPDialog(gobject.GObject, Timer):
         self._last_request = request
 
         self._incoming = False
-        self._pending_incoming_requests = []
-        self._pending_outgoing_requests = []
+        self._pending_incoming_requests = set()
+        self._pending_outgoing_requests = set()
         self._local_offer = None
         self._pending_local_offer = False
         self._pending_remote_offer = False
@@ -178,7 +178,7 @@ class SIPDialog(gobject.GObject, Timer):
 
     def reset(self):
         self.stop_all_timeout()
-        self._pending_incoming_requests = []
+        self._pending_incoming_requests = set()
         self._pending_local_offer = False
         self._pending_remote_offer = False
         self._pending_accept = False
@@ -190,7 +190,7 @@ class SIPDialog(gobject.GObject, Timer):
         self._state = "DISPOSED"
 
     def force_dispose(self):
-        self._pending_outgoing_requests = []
+        self._pending_outgoing_requests = set()
         self.dispose()
 
     # States Handling --------------------------------------------------------
@@ -277,7 +277,7 @@ class SIPDialog(gobject.GObject, Timer):
     def _build_UAS_dialog(self, request, response):
         # 12.1.1 UAS behavior (Creation of Dialog)
         if self._early:
-            self._pending_incoming_requests.append(request)
+            self._pending_incoming_requests.add(request)
         if response.record_route:
             self._route_set = response.record_route.route_set
         self._incoming = True
@@ -293,7 +293,7 @@ class SIPDialog(gobject.GObject, Timer):
         # 12.1.2 UAC behavior (Creation of Dialog)
         self._state = "INVITING"
         self._incoming = False
-        self._pending_outgoing_requests.append(request)
+        self._pending_outgoing_requests.add(request)
         if response.record_route:
             self._route_set = response.record_route.route_set.reverse()
         if response.contact:
@@ -335,7 +335,7 @@ class SIPDialog(gobject.GObject, Timer):
     # Messages Handling ------------------------------------------------------
 
     def send_request(self, request):
-        self._pending_outgoing_requests.append(request)
+        self._pending_outgoing_requests.add(request)
         self._core.send(request)
 
     def answer(self, request, status, extra_headers={}, content=None):
@@ -375,7 +375,7 @@ class SIPDialog(gobject.GObject, Timer):
             return
 
         self._last_request = request
-        self._pending_incoming_requests.append(request)
+        self._pending_incoming_requests.add(request)
         if not self._remote_cseq:
             self._remote_cseq = request.cseq.number
         elif self._remote_cseq > request.cseq.number: # Out of order
@@ -490,7 +490,7 @@ class SIPDialog(gobject.GObject, Timer):
         if not self._early:
             return
         request = self._core.cancel(self._initial_request)
-        self._pending_outgoing_requests.append(request)
+        self._pending_outgoing_requests.add(request)
         self._state = "ENDED"
 
     def _handle_cancel_request(self, request):

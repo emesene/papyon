@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.errors import ParseError
 from papyon.sip.constants import *
 from papyon.util.decorator import rw_property
 
@@ -26,9 +27,16 @@ import logging
 import re
 import weakref
 
-__all__ = ['SIPMessage', 'SIPRequest', 'SIPResponse', 'SIPMessageParser']
+__all__ = ['SIPMessage', 'SIPRequest', 'SIPResponse', 'SIPParseError',
+           'SIPMessageParser']
 
 logger = logging.getLogger('papyon.sip.parser')
+
+
+class SIPParseError(ParseError):
+    """SIP Parsing Error"""
+    def __init__(self, message, infos=''):
+        ParseError.__init__(self, "SIP", message, infos)
 
 
 class SIPMessage(object):
@@ -85,14 +93,17 @@ class SIPMessage(object):
 
     def parse_header(self, name, value):
         name = self.normalize_name(name)
-        if name in ("contact", "from", "to"):
-            value = SIPContact.build(value)
-        elif name == "cseq":
-            value = SIPCSeq.build(value)
-        elif name in ("record-route", "route"):
-            value = SIPRoute.build(value)
-        elif name == "via":
-            value = SIPVia.build(value)
+        try:
+            if name in ("contact", "from", "to"):
+                value = SIPContact.build(value)
+            elif name == "cseq":
+                value = SIPCSeq.build(value)
+            elif name in ("record-route", "route"):
+                value = SIPRoute.build(value)
+            elif name == "via":
+                value = SIPVia.build(value)
+        except:
+            raise SIPParseError("invalid %s header value: %s" % (name, value))
         self.add_header(name, value)
 
     def set_header(self, name, value):
@@ -194,7 +205,7 @@ class SIPResponse(SIPMessage):
         SIPMessage.__init__(self)
         self._request_ref = None
         self._status = status
-        if not reason:
+        if not reason and status in RESPONSE_CODES:
             reason = RESPONSE_CODES[status]
         self._reason = reason
 
@@ -256,8 +267,8 @@ class SIPMessageParser(gobject.GObject):
             while not finished:
                 finished = self.parse_buffer()
         except Exception, err:
-            logger.error("Error while parsing received message")
             logger.exception(err)
+            logger.error("Error while parsing received message")
             self.reset()
 
     def parse_buffer(self):
@@ -265,12 +276,17 @@ class SIPMessageParser(gobject.GObject):
             line = self.consume_line()
             if line is None:
                 return True
-            a, b, c = line.split(" ", 2)
-            if a == self.version:
-                code = int(b)
-                self._message = SIPResponse(code, c)
-            elif c == self.version:
-                self._message = SIPRequest(a, b)
+            try:
+                a, b, c = line.split(" ", 2)
+                if a == self.version:
+                    code = int(b)
+                    self._message = SIPResponse(code, c)
+                elif c == self.version:
+                    self._message = SIPRequest(a, b)
+                else:
+                    raise ValueError
+            except ValueError:
+                raise SIPParseError("invalid start line", line)
             self._state = "headers"
 
         if self._state == "headers":
@@ -280,6 +296,8 @@ class SIPMessageParser(gobject.GObject):
             elif line == "":
                 self._state = "body"
             else:
+                if not ':' in line:
+                    raise SIPParseError("invalid header line (no colon)", line)
                 name, value = line.split(":", 1)
                 self._message.parse_header(name, value.strip())
 

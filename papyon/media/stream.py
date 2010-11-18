@@ -41,6 +41,9 @@ class MediaStream(gobject.GObject, EventsDispatcher, Timer):
        default implementation using Farsight 2.0."""
 
     __gsignals__ = {
+        'constructed': (gobject.SIGNAL_RUN_FIRST,
+            gobject.TYPE_NONE,
+            ()),
         'prepared': (gobject.SIGNAL_RUN_FIRST,
             gobject.TYPE_NONE,
             ()),
@@ -145,6 +148,11 @@ class MediaStream(gobject.GObject, EventsDispatcher, Timer):
             self._emit_if_ready()
 
         self.process()
+
+    def construct(self):
+        self._client._turn_client.request_shared_secret(
+                (self._on_relay_completed,),
+                (self._on_relay_error,), 2)
 
     def activate(self):
         """Function called once the stream handler is ready to handle the
@@ -321,3 +329,11 @@ class MediaStream(gobject.GObject, EventsDispatcher, Timer):
             return
         self._ready = True
         self.emit("ready")
+
+    def _on_relay_completed(self, relays):
+        self.relays = relays
+        self.emit("constructed")
+
+    def _on_relay_error(self, error):
+        self._on_relay_completed([])
+

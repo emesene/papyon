@@ -63,6 +63,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
         self._type = type
 
         self._streams = []
+        self._constructed_streams = []
         self._processing_message = False
         self._signals = {}
 
@@ -76,7 +77,7 @@ class MediaSession(gobject.GObject, EventsDispatcher):
     def streams(self):
         """List of streams
            @rtype: list of L{papyon.media.stream.MediaStream}"""
-        return self._streams
+        return self._constructed_streams
 
     @property
     def prepared(self):
@@ -139,12 +140,12 @@ class MediaSession(gobject.GObject, EventsDispatcher):
 
         # TODO: Make sure a stream with the same name doesn't already
         # exist in the session (check for 'stream.name in self._signals')
+        sc = stream.connect("constructed", self.on_stream_constructed)
         sp = stream.connect("prepared", self.on_stream_prepared)
         sr = stream.connect("ready", self.on_stream_ready)
+        self._signals[stream.name] = [sc, sp, sr]
         self._streams.append(stream)
-        self._signals[stream.name] = [sp, sr]
-        self._dispatch("on_stream_added", stream)
-        stream.activate()
+        stream.construct()
         return stream
 
     def get_stream(self, name):
@@ -209,6 +210,11 @@ class MediaSession(gobject.GObject, EventsDispatcher):
                 self.emit("ready")
 
         return True
+
+    def on_stream_constructed(self, stream):
+        self._constructed_streams.append(stream)
+        self._dispatch("on_stream_added", stream)
+        stream.activate()
 
     def on_stream_prepared(self, stream):
         if self.prepared:

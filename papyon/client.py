@@ -97,6 +97,7 @@ from papyon.msnp2p import P2PSessionManager
 from papyon.msnp2p.transport.switchboard import SwitchboardP2PTransport
 from papyon.p2p import MSNObjectStore, FileTransferManager, WebcamHandler
 from papyon.sip import SIPCallManager
+from papyon.sip.turn import TURNClient
 from papyon.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
 from papyon.event import ClientState, \
@@ -174,6 +175,7 @@ class Client(EventsDispatcher):
         self._oim_box = None
         self._mailbox = None
         self._roaming = None
+        self._turn_client = None
 
         self.__die = False
         self.__connect_transport_signals()
@@ -407,6 +409,7 @@ class Client(EventsDispatcher):
             self.__connect_oim_box_signals()
             self._spaces = Spaces.Spaces(self._sso, self._proxies)
             self._roaming = CR.ContentRoaming(self._sso, self._address_book, self._proxies)
+            self._turn_client = TURNClient(self._sso, self.profile.account)
 
             self._state = ClientState.CONNECTED
 

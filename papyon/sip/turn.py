@@ -18,21 +18,29 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.errors import ClientError, ClientErrorType, ParseError
 from papyon.gnet.constants import *
 from papyon.gnet.io.ssl_tcp import SSLTCPClient
 from papyon.media.relay import MediaRelay
 from papyon.service.SingleSignOn import *
+from papyon.util.async import run
+from papyon.util.debug import hexify_string
 from papyon.util.decorator import rw_property
+from papyon.util.timer import Timer
 
 import base64
 import getpass
 import gobject
 import hashlib
 import hmac
+import logging
 import random
+import socket
 import struct
 import sys
 import uuid
+
+logger = logging.getLogger('papyon.turn')
 
 class MessageTypes(object):
     BINDING_REQUEST = 1
@@ -76,42 +84,62 @@ class AttributeTypes(object):
     REQUESTED_IP = 28
     FINGERPRINT = 29
     SERVER = 32802
-    ALTERNATE_SERVER = 32803
+    #ALTERNATE_SERVER = 32803
     REFRESH_INTERVAL = 32804
 
-REQUEST_TIMEOUT = 5000 # milliseconds
+class TURNErrorCode(object):
+   BAD_REQUEST = 400
+   UNAUTHORIZED = 401
+   UNKNOWN_ATTRIBUTE = 420
+   STALE_CREDENTIALS = 430
+   INTEGRITY_CHECK_FAILURE = 431
+   MISSING_USERNAME = 432
+   USE_TLS = 433
+   SERVER_ERROR = 500
+   GLOBAL_FAILURE = 600
 
-class TURNClient(gobject.GObject):
+REQUEST_TIMEOUT = 5 # seconds
 
-    host = "relay.voice.messenger.msn.com"
-    port = 443
 
-    # Signal emitted when all requests were answered or failed
-    __gsignals__ = {
-        'done': (gobject.SIGNAL_RUN_FIRST,
-            gobject.TYPE_NONE,
-            (object,))
-    }
+class TURNError(ClientError):
+    """TURN Error"""
+    def __init__(self, code, reason=''):
+        ClientError.__init__(self, ClientErrorType.UNKNOWN, code)
+        self.reason = reason
 
-    def __init__(self, sso, account):
+    def __str__(self):
+        return "TURN Error (%i): %s" % (self._code, self.reason)
+
+class TURNParseError(ParseError):
+    """TURN Parsing Error"""
+    def __init__(self, message, infos=''):
+        ParseError.__init__(self, "TURN", message, infos)
+
+
+class TURNClient(gobject.GObject, Timer):
+
+    def __init__(self, sso, account, host="relay.voice.messenger.msn.com", port=443):
         gobject.GObject.__init__(self)
+        Timer.__init__(self)
+
+        self._sso = sso
+        self._account = account
+
         self._signals = []
-        self._transport = SSLTCPClient(self.host, self.port)
+        self._transport = SSLTCPClient(host, port)
         self._signals.append(self._transport.connect("notify::status",
             self.on_status_changed))
         self._signals.append(self._transport.connect("received",
             self.on_message_received))
-        self._answered = False
-        self._src = None
-        self._msg_queue = []
-        self._requests = {}
-        self._relays = []
-        self._account = account
-        self._sso = sso
+
         self._tokens = {}
+        self._msg_queue = []
+        self._transactions = {}  # id => (initial_request)
+        self._request_id = 0
+        self._requests = {} # id => (callback, errback, count, relays)
 
     def send(self, message):
-        self._requests[message.id] = message
+        self._transactions[message.id] = message
         if self._transport.status != IoStatus.OPEN:
             self._msg_queue.append(message)
             self._transport.open()
@@ -119,23 +147,30 @@ class TURNClient(gobject.GObject):
         self._transport.send(str(message))
 
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
-    def request_shared_secret(self, callback, errcb, count=4):
-        self._src = gobject.timeout_add(REQUEST_TIMEOUT, self.on_timeout)
+    def request_shared_secret(self, callback, errback, count=1):
+        logger.info("Sending shared secret requests (%i)" % count)
+
+        self._request_id += 1
+        self._requests[self._request_id] = (callback, errback, count, [])
+        self.start_timeout_with_id("request", self._request_id, REQUEST_TIMEOUT)
+
         for _ in range(count):
             token = self._tokens[LiveService.MESSENGER_SECURE]
             username = "RPS_%s\x00\x00\x00" % token
             attrs = [TURNAttribute(AttributeTypes.USERNAME, username)]
-            msg = TURNMessage(MessageTypes.SHARED_SECRET_REQUEST, attrs)
+            msg = TURNMessage(None, MessageTypes.SHARED_SECRET_REQUEST, attrs)
             self.send(msg)
 
     @RequireSecurityTokens(LiveService.MESSENGER_SECURE)
     def request_shared_secret_with_integrity(self, callback, errcb, realm, nonce):
+        logger.info("Sending shared secret request with integrity")
+
         token = self._tokens[LiveService.MESSENGER_SECURE]
         username = "RPS_%s\x00\x00\x00" % token
         attrs = [TURNAttribute(AttributeTypes.USERNAME, username),
                  TURNAttribute(AttributeTypes.REALM, realm),
                  TURNAttribute(AttributeTypes.NONCE, nonce)]
-        msg = TURNMessage(MessageTypes.SHARED_SECRET_REQUEST, attrs, 24)
+        msg = TURNMessage(None, MessageTypes.SHARED_SECRET_REQUEST, attrs, 24)
         hmac = self.build_message_integrity(msg, token, nonce)
         msg.attributes.append(TURNAttribute(AttributeTypes.MESSAGE_INTEGRITY, hmac))
         msg.extra_size = 0
@@ -162,79 +197,107 @@ class TURNClient(gobject.GObject):
             while self._msg_queue:
                 self.send(self._msg_queue.pop())
         elif self._transport.status == IoStatus.CLOSED:
-            self._done()
+            pass #TODO something..
 
     def on_message_received(self, transport, data, length):
-        msg = TURNMessage()
-        msg.parse(data)
+        try:
+            msg = parse_message(data)
 
-        if self._requests.get(msg.id, None) is None:
-            return
+            initial_request = self._transactions.pop(msg.id, None)
+            if initial_request is None:
+                logger.warning("Received TURN response with invalid ID")
+                return
+
+            if msg.type == MessageTypes.SHARED_SECRET_ERROR:
+                self.on_shared_secret_error(msg)
+            elif msg.type == MessageTypes.SHARED_SECRET_RESPONSE:
+                self.on_shared_secret_response(msg)
+            else:
+                logger.warning("Received unexpected message: %i" % msg.type)
+
+        except Exception, e:
+            logger.exception(e)
+            logger.error("Received invalid TURN message")
+
+    def on_shared_secret_error(self, msg):
+        logger.info("Received shared secret error")
+        error = None
+        realm = None
+        nonce = None
+        for attr in msg.attributes:
+            if attr.type == AttributeTypes.REALM:
+                realm = attr.value
+            elif attr.type == AttributeTypes.NONCE:
+                nonce = attr.value
+            elif attr.type == AttributeTypes.ERROR_CODE:
+                error = parse_error(attr.value)
+        if error == TURNErrorCode.UNAUTHORIZED:
+            if realm is not None or nonce is not None:
+                self.request_shared_secret_with_integrity(None, None,
+                        realm, nonce)
+            else:
+                raise TURNParseError("missing REALM or NONCE attribute")
+        elif error is None:
+            raise TURNParseError("missing ERROR-CODE attribute")
         else:
-            del self._requests[msg.id]
+            raise error
 
-        if msg.type == MessageTypes.SHARED_SECRET_ERROR:
-            error_msg = None
-            realm = None
-            nonce = None
-            for attr in msg.attributes:
-                if attr.type == AttributeTypes.REALM:
-                    realm = attr.value
-                elif attr.type == AttributeTypes.NONCE:
-                    nonce = attr.value
-                elif attr.type == AttributeTypes.ERROR_CODE:
-                    error_msg = attr.value[4:]
-            if error_msg == "Unauthorized":
-                if realm is not None or nonce is not None:
-                    self.request_shared_secret_with_integrity(None, None, realm, nonce)
-                    return
+    def on_shared_secret_response(self, msg):
+        logger.info("Received shared secret response")
+        relay = MediaRelay()
+        for attr in msg.attributes:
+            if attr.type == AttributeTypes.USERNAME:
+                relay.username = base64.b64encode(attr.value)
+            elif attr.type == AttributeTypes.PASSWORD:
+                relay.password = base64.b64encode(attr.value)
+            elif attr.type == AttributeTypes.ALTERNATE_SERVER:
+                relay.ip, relay.port = parse_server(attr.value)
+        self.on_relay_discovered(relay)
 
-        elif msg.type == MessageTypes.SHARED_SECRET_RESPONSE:
-            relay = MediaRelay()
-            for attr in msg.attributes:
-                if attr.type == AttributeTypes.USERNAME:
-                    relay.username = base64.b64encode(attr.value)
-                elif attr.type == AttributeTypes.PASSWORD:
-                    relay.password = base64.b64encode(attr.value)
-                elif attr.type == AttributeTypes.ALTERNATE_SERVER:
-                    server = struct.unpack("!HHcccc", attr.value)
-                    ip = map(lambda x: ord(x), server[2:6])
-                    relay.ip = "%i.%i.%i.%i" % tuple(ip)
-                    relay.port = server[1]
-            self._relays.append(relay)
-
+    def on_relay_discovered(self, relay):
+        logger.info("Discovered %s" % str(relay))
+        keys = self._requests.keys()
+        if not keys:
+            logger.warning("No active request necessitating new relay")
+            return
+        keys.sort()
+        callback, errback, count, result = self._requests.get(keys[0])
+        result.append(relay)
+        if len(result) >= count:
+            del self._requests[keys[0]]
+            run(callback, result)
         if not self._requests:
-            self._done()
+            self.stop_all_timeout()
+            self._transport.close()
 
-    def on_timeout(self):
-        self._done()
-        return False
-
-    def _done(self):
-        if not self._answered:
-            self._answered = True
-            self._requests = {}
-            self._msg_queue = []
-            for signal_id in self._signals:
-                self._transport.disconnect(signal_id)
-            if self._src is not None:
-                gobject.source_remove(self._src)
-                self._src = None
-            self.emit("done", self._relays)
-        self._transport.close()
+    def on_request_timeout(self, id):
+        if id not in self._requests:
+            return
+        logger.info("Timeout on TURN request")
+        callback, errback, count, result = self._requests.pop(id)
+        run(callback, result)
+        if not self._requests:
+            self._transport.close()
 
 
 class TURNMessage(object):
 
-    def __init__(self, type=None, attributes=[], extra_size=0):
-        self.type = type
+    def __init__(self, id, type, attributes=[], extra_size=0):
+        if id is None:
+            id = uuid.uuid4()
+
+        self._id = id
+        self._type = type
         self._attributes = attributes
         self._extra_size = extra_size
-        self._id = int(uuid.uuid4())
 
     @property
     def id(self):
         return self._id
+
+    @property
+    def type(self):
+        return self._type
 
     @property
     def attributes(self):
@@ -248,66 +311,93 @@ class TURNMessage(object):
             self._extra_size = value
         return locals()
 
-    def split_id(self):
-        parts = []
-        id = self._id
-        for i in range(0, 4):
-            parts.append(int(id & 0xFFFFFFFF))
-            id >>= 32
-        parts.reverse()
-        return parts
-
-    def merge_id(self, parts):
-        self._id = 0
-        for part in parts:
-            self._id += part
-            self._id <<= 32
-        self._id >>= 32
-
-    def parse(self, msg):
-        hdr = struct.unpack("!HH4I", msg[0:20])
-        self.type = hdr[0]
-        self.merge_id(hdr[2:])
-
-        msg = msg[20:]
-        while msg:
-            attr = TURNAttribute()
-            attr.parse(msg)
-            self._attributes.append(attr)
-            msg = msg[len(attr):]
-
     def __str__(self):
         msg = ""
         for attr in self._attributes:
             msg += str(attr)
-        id = self.split_id()
-        hdr = struct.pack("!HH4I", self.type, len(msg) + self._extra_size,
-                          id[0], id[1], id[2], id[3])
+        size = len(msg) + self._extra_size
+        hdr = struct.pack("!HH16s", self._type, size, self._id.bytes)
         return (hdr + msg)
 
 
 class TURNAttribute(object):
 
-    def __init__(self, type=None, value=None):
-        self.type = type
+    def __init__(self, type, value):
+        self._type = type
         self._value = value
+
+    @property
+    def type(self):
+        return self._type
 
     @property
     def value(self):
         return self._value
 
-    def parse(self, msg):
-        type, size = struct.unpack("!HH", msg[0:4])
-        self.type = type
-        self._value = msg[4:size+4]
-
     def __len__(self):
         return len(self._value) + 4
 
     def __str__(self):
-        attr = struct.pack("!HH", self.type, len(self._value))
+        attr = struct.pack("!HH", self._type, len(self._value))
         attr += self._value
         return attr
+
+
+### Helper functions ---------------------------------------------------------
+
+def parse_message(msg):
+    if len(msg) < 20:
+        raise TURNParseError("message must be a least 20 bytes long",
+                hexify_string(msg))
+
+    try:
+        hdr = struct.unpack("!HH16s", msg[:20])
+    except:
+        raise TURNParseError("invalid message header", hexify_string(msg[:20]))
+
+    type = hdr[0]
+    id = uuid.UUID(bytes=hdr[2])
+    attributes = []
+    msg = msg[20:]
+    while msg:
+        attr = parse_attribute(msg)
+        attributes.append(attr)
+        msg = msg[len(attr):]
+    return TURNMessage(id, type, attributes)
+
+def parse_attribute(msg):
+    if len(msg) < 4:
+        raise TURNParseError("attribute must be at least 4 bytes long",
+                hexify_string(msg))
+    try:
+        type, size = struct.unpack("!HH", msg[:4])
+    except:
+        raise TURNParseError("invalid attribute", hexify_string(msg[:4]))
+
+    value = msg[4:size+4]
+    return TURNAttribute(type, value)
+
+def parse_error(value):
+    try:
+        values = struct.unpack("!HBB", value[0:4])
+    except:
+        raise TURNParseError("invalid error attribute", hexify_string(value))
+
+    code = values[1] * 100 + values[2]
+    reason = value[4:]
+    return TURNError(code, reason)
+
+def parse_server(value):
+    try:
+        server = struct.unpack("!HH4s", value)
+    except:
+        raise TURNParseError("invalid server attribute", hexify_string(value))
+
+    ip = socket.inet_ntoa(server[2])
+    port = server[1]
+    if port == 0:
+        port = 1863
+    return ip, port
 
 
 if __name__ == "__main__":
@@ -322,6 +412,7 @@ if __name__ == "__main__":
     else:
         password = sys.argv[2]
 
+    logging.basicConfig(level=0)
     mainloop = gobject.MainLoop(is_running=True)
     sso = SingleSignOn(account, password)
     client = TURNClient(sso, account)

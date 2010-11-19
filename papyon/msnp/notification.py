@@ -432,6 +432,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         self._client.profile._server_property_changed("privacy",
                 command.arguments[0])
 
+    def _handle_GCF(self, command):
+        pass
+
     def _handle_CHG(self, command):
         self._client.profile._server_property_changed("presence",
                 command.arguments[0])

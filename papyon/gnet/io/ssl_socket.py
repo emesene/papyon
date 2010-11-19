@@ -69,7 +69,7 @@ class SSLSocketClient(GIOChannelClient):
             except (OpenSSL.WantX509LookupError,
                     OpenSSL.WantReadError, OpenSSL.WantWriteError):
                 return True
-            except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError), err:
+            except OpenSSL.Error, err:
                 self.emit("error", SSLError(str(err)))
                 self.close()
                 return False
@@ -85,7 +85,7 @@ class SSLSocketClient(GIOChannelClient):
                 except (OpenSSL.WantX509LookupError,
                         OpenSSL.WantReadError, OpenSSL.WantWriteError):
                     return True
-                except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
+                except OpenSSL.Error:
                     self.close()
                     return False
 
@@ -101,7 +101,7 @@ class SSLSocketClient(GIOChannelClient):
                     except (OpenSSL.WantX509LookupError,
                             OpenSSL.WantReadError, OpenSSL.WantWriteError):
                         return True
-                    except (OpenSSL.ZeroReturnError, OpenSSL.SysCallError):
+                    except OpenSSL.Error:
                         self.close()
                         return False
                     item.sent(ret)

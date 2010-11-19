@@ -64,7 +64,7 @@ def decode_rfc2047_string(string):
     if not ecre.search(string):
         return string
 
-    decoded = ""
+    decoded = u""
 
     try:
         for line in string.splitlines():
@@ -73,7 +73,7 @@ def decode_rfc2047_string(string):
                 unenc = parts.pop(0)
                 # don't append single spaces between encoded words to the result
                 if not decoded or not parts or unenc != ' ':
-                    decoded += unenc
+                    decoded += unicode(unenc)
                 if parts:
                     charset, encoding = [s.lower() for s in parts[0:2]]
                     encoded = parts[2]
@@ -87,4 +87,7 @@ def decode_rfc2047_string(string):
                 del parts[0:3]
     except:
         return string
+
+    if type(decoded) is unicode:
+        decoded = decoded.encode("utf-8")
     return decoded

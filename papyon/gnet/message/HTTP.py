@@ -79,19 +79,44 @@ class HTTPMessage(object):
 
     def decode_body(self):
         """Decodes body content using "Content-Encoding" header. As of now
-           only 'gzip' encoding is supported.
+           only 'gzip' encoding is supported. Also encodes the result string
+           to UTF-8 if necessary.
            @note Only 'gzip' encoding is supported for now
-           @raises NotImplementedError: if encoding is unknown"""
+           @raises HTTPParseError: if encoding is unknown"""
 
         encoding = self.headers.get("Content-Encoding", "")
         if encoding == "":
-            return self.body
+            body = self.body
         elif encoding == "gzip":
             body_stream = StringIO.StringIO(self.body)
             unzipper = gzip.GzipFile(fileobj=body_stream)
-            return unzipper.read()
+            body = unzipper.read()
         else:
             raise HTTPParseError("%s is not implemented" % encoding)
+
+        type, charset = self.content_type
+        if charset.lower() != "utf-8":
+            body = body.decode(charset).encode("utf-8")
+
+        return body
+
+    def __get_content_type(self):
+        if 'Content-Type' in self.headers:
+            content_type = self.headers['Content-Type'].split(';', 1)
+            if len(content_type) == 1:
+                return (content_type[0].strip(), 'UTF-8')
+            mime_type = content_type[0].strip()
+            encoding = content_type[1].split('=', 1)[1].strip()
+            return (mime_type, encoding)
+        return ('text/plain', 'UTF-8')
+    
+    def __set_content_type(self, content_type):
+        if not isinstance(content_type, str):
+            content_type = '; charset='.join(content_type)
+        self.headers['Content-Type'] = content_type
+
+    content_type = property(__get_content_type, __set_content_type,
+            doc="a tuple specifying the content type")
 
     def __str__(self):
         result = []

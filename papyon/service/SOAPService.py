@@ -200,8 +200,6 @@ class SOAPService(object):
                 user_data)
 
     def _response_handler(self, transport, http_response):
-        logger.debug("<<< " + unicode(http_response))
-
         request = self._unref_transport(transport)
         if request is None:
             logger.warning("No active request for HTTP response received")
@@ -211,7 +209,9 @@ class SOAPService(object):
 
         # decode, build and process SOAP response
         try:
+            logger.debug("<<< Received response for %s" % request_id)
             decoded_body = http_response.decode_body()
+            logger.debug("<<<" + unicode(decoded_body, "utf-8"))
             soap_response = SOAPResponse(decoded_body)
             if not soap_response.is_fault():
                 response = method.process_response(soap_response)

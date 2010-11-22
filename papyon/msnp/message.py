@@ -74,24 +74,6 @@ class Message(HTTPMessage):
             message += "\t[P2P message (%d bytes)]" % (len(self.body) - 4)
         return message.rstrip("\n\t")
 
-    def __get_content_type(self):
-        if 'Content-Type' in self.headers:
-            content_type = self.headers['Content-Type'].split(';', 1)
-            if len(content_type) == 1:
-                return (content_type[0].strip(), 'UTF-8')
-            mime_type = content_type[0].strip()
-            encoding = content_type[1].split('=', 1)[1].strip()
-            return (mime_type, encoding)
-        return ('text/plain', 'UTF-8')
-    
-    def __set_content_type(self, content_type):
-        if not isinstance(content_type, str):
-            content_type = '; charset='.join(content_type)
-        self.headers['Content-Type'] = content_type
-
-    content_type = property(__get_content_type, __set_content_type,
-            doc="a tuple specifying the content type")
-
     def parse_guid(self, header):
         if header not in self.headers:
             return None

@@ -101,7 +101,7 @@ class SLPMessage(HTTPMessage):
             self.add_header("Content-Type", "null")
             self.add_header("Content-Length", 0)
         else:
-            self.add_header("Content-Type", self.body.content_type)
+            self.add_header("Content-Type", self.body.type)
             self.add_header("Content-Length", len(str(self.body)))
             
         return HTTPMessage.__str__(self)
@@ -192,7 +192,7 @@ class SLPMessageBody(HTTPMessage):
     
     def __init__(self, content_type, session_id=None, s_channel_state=0, capabilities_flags=1):
         HTTPMessage.__init__(self)
-        self.content_type = content_type
+        self.type = content_type
 
         if session_id is not None:
             self.add_header("SessionID", session_id)

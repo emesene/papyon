@@ -277,8 +277,6 @@ class Client(EventsDispatcher):
         self._state = ClientState.CONNECTING
         self._profile = profile.Profile((account, password), self._protocol)
         self.__connect_profile_signals()
-        self._mailbox = msnp.Mailbox(self._protocol)
-        self.__connect_mailbox_signals()
         self._transport.establish_connection()
 
     def logout(self):
@@ -401,6 +399,8 @@ class Client(EventsDispatcher):
                                          self._proxies)
             self._address_book = AB.AddressBook(self._sso, self, self._proxies)
             self.__connect_addressbook_signals()
+            self._mailbox = msnp.Mailbox(self._protocol)
+            self.__connect_mailbox_signals()
             self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
             self.__connect_oim_box_signals()
             self._spaces = Spaces.Spaces(self._sso, self._proxies)

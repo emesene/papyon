@@ -785,6 +785,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             return
         if address_book.state != AB.AddressBookState.SYNCHRONIZED:
             return
+        self._client.profile._cid = address_book.profile._cid
         self._client.profile._server_property_changed("display-name",
                 address_book.profile.display_name)
 

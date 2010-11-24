@@ -162,6 +162,12 @@ class SIPCall(gobject.GObject, MediaCall, RTCActivity, EventsDispatcher, Timer):
         self._add_dialog(dialog)
         return dialog.handle_response(response)
 
+    def handle_cancel_request(self, request):
+        logger.info("Cancel all dialogs for call %s" % self._id)
+        for dialog in self._dialogs[:]:
+            dialog.handle_request(request)
+        return True
+
     ### Private API ----------------------------------------------------------
 
     @property

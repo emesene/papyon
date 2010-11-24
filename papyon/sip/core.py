@@ -325,6 +325,7 @@ class SIPCore(gobject.GObject, Timer):
             logger.warning("Can't remotely cancel client transaction.")
             return self.answer(request, 500) # Server Error
         if transaction.answered:
+            logger.info("Call already answered, ignoring CANCEL")
             return
 
         dialog = self._find_dialog(request)

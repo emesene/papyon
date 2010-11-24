@@ -43,6 +43,7 @@ class SIPCallManager(gobject.GObject):
         self._core = SIPCore(self._client)
         self._core.connect("invite-received", self._on_invite_received)
         self._core.connect("invite-answered", self._on_invite_answered)
+        self._core.connect("cancel-received", self._on_cancel_received)
 
         self._calls = {} # Call-ID => call, handle_id
 
@@ -92,6 +93,14 @@ class SIPCallManager(gobject.GObject):
             logger.warning("No call matches with INVITE answer (%s)" % call_id)
             return
         call.handle_invite_response(response)
+
+    def _on_cancel_received(self, core, request):
+        call_id = request.call_id
+        if not call_id in self._calls:
+            logger.warning("No call matches with CANCEL request (%s)" % call_id)
+            return
+        call, handle = self._calls.get(call_id)
+        call.handle_cancel_request(request)
 
     def _generate_id(self):
         id = None

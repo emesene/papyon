@@ -514,7 +514,7 @@ class NotificationProtocol(BaseProtocol, Timer):
         mg = self.__find_node(tree, "./MachineGuid", "{}").lower()[1:-1]
 
         msn_object = None
-        if utl != "":
+        if utl != "" and utl != "0":
             msn_object = papyon.p2p.MSNObject.parse(self._client, utl)
 
         cm = None

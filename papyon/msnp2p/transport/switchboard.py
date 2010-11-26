@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.msnp.message import MessageAcknowledgement
+from papyon.msnp.message import Message, MessageAcknowledgement
 from papyon.msnp2p.transport.TLP import MessageChunk
 from papyon.msnp2p.transport.base import BaseP2PTransport
 from papyon.switchboard_manager import SwitchboardHandler
@@ -92,17 +92,19 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
 
     def _send_chunk(self, peer, peer_guid, chunk):
         logger.debug(">>> %s" % repr(chunk))
+
+        msg = Message(self._client.profile)
         if chunk.version is 1 or peer_guid is None:
-            headers = {'P2P-Dest': peer.account}
+            msg.add_header('P2P-Dest', peer.account)
         elif chunk.version is 2:
-            headers = {'P2P-Src' : build_account(self._client.profile.account,
-                                                 self._client.machine_guid),
-                       'P2P-Dest': build_account(peer.account, peer_guid)}
-        content_type = 'application/x-msnmsgrp2p'
-        body = str(chunk) + struct.pack('>L', chunk.application_id)
+            msg.add_header('P2P-Src', build_account(self._client.profile.account,
+                                                    self._client.machine_guid))
+            msg.add_header('P2P-Dest', build_account(peer.account, peer_guid))
+        msg.content_type = 'application/x-msnmsgrp2p'
+        msg.body = str(chunk) + struct.pack('>L', chunk.application_id)
+
         self._oustanding_sends += 1
-        self._send_message(content_type, body, headers,
-                MessageAcknowledgement.MSNC,
+        self._send_message(msg, MessageAcknowledgement.MSNC,
                 (self._on_message_sent, peer, peer_guid, chunk),
                 (self._on_message_error, peer, peer_guid, chunk))
 

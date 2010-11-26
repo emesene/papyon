@@ -168,6 +168,7 @@ class SwitchboardProtocol(BaseProtocol):
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
+        message.add_header('MIME-Version', '1.0')
         return self._send_command('MSG', (ack,), message, True,
                 (self._on_message_sent, message, callback), errback)
 

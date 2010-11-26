@@ -299,29 +299,26 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
                 body.append(str(msn_object))
                 # FIXME : we need to distinguish animemoticon and emoticons
                 # and send the related msn objects in separated messages
-            self._send_message(("text/x-mms-animemoticon",), '\t'.join(body))
+            self._send_message_ex(("text/x-mms-animemoticon",), '\t'.join(body))
 
         content_type = ("text/plain","utf-8")
         body = message.content.encode("utf-8")
-        ack = msnp.MessageAcknowledgement.HALF
         headers = {}
         if message.formatting is not None:
             headers["X-MMS-IM-Format"] = str(message.formatting)
 
-        self._send_message(content_type, body, headers, ack, callback, errback)
+        self._send_message_ex(content_type, body, headers, callback, errback)
 
     def send_nudge(self):
         content_type = "text/x-msnmsgr-datacast"
         body = "ID: 1\r\n\r\n".encode('UTF-8') #FIXME: we need to figure out the datacast objects :D
-        ack = msnp.MessageAcknowledgement.NONE
-        self._send_message(content_type, body, ack=ack)
+        self._send_message_ex(content_type, body)
 
     def send_typing_notification(self):
         content_type = "text/x-msmsgscontrol"
         body = "\r\n\r\n".encode('UTF-8')
-        headers = { "TypingUser" : self._client.profile.account.encode('UTF_8') }
-        ack = msnp.MessageAcknowledgement.NONE
-        self._send_message(content_type, body, headers, ack)
+        headers = { "TypingUser" : self._client.profile.account }
+        self._send_message_ex(content_type, body, headers)
 
     def invite_user(self, contact):
         raise NotImplementedError
@@ -329,8 +326,16 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
     def leave(self):
         raise NotImplementedError
 
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
+    def _send_message_ex(self, content_type, body, headers={},
+            callback=None, errback=None):
+        message = msnp.Message(self._client.profile)
+        for key, value in headers.iteritems():
+            message.add_header(key, value)
+        message.content_type = content_type
+        message.body = body
+        return self._send_message(message, callback, errback)
+
+    def _send_message(self, message, callback=None, errback=None):
         raise NotImplementedError
 
     def _on_contact_joined(self, contact):
@@ -406,16 +411,10 @@ class ExternalNetworkConversation(AbstractConversation):
     def leave(self):
         self._client._unregister_external_conversation(self)
 
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
-        if content_type[0]  in ['text/x-mms-emoticon',
-                                'text/x-mms-animemoticon']:
-            return
-        message = msnp.Message(self._client.profile)
-        for key, value in headers.iteritems():
-            message.add_header(key, value)
-        message.content_type = content_type
-        message.body = body
+    def _send_message(self, message, callback=None, errback=None):
+        content_type = message.content_type[0]
+        if content_type in ['text/x-mms-emoticon', 'text/x-mms-animemoticon']:
+            return # don't send icons to external contacts
         for contact in self.participants:
             self._client._protocol.\
                     send_unmanaged_message(contact, message)
@@ -450,10 +449,13 @@ class SwitchboardConversation(AbstractConversation, SwitchboardHandler):
         """Leave the conversation."""
         SwitchboardHandler._leave(self)
 
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
-        SwitchboardHandler._send_message(self, content_type, body, headers,
-                ack, callback=callback, errback=errback)
+    def _send_message(self, message, callback=None, errback=None):
+        content_type = message.content_type[0]
+        ack = msnp.MessageAcknowledgement.HALF
+        if content_type in ("text/x-msnmsgr-datacast", "text/x-msmsgscontrol"):
+            ack = msnp.MessageAcknowledgement.NONE
+        SwitchboardHandler._send_message(self, message, ack,
+                callback=callback, errback=errback)
 
     def _on_closed(self):
         self._dispatch("on_conversation_closed")

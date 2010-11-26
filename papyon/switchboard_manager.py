@@ -98,15 +98,7 @@ class SwitchboardHandler(object):
     switchboard = property(__get_switchboard)
 
     # protected
-    def _send_message(self, content_type, body, headers={},
-            ack=msnp.MessageAcknowledgement.HALF, callback=None, errback=None):
-        message = msnp.Message(self._client.profile)
-        message.add_header('MIME-Version', '1.0')
-        message.content_type = content_type
-        for key, value in headers.iteritems():
-            message.add_header(key, value)
-        message.body = body
-
+    def _send_message(self, message, ack, callback=None, errback=None):
         self._pending_messages.append((message, ack, callback, errback))
         self._process_pending_queues()
 

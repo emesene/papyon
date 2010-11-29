@@ -606,6 +606,9 @@ class AddressBook(gobject.GObject):
             else:
                 continue
 
+            if network == NetworkID.MSN and member.IsPassportNameHidden:
+                continue # ignore contacts with hidden passport name
+
             contact = self.search_contact(member.Account, network)
             new_contact = False
             if contact is None:

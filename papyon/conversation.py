@@ -74,6 +74,10 @@ class ConversationInterface(object):
     """Interface implemented by all the Conversation objects, a Conversation
     object allows the user to communicate with one or more peers"""
 
+    @property
+    def max_message_size(self):
+        raise NotImplementedError
+
     def send_text_message(self, message):
         """Send a message to all persons in this conversation.
 
@@ -134,6 +138,17 @@ class ConversationMessage(object):
         self.content = content
         self.formatting = formatting
         self.msn_objects = msn_objects
+
+    def split(self, size):
+        """Split message in parts of given size."""
+        #TODO make sure we don't cut a smiley alias
+        parts = []
+        cs = [self.content[i:i+size] for i in range(0, len(self.content), size)]
+        for c in cs:
+            part = ConversationMessage(c, self.formatting, self.msn_objects)
+            part.display_name = self.display_name
+            parts.append(part)
+        return parts
 
 class TextFormat(object):
 
@@ -290,7 +305,18 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
 
         self.__last_received_msn_objects = {}
 
+    @property
+    def max_message_size(self):
+        return 1500
+
     def send_text_message(self, message, callback=None, errback=None):
+        if len(message.content) > self.max_message_size:
+            logger.info("Message content is too large, message will be split")
+            parts = message.split(self.max_message_size)
+            for part in parts:
+                self.send_text_message(part)
+            return
+
         if len(message.msn_objects) > 0:
             body = []
             for alias, msn_object in message.msn_objects.iteritems():
@@ -373,7 +399,7 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
             msn_objects = {}
             parts = message.body.split('\t')
             logger.debug(parts)
-            for i in [i for i in range(len(parts)) if not i % 2]:
+            for i in range(0, len(parts), 2):
                 if parts[i] == '': break
                 try:
                     msn_object = p2p.MSNObject.parse(self._client, parts[i+1])

@@ -412,8 +412,8 @@ class SIPCore(gobject.GObject, Timer):
 
     def on_cancel_timeout(self, canceled_request):
         transaction = canceled_request.transaction
-        if transaction is not None:
-            logger.info("Canceled request not responsed, destroy transaction")
+        if transaction is not None and not transaction.answered:
+            logger.info("Canceled request not answered, destroy transaction")
             transaction.destroy()
 
     # Errors Handling --------------------------------------------------------

@@ -117,8 +117,8 @@ class BaseProtocol(gobject.GObject):
             try:
                 handler(command)
             except Exception, err:
-                logger.exception(err)
-                logger.error('Ignoring invalid command :' + unicode(command))
+                logger.error(str(err))
+                logger.error('Ignoring invalid command : ' + unicode(command))
         else:
             self._error_handler(command)
    

@@ -116,8 +116,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         try:
             dest, dest_guid = parse_account(message.get_header('P2P-Dest'))
         except Exception, err:
-            logger.exception(err)
-            logger.warning("Couldn't parse destination GUID")
+            logger.warning("Couldn't parse destination GUID: %s" % err)
             return
 
         # if destination contains a GUID, the protocol should be TLPv2
@@ -125,14 +124,14 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
             version = 2
             if dest_guid != self._client.machine_guid or \
                peer_guid != self._peer_guid:
-                return # this chunk is not for us
+                logger.debug("Received chunk is not for this end point")
+                return
 
         try:
             chunk = MessageChunk.parse(version, message.body[:-4])
             chunk.application_id = struct.unpack('>L', message.body[-4:])[0]
         except Exception, err:
-            logger.exception(err)
-            logger.warning("Couldn't build TLP chunk from switchboard message")
+            logger.warning("Invalid TLP chunk in SB message: %s" % err)
             return
 
         logger.debug("<<< %s" % repr(chunk))

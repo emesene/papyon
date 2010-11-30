@@ -246,7 +246,7 @@ class SOAPService(object):
         logger.debug(">>> " + unicode(cleaned))
 
     def _error_handler(self, transport, error):
-        logger.warning("Transport Error :" + str(error))
+        logger.warning("Transport Error : " + str(error))
 
         # try to process response if we received an HTTP error (status != 2xx)
         if isinstance(error, HTTPError):

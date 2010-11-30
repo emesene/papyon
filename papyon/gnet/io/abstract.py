@@ -121,17 +121,18 @@ class AbstractClient(gobject.GObject):
         """Close the connection."""
         raise NotImplementedError
 
-    def send(self, buffer, callback=None, *args):
+    def send(self, buffer, callback=None, errback=None):
         """Send data to the server.
 
             @param buffer: data buffer.
             @type buffer: string
 
             @param callback: a callback method that would be called when the
-                data is atually sent to the server.
-            @type callback: callback
+                data is actually sent to the server.
+            @type callback: tuple(callable, args)
 
-            @param args: callback arguments to be passed to the callback.
+            @param errback: a callback method called if sending fails.
+            @type errback: tuple(callable, args)
         """
         raise NotImplementedError
 

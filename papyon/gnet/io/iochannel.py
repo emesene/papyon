@@ -21,6 +21,7 @@
 from papyon.gnet.constants import *
 from papyon.gnet.errors import *
 from papyon.gnet.resolver import *
+from papyon.util.async import run
 from abstract import AbstractClient
 
 import gobject
@@ -31,12 +32,12 @@ __all__ = ['GIOChannelClient']
 
 class OutgoingPacket(object):
     """Represents a packet to be sent over the IO channel"""
-    def __init__(self, buffer, size, callback=None, *cb_args):
+    def __init__(self, buffer, size, callback=None, errback=None):
         self.buffer = buffer
         self.size = size
         self._sent = 0
         self._callback = callback
-        self._callback_args = cb_args
+        self._errback = errback
 
     def read(self, size=2048):
         if size is not None:
@@ -53,8 +54,11 @@ class OutgoingPacket(object):
 
     def callback(self):
         """Run the callback function if supplied"""
-        if self._callback is not None:
-            self._callback(*self._callback_args)
+        run(self._callback)
+
+    def errback(self, error):
+        """Run the errback function if supplied"""
+        run(self._errback, error)
 
 
 class GIOChannelClient(AbstractClient):
@@ -153,6 +157,11 @@ class GIOChannelClient(AbstractClient):
         if self._status in (IoStatus.CLOSING, IoStatus.CLOSED):
             return
         self._status = IoStatus.CLOSING
+
+        for packet in self._outgoing_queue:
+            packet.errback(IoConnectionClosed(self, self._status))
+        self._outgoing_queue = []
+
         self._watch_remove()
         try:
             self._channel.close()
@@ -169,9 +178,11 @@ class GIOChannelClient(AbstractClient):
             return
         self._watch_remove()
 
-    def send(self, buffer, callback=None, *args):
-        assert(self._status == IoStatus.OPEN), self._status
+    def send(self, buffer, callback=None, errback=None):
+        if self._status != IoStatus.OPEN:
+            run(errback, IoConnectionClosed(self, self._status))
+            return
         self._outgoing_queue.append(OutgoingPacket(buffer, len(buffer),
-            callback, *args))
+            callback, errback))
         self._watch_add_cond(gobject.IO_OUT)
 gobject.type_register(GIOChannelClient)

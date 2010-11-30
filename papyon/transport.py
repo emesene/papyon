@@ -32,6 +32,7 @@ The classes of this module are structured as follow:
 G{classtree BaseTransport}"""
 
 from gnet.proxy.factory import ProxyFactory
+from papyon.util.async import run
 
 import gnet
 import gnet.protocol
@@ -164,7 +165,8 @@ class BaseTransport(gobject.GObject):
         raise NotImplementedError
 
     # Command Sending
-    def send_command(self, command, increment=True, callback=None, *cb_args):
+    def send_command(self, command, increment=True, callback=None,
+            errback=None):
         """
         Sends a L{msnp.Command} to the server.
 
@@ -174,17 +176,16 @@ class BaseTransport(gobject.GObject):
             @param increment: if False, the transaction ID is not incremented
             @type increment: bool
 
-            @param callback: callback to be used when the command has been
-                transmitted
-            @type callback: callable
+            @param callback: callback once transmission of command succeeded
+            @type callback: tuple (callable, args)
 
-            @param cb_args: callback arguments
-            @type cb_args: Any, ...
+            @param errback: callback if transmission of command failed
+            @type errback: tuple (callable, args)
         """
         raise NotImplementedError
 
-    def send_command_ex(self, command, arguments=(), payload=None, 
-            increment=True, callback=None, *cb_args):
+    def send_command_ex(self, command, arguments=(), payload=None,
+            increment=True, callback=None, errback=None):
         """
         Builds a command object then send it to the server.
         
@@ -201,16 +202,15 @@ class BaseTransport(gobject.GObject):
             @param increment: if False, the transaction ID is not incremented
             @type increment: bool
 
-            @param callback: callback to be used when the command has been
-                transmitted
-            @type callback: callable
+            @param callback: callback once transmission of command succeeded
+            @type callback: tuple (callable, args)
 
-            @param cb_args: callback arguments
-            @type cb_args: tuple
+            @param errback: callback if transmission of command failed
+            @type errback: tuple (callable, args)
         """
         cmd = msnp.Command()
         cmd.build(command, self._transaction_id, payload, *arguments)
-        self.send_command(cmd, increment, callback, *cb_args)
+        self.send_command(cmd, increment, callback, errback)
         return cmd
 
     def enable_ping(self):
@@ -240,7 +240,7 @@ class DirectConnection(BaseTransport):
         self._transport = transport
         self.__pending_command = None
         self.__resetting = False
-        self.__error = False
+        self.__error = None
 
     __init__.__doc__ = BaseTransport.__init__.__doc__
 
@@ -264,8 +264,8 @@ class DirectConnection(BaseTransport):
         self._transport.open()
 
     def lose_connection(self, error=None):
+        self.__error = error
         if error is not None:
-            self.__error = True
             self.emit("connection-failure", error)
 
         self.__resetting = False
@@ -280,15 +280,15 @@ class DirectConnection(BaseTransport):
         self._transport.close()
         self._transport.open()
 
-    def send_command(self, command, increment=True, callback=None, *cb_args):
-        status = self._transport.get_property("status")
-        if self.__error or status != gnet.IoStatus.OPEN:
-            logger.warning("Transport is closed or errored, not sending %s" %
-                    command.name)
+    def send_command(self, command, increment=True, callback=None,
+            errback=None):
+        if self.__error:
+            logger.warning("Transport is errored, not sending %s" % command.name)
+            run(errback, self.__error)
             return
         logger.debug('>>> ' + unicode(command))
-        our_cb_args = (command, callback, cb_args)
-        self._transport.send(str(command), self.__on_command_sent, *our_cb_args)
+        self._transport.send(str(command),
+                (self.__on_command_sent, command, callback), errback)
         if increment:
             self._increment_transaction_id()
 
@@ -297,10 +297,9 @@ class DirectConnection(BaseTransport):
         cmd.build("PNG", None)
         self.send_command(cmd, False)
 
-    def __on_command_sent(self, command, user_callback, user_cb_args):
+    def __on_command_sent(self, command, user_callback):
         self.emit("command-sent", command)
-        if user_callback:
-            user_callback(*user_cb_args)
+        run(user_callback)
 
     ### callbacks
     def __on_status_change(self, transport, param):
@@ -313,11 +312,11 @@ class DirectConnection(BaseTransport):
         elif status == gnet.IoStatus.CLOSED:
             if not self.__resetting and not self.__error:
                 self.emit("connection-lost", None)
-            self.__error = False
+            self.__error = None
     
     def __on_error(self, transport, error):
         status = transport.get_property("status")
-        self.__error = True
+        self.__error = error
         if status == gnet.IoStatus.OPEN:
             self.emit("connection-lost", error)
         else:
@@ -359,7 +358,7 @@ class HTTPPollConnection(BaseTransport):
         self._command_queue = []
         self._waiting_for_response = False # are we waiting for a response
         self._session_id = None
-        self.__error = False
+        self.__error = None
 
     def _setup_transport(self, host, port, proxies):
         handles = []
@@ -382,7 +381,7 @@ class HTTPPollConnection(BaseTransport):
             self.emit("connection-failure", error)
         elif not self.__error:
             self.emit("connection-lost", None)
-        self.__error = False
+        self.__error = None
 
     def reset_connection(self, server=None):
         if server:
@@ -399,8 +398,9 @@ class HTTPPollConnection(BaseTransport):
         self._transport.close()
         self._setup_transport(server[0], server[1], self.proxies)
 
-    def send_command(self, command, increment=True, callback=None, *cb_args):
-        self._command_queue.append((command, increment, callback, cb_args))
+    def send_command(self, command, increment=True, callback=None,
+            errback=None):
+        self._command_queue.append((command, increment, callback, errback))
         self._send_command()
 
     def _send_command(self):
@@ -443,7 +443,7 @@ class HTTPPollConnection(BaseTransport):
         return True
     
     def __on_error(self, transport, error):
-        self.__error = True
+        self.__error = error
         self.emit("connection-lost", error)
         self.lose_connection()
         
@@ -471,10 +471,9 @@ class HTTPPollConnection(BaseTransport):
     def __on_sent(self, transport, http_request):
         if len(self._command_queue) == 0:
             return
-        command, increment, callback, cb_args = self._command_queue.pop(0)
+        command, increment, callback, errback = self._command_queue.pop(0)
         if command is not None:
-            if callback:
-                callback(*cb_args)
+            run(callback)
             self.emit("command-sent", command)
 
     def __extract_command(self, data):

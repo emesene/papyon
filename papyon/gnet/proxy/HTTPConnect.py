@@ -84,8 +84,8 @@ class HTTPConnectProxy(AbstractProxy):
         self._client._proxy_closed()
         self._transport.close()
 
-    def send(self, buffer, callback=None, *args):
-        self._client.send(buffer, callback, *args)
+    def send(self, buffer, callback=None, errback=None):
+        self._client.send(buffer, callback, errback=None)
 
     # callbacks and signal handlers
     def _on_transport_status(self, transport, param):

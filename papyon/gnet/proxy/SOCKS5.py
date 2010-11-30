@@ -123,8 +123,8 @@ class SOCKS5Proxy(AbstractProxy):
         self._client._proxy_closed()
         self._transport.close()
 
-    def send(self, buffer, callback=None, *args):
-        self._client.send(buffer, callback, *args)
+    def send(self, buffer, callback=None, errback=None):
+        self._client.send(buffer, callback, errback)
 
     # Handshake
     def _send_nego_msg(self):

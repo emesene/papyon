@@ -85,9 +85,9 @@ class BaseProtocol(gobject.GObject):
         self._proxies = proxies
 
     def _send_command(self, command, arguments=(), payload=None, 
-            increment=True, callback=None, *cb_args):
+            increment=True, callback=None, errback=None):
         command = self._transport.send_command_ex(command, arguments, payload, 
-                                                increment, callback, *cb_args)
+                                                increment, callback, errback)
         return command.transaction_id
    
     # default handlers

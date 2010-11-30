@@ -30,7 +30,7 @@ from msnp2p.msnobject import MSNObjectSession
 from msnp2p.webcam import WebcamSession
 from msnp2p import EufGuid, ApplicationID
 from msnp2p.constants import SLPStatus
-from msnp2p.errors import MSNObjectParseError
+from msnp2p.errors import P2PError, MSNObjectParseError
 from profile import NetworkID, BaseContact, Contact, Profile
 
 from papyon.util.async import *
@@ -321,15 +321,13 @@ class MSNObjectStore(P2PSessionHandler):
     def _on_session_completed(self, session, data):
         if session in self._callbacks:
             callback, errback, msn_object = self._callbacks[session]
-            if callback:
-                msn_object._data = data
-                callback[0](msn_object, *callback[1:])
+            msn_object._data = data
+            run(callback, msn_object)
 
     def _on_session_rejected(self, session):
         if session in self._callbacks:
             callback, errback, msn_object = self._callbacks[session]
-            if errback:
-                errback[0](msn_object, *errback[1:])
+            run(errback, P2PError("Request for %s was rejected" % msn_object))
 
     def _on_session_disposed(self, session):
         P2PSessionHandler._on_session_disposed(self, session)

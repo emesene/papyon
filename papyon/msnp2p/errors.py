@@ -18,7 +18,19 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from papyon.errors import ParseError
+from papyon.errors import ClientError, ClientErrorType, ParseError
+
+class P2PError(ClientError):
+    """P2P Error"""
+
+    UNKNOWN = 0
+
+    def __init__(self, message):
+        ClientError.__init__(self, ClientErrorType.UNKNOWN, P2PError.UNKNOWN)
+        self.message = message
+
+    def __str__(self):
+        return "P2P Error: %s" % self.message
 
 class SLPParseError(ParseError):
     """SLP Parsing Error"""

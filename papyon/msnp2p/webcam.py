@@ -43,7 +43,7 @@ __all__ = ['WebcamSession']
 
 logger = logging.getLogger("papyon.msnp2p.webcam")
 
-class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
+class WebcamSession(P2PSession, MediaCall):
 
     def __init__(self, producer, session_manager, peer, peer_guid,
             euf_guid,  message=None):
@@ -55,7 +55,6 @@ class WebcamSession(P2PSession, MediaCall, EventsDispatcher):
         P2PSession.__init__(self, session_manager, peer, peer_guid, euf_guid,
                 ApplicationID.WEBCAM, message)
         MediaCall.__init__(self, type)
-        EventsDispatcher.__init__(self)
 
         self._producer = producer
         self._answered = False

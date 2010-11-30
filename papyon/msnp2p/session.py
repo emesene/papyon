@@ -19,6 +19,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from papyon.event import EventsDispatcher
 from papyon.msnp2p.constants import *
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
@@ -40,7 +41,7 @@ MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff
 
 
-class P2PSession(gobject.GObject):
+class P2PSession(gobject.GObject, EventsDispatcher):
 
     __gsignals__ = {
             "accepted" : (gobject.SIGNAL_RUN_FIRST,
@@ -55,6 +56,9 @@ class P2PSession(gobject.GObject):
             "progressed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
+            "canceled" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
             "disposed" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 ())
@@ -63,6 +67,7 @@ class P2PSession(gobject.GObject):
     def __init__(self, session_manager, peer, peer_guid=None, euf_guid="",
             application_id=0, message=None):
         gobject.GObject.__init__(self)
+        EventsDispatcher.__init__(self)
         self._session_manager = session_manager
         self._transport_manager = session_manager._transport_manager
         self._client = session_manager._client
@@ -264,7 +269,7 @@ class P2PSession(gobject.GObject):
         self._session_manager._transport_manager.cleanup(self.peer,
                 self.peer_guid, self._id)
         self._session_manager._unregister_session(self)
-        self.emit("disposed")
+        self._emit("disposed")
 
     def _send_slp_message(self, message):
         self._transport_manager.send_slp_message(self.peer, self.peer_guid,
@@ -285,10 +290,10 @@ class P2PSession(gobject.GObject):
         elif isinstance(message, SLPResponseMessage):
             if isinstance(message.body, SLPSessionRequestBody):
                 if message.status == 200:
-                    self.emit("accepted")
+                    self._emit("accepted")
                     self._on_session_accepted()
                 elif message.status == 603:
-                    self.emit("rejected")
+                    self._emit("rejected")
                     self._on_session_rejected(message)
             else:
                 print "Unhandled response blob :", message
@@ -297,17 +302,17 @@ class P2PSession(gobject.GObject):
         logger.info("Session data transfer completed")
         data.seek(0, os.SEEK_SET)
         self._completed = True
-        self.emit("completed", data)
+        self._emit("completed", data)
 
     def _on_data_received(self, data):
         logger.info("Session data transfer completed")
         data.seek(0, os.SEEK_SET)
         self._completed = True
-        self.emit("completed", data)
+        self._emit("completed", data)
         self._close()
 
     def _on_data_transferred(self, size):
-        self.emit("progressed", size)
+        self._emit("progressed", size)
 
     # Methods to implement in different P2P applications
 
@@ -322,5 +327,11 @@ class P2PSession(gobject.GObject):
 
     def _on_session_rejected(self, message):
         self._dispose()
+
+    # Utilities methods
+
+    def _emit(self, signal, *args):
+        self._dispatch("on_session_%s" % signal, *args)
+        self.emit(signal, *args)
 
 gobject.type_register(P2PSession)

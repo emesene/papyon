@@ -29,12 +29,6 @@ __all__ = ['FileTransferSession']
 
 class FileTransferSession(P2PSession):
 
-    __gsignals__ = {
-            "canceled" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ())
-    }
-
     def __init__(self, session_manager, peer, guid, message=None):
         P2PSession.__init__(self, session_manager, peer, guid,
                 EufGuid.FILE_TRANSFER, ApplicationID.FILE_TRANSFER, message)
@@ -99,5 +93,5 @@ class FileTransferSession(P2PSession):
 
     def _on_bye_received(self, message):
         if not self.completed:
-            self.emit("canceled")
+            self._emit("canceled")
         self._dispose()

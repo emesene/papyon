@@ -55,13 +55,16 @@ class FileTransferSession(P2PSession):
     def preview(self):
         return self._preview
 
-    def invite(self, filename, size):
+    def invite(self, filename, size, data):
         self._filename = filename
         self._size = size
+        self._data = data
         context = self._build_context()
         self._invite(context)
 
-    def accept(self):
+    def accept(self, buffer=None):
+        if buffer is not None:
+            self.set_receive_data_buffer(buffer, self._size)
         self._accept()
 
     def reject(self):
@@ -90,6 +93,10 @@ class FileTransferSession(P2PSession):
         context += struct.pack("550s", filename)
         context += "\xFF" * 4
         return context
+
+    def _on_session_accepted(self):
+        if self._data:
+            self.send(self._data)
 
     def _on_bye_received(self, message):
         if not self.completed:

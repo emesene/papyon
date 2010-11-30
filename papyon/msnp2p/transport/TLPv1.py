@@ -80,10 +80,11 @@ class TLPHeader(object):
                 self.qw1)
 
     def parse(self, data):
+        header = debug.hexify_string(data[:48])
+
         try:
             fields = struct.unpack("<LLQQLLLLQ", data[:48])
         except:
-            header = debug.hexify_string(data[:48])
             raise TLPParseError(1, "invalid header", header)
 
         self.session_id = fields[0]
@@ -95,6 +96,11 @@ class TLPHeader(object):
         self.dw1 = fields[6]
         self.dw2 = fields[7]
         self.qw1 = fields[8]
+
+        if self.blob_offset + self.chunk_size > self.blob_size:
+            raise TLPParseError(1, "chunk end exceeds blob size", header)
+        if self.blob_size >= 0 and self.chunk_size == 0:
+            raise TLPParseError(1, "empty chunk for non-empty blob", header)
 
 
 class MessageChunk(object):

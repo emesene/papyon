@@ -23,6 +23,7 @@ import socket
 
 import gobject
 
+from papyon.gnet.errors import IoError
 from papyon.util.async import run
 from papyon.util.decorator import async
 
@@ -33,50 +34,47 @@ class HostnameResponse(object):
         self._response = response
 
     @property
-    def status(self):
+    def cname(self):
         return self._response[0]
 
     @property
-    def cname(self):
+    def expires(self):
         return self._response[1]
 
     @property
-    def expires(self):
-        return self._response[2]
-
-    @property
     def answer(self):
-        return self._response[3]
+        return self._response[2]
 
     def __repr__(self):
         return repr(self._response)
+
+class HostnameError(IoError):
+    def __init__(self, host):
+        IoError.__init__(self, IoError.HOSTNAME_RESOLVE_FAILED)
+        self.host = host
+
+    def __str__(self):
+        return "Couldn't resolve hostname for \"%s\"" % (self.host)
 
 class HostnameResolver(object):
     def __init__(self):
         self._queries = {}
 
-    def query(self, host, callback):
+    @async
+    def query(self, host, callback, errback):
         try:
             result = socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM)
         except socket.gaierror:
             result = []
 
         if len(result) == 0:
-            status = 1
-            cname = ''
-            expires = 0
-            addresses = ()
-        else:
-            status = 0
-            cname = result[0][3]
-            expires = 0
-            addresses = ((socket.AF_INET, result[0][4][0]),)
-        self._emit_response(callback, (status, cname, expires, addresses))
+            run(errback, HostnameError(host))
+            return
 
-    #@async
-    def _emit_response(self, callback, response):
-        run(callback, HostnameResponse(response))
-        return False
+        cname = result[0][3]
+        expires = 0
+        addresses = ((socket.AF_INET, result[0][4][0]),)
+        run(callback, HostnameResponse((cname, expires, addresses)))
 
 
 if __name__ == "__main__":
@@ -89,15 +87,19 @@ if __name__ == "__main__":
         print result
         mainloop.quit()
 
+    def hostname_failed(error):
+        print error
+        mainloop.quit()
+
     def resolve_hostname(resolver, host):
         print "Resolving"
-        resolver.query(host, (hostname_resolved,))
+        resolver.query(host, (hostname_resolved,), (hostname_failed,))
         return False
 
     resolver = HostnameResolver()
 
     gobject.timeout_add(10, print_throbber)
     gobject.timeout_add(100, resolve_hostname, resolver, 'www.google.com')
-    #gobject.timeout_add(100, resolve_hostname, resolver, '209.85.129.104')
+    gobject.timeout_add(100, resolve_hostname, resolver, 'www.abcdeg.hij')
 
     mainloop.run()

@@ -35,6 +35,8 @@ class IoError(ClientError):
     PROXY_AUTHENTICATION_REQUIRED = 21
     PROXY_FORBIDDEN = 22
 
+    HOSTNAME_RESOLVE_FAILED = 30
+
     def __init__(self, code):
         ClientError.__init__(self, ClientErrorType.NETWORK, code)
 

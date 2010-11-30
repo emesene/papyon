@@ -93,15 +93,10 @@ class GIOChannelClient(AbstractClient):
 
     def _open(self, host, port):
         resolver = HostnameResolver()
-        resolver.query(host, (self.__open, host, port))
+        resolver.query(host, (self.__open, host, port), (self.__open_failed,))
 
     def __open(self, resolve_response, host, port):
-        if resolve_response.status != 0:
-            self.emit("error", IoConnectionFailed(self, "Couldn't resolve hostname"))
-            self._transport.close()
-            return
-        else:
-            host = resolve_response.answer[0][1]
+        host = resolve_response.answer[0][1]
 
         # Even though connect_ex *shouldn't* raise an exception,
         # sometimes it does, which is just great.
@@ -119,6 +114,10 @@ class GIOChannelClient(AbstractClient):
                 ENETUNREACH, ENETDOWN, EBADFD):
             self.emit("error", IoConnectionFailed(self, str(err)))
             self._transport.close()
+
+    def __open_failed(self, error):
+        self.emit("error", error)
+        self._transport.close()
 
     # convenience methods
     def _watch_remove(self):

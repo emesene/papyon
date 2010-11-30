@@ -43,6 +43,7 @@ class SwitchboardHandler(object):
         self._client = client
         self._switchboard_manager = weakref.proxy(self._client._switchboard_manager)
         self.__switchboard = None
+        self.__switchboard_handles = []
         self._switchboard_requested = False
         self._switchboard_priority = priority
 
@@ -69,24 +70,28 @@ class SwitchboardHandler(object):
     def __get_switchboard(self):
         return self.__switchboard
     def __set_switchboard(self, switchboard):
+        self.__disconnect_switchboard()
         self.__switchboard = weakref.proxy(switchboard)
         self._switchboard_requested = False
         self.participants = set(switchboard.participants.values())
 
-        self.switchboard.connect("notify::inviting",
-                lambda sb, pspec: self.__on_user_inviting_changed())
-        self.switchboard.connect("notify::state",
-                lambda sb, pspec: self.__on_switchboard_state_changed())
-        self.switchboard.connect("user-joined",
-                lambda sb, contact: self.__on_user_joined(contact))
-        self.switchboard.connect("user-left",
-                lambda sb, contact: self.__on_user_left(contact))
-        self.switchboard.connect("user-invitation-failed",
-                lambda sb, contact: self.__on_user_invitation_failed(contact))
-        self.switchboard.connect("message-delivered",
-                lambda sb, trid: self.__on_message_delivered(trid))
-        self.switchboard.connect("message-undelivered",
-                lambda sb, trid: self.__on_message_undelivered(trid))
+        handles = []
+        handles.append(self.switchboard.connect("notify::inviting",
+                lambda sb, pspec: self.__on_user_inviting_changed()))
+        handles.append(self.switchboard.connect("notify::state",
+                lambda sb, pspec: self.__on_switchboard_state_changed()))
+        handles.append(self.switchboard.connect("user-joined",
+                lambda sb, contact: self.__on_user_joined(contact)))
+        handles.append(self.switchboard.connect("user-left",
+                lambda sb, contact: self.__on_user_left(contact)))
+        handles.append(self.switchboard.connect("user-invitation-failed",
+                lambda sb, contact: self.__on_user_invitation_failed(contact)))
+        handles.append(self.switchboard.connect("message-delivered",
+                lambda sb, trid: self.__on_message_delivered(trid)))
+        handles.append(self.switchboard.connect("message-undelivered",
+                lambda sb, trid: self.__on_message_undelivered(trid)))
+        self.__switchboard_handles = handles
+
         logger.info("Handler %s attached to switchboard %s" %
                 (repr(self), switchboard.session_id))
         def process_pending_queues():
@@ -107,7 +112,17 @@ class SwitchboardHandler(object):
         self._process_pending_queues()
 
     def _leave(self):
+        self.__disconnect_switchboard()
         self._switchboard_manager.close_handler(self)
+
+    def __disconnect_switchboard(self):
+        try:
+            # try to disconnect old switchboard handles
+            for handle in self.__switchboard_handles:
+                self.__switchboard.disconnect(handle)
+        except:
+            pass
+        self.__switchboard_handles = []
 
     # callbacks
     def _on_message_received(self, message):

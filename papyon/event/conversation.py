@@ -118,6 +118,17 @@ class ConversationEventInterface(BaseEventInterface):
             @type sender: L{Contact<papyon.profile.Contact>}"""
         pass
 
+    def on_conversation_message_sent(self, message):
+        """Called when a message is sent.
+            @param message: the message
+            @type message: L{ConversationMessage<papyon.conversation.ConversationMessage>}
+            @note doesn't guarantee the message has been delivered."""
+        pass
+
+    def on_conversation_nudge_sent(self):
+        """Called when a nudge is sent."""
+        pass
+
     def on_conversation_closed(self):
         """Called when the conversation is closed."""
         pass

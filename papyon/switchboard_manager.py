@@ -207,9 +207,9 @@ class SwitchboardHandler(object):
 
     def __on_message_undelivered(self, trid):
         callback, errback = self._delivery_callbacks.pop(trid, (None, None))
-        run(errback)
-        self._on_error(ConversationErrorType.MESSAGE,
-                MessageError.DELIVERY_FAILED)
+        error = MessageError.DELIVERY_FAILED
+        run(errback, error)
+        self._on_error(ConversationErrorType.MESSAGE, error)
 
     # Helper functions
     def _process_pending_queues(self):
@@ -237,6 +237,7 @@ class SwitchboardHandler(object):
                     self._delivery_callbacks[transaction_id] = (callback, errback)
                 else:
                     self.switchboard.send_message(message, ack, callback)
+                    self._delivery_callbacks[transaction_id] = (None, errback)
 
             self._pending_messages = []
 

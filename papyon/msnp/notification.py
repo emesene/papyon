@@ -267,7 +267,8 @@ class NotificationProtocol(BaseProtocol, Timer):
         tr_id = self._send_command("UUN", arguments, message, True)
         self._callbacks[tr_id] = (callback, errback)
 
-    def send_unmanaged_message(self, contact, message):
+    def send_unmanaged_message(self, contact, message, callback=None,
+            errback=None):
         content_type = message.content_type[0]
         if content_type == 'text/x-msnmsgr-datacast':
             message_type = 3
@@ -275,9 +276,10 @@ class NotificationProtocol(BaseProtocol, Timer):
             message_type = 2
         else:
             message_type = 1
-        self._send_command('UUM',
+        tr_id = self._send_command('UUM',
                 (contact.account, contact.network_id, message_type),
-                payload=message)
+                payload=message, callback=callback)
+        self._callbacks[tr_id] = (None, errback)
 
     def send_url_request(self, url_command_args, callback):
         tr_id = self._send_command('URL', url_command_args)

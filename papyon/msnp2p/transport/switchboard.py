@@ -141,7 +141,7 @@ class SwitchboardP2PTransport(BaseP2PTransport, SwitchboardHandler):
         self._oustanding_sends -= 1
         self._on_chunk_sent(peer, peer_guid, chunk)
 
-    def _on_message_error(self, peer, peer_guid, chunk):
+    def _on_message_error(self, error, peer, peer_guid, chunk):
         self._oustanding_sends -= 1
 
     def _on_switchboard_closed(self):

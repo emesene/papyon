@@ -333,12 +333,15 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
         if message.formatting is not None:
             headers["X-MMS-IM-Format"] = str(message.formatting)
 
-        self._send_message_ex(content_type, body, headers, callback, errback)
+        callback = (self._on_text_message_sent, message)
+        self._send_message_ex(content_type, body, headers, callback)
 
     def send_nudge(self):
         content_type = "text/x-msnmsgr-datacast"
         body = "ID: 1\r\n\r\n".encode('UTF-8') #FIXME: we need to figure out the datacast objects :D
-        self._send_message_ex(content_type, body)
+
+        callback = (self._on_nudge_sent,)
+        self._send_message_ex(content_type, body, {}, callback)
 
     def send_typing_notification(self):
         content_type = "text/x-msmsgscontrol"
@@ -411,8 +414,11 @@ class AbstractConversation(ConversationInterface, EventsDispatcher):
                 message.body.strip() == "ID: 1":
             self._dispatch("on_conversation_nudge_received", sender)
 
-    def _on_message_sent(self, message):
-        pass
+    def _on_nudge_sent(self):
+        self._dispatch("on_conversation_nudge_sent")
+
+    def _on_text_message_sent(self, message):
+        self._dispatch("on_conversation_message_sent", message)
 
     def _on_error(self, error_type, error):
         self._dispatch("on_conversation_error", error_type, error)
@@ -443,7 +449,7 @@ class ExternalNetworkConversation(AbstractConversation):
             return # don't send icons to external contacts
         for contact in self.participants:
             self._client._protocol.\
-                    send_unmanaged_message(contact, message)
+                    send_unmanaged_message(contact, message, callback, errback)
 
 
 class SwitchboardConversation(AbstractConversation, SwitchboardHandler):

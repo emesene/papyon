@@ -49,11 +49,15 @@ def parse_args(opts, args):
                 value = getpass.getpass(display_name)
             elif type == "string":
                 value = raw_input(display_name)
+            elif type == "list":
+                value = raw_input(display_name).split()
             else:
                 value = input(display_name)
         else:
             value = arguments[i]
-            if type not in ("pass", "string"):
+            if type == "list":
+                value = arguments[i:]
+            elif type not in ("pass", "string"):
                 value = eval(value)
         values[name] = value
 

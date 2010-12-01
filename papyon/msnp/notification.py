@@ -315,7 +315,7 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
         return contact
 
     def __parse_network_and_account(self, command, idx=0):
-        if self._protocol_version >= 18:
+        if self._protocol_version >= 18 and ":" in command.arguments[idx]:
             temp = command.arguments[idx].split(":")
             network_id = int(temp[0])
             account = temp[1]

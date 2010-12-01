@@ -465,7 +465,6 @@ class Client(EventsDispatcher):
                 conversation._on_message_received(message)
             else:
                 conversation = ExternalNetworkConversation(self, [sender])
-                self._register_external_conversation(conversation)
                 if self._dispatch("on_invite_conversation", conversation) == 0:
                     logger.warning("No event handler attached for conversations")
                 conversation._on_message_received(message)

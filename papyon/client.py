@@ -99,8 +99,9 @@ from papyon.p2p import MSNObjectStore, FileTransferManager, WebcamHandler
 from papyon.sip import SIPCallManager
 from papyon.conversation import SwitchboardConversation, \
     ExternalNetworkConversation
-from papyon.event import ClientState, ClientErrorType, \
+from papyon.event import ClientState, \
     AuthenticationError, ProtocolError, EventsDispatcher
+from papyon.errors import ClientErrorType
 
 import logging
 import uuid

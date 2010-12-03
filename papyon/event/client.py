@@ -30,6 +30,7 @@ from the client.
 
 from papyon.event import BaseEventInterface
 
+import papyon.errors
 import papyon.gnet
 import papyon.service.AddressBook.constants
 import papyon.service.OfflineIM.constants
@@ -51,37 +52,17 @@ class ClientState(object):
     SYNCHRONIZED = 6
     OPEN = 7
 
-class ClientErrorType(object):
-    """L{Client<papyon.Client>} error types
-        @see: L{ClientEventInterface.on_client_error}"""
-
-    NETWORK = 0
-    "Network related errors"
-    AUTHENTICATION = 1
-    "Authentication related errors"
-    PROTOCOL = 2
-    "Protocol related errors"
-    ADDRESSBOOK = 3
-    "Address book related errors"
-    OFFLINE_MESSAGES = 4
-    "Offline IM related errors"
-
-NetworkError = papyon.gnet.IoError
-"Network related errors"
-
-class AuthenticationError(object):
-    "Authentication related errors"
-    UNKNOWN = 0
-    INVALID_USERNAME = 1
-    INVALID_PASSWORD = 2
-    INVALID_USERNAME_OR_PASSWORD = 3
-
 class ProtocolError(object):
     "Protocol related errors"
     UNKNOWN = 0
     OTHER_CLIENT = 1
     SERVER_DOWN = 2
 
+#Backward compatibility declarations
+
+ClientErrorType = papyon.errors.ClientErrorType
+
+NetworkError = papyon.gnet.IoError
 AddressBookError = papyon.service.AddressBook.constants.AddressBookError
 OfflineMessagesBoxError = papyon.service.OfflineIM.constants.OfflineMessagesBoxError
 
@@ -106,7 +87,7 @@ class ClientEventInterface(BaseEventInterface):
         """Called when an error occurs in the L{Client<papyon.Client>}.
 
             @param type: the error type
-            @type type: L{ClientErrorType}
+            @type type: L{ClientErrorType<papyon.errors.ClientErrorType>}
 
             @param error: the error code
             @type error: L{NetworkError} or L{AuthenticationError} or

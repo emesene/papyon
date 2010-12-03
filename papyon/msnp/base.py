@@ -21,24 +21,16 @@
 
 """Base classes used by the specific classes of the Core Protocol"""
 
+from constants import ProtocolState, ProtocolError
+
+import gobject
 import logging
 
 __all__ = ['BaseProtocol']
 
 logger = logging.getLogger('papyon.protocol')
 
-class ProtocolState(object):
-    CLOSED = 0
-    OPENING = 1
-    AUTHENTICATING = 2
-    AUTHENTICATED = 3
-    SYNCHRONIZING = 4
-    SYNCHRONIZED = 5
-    OPEN = 6
-    CLOSING = 7
-
-
-class BaseProtocol(object):
+class BaseProtocol(gobject.GObject):
     """Base class used to implement the Notification protocol as well
     as the Switchboard protocol
         @group Handlers: _handle_*, _default_handler, _error_handler
@@ -53,6 +45,21 @@ class BaseProtocol(object):
             L{gnet.proxy.ProxyInfos} instance
     """
 
+    __gsignals__ = {
+            "error" : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                (object,)),
+            }
+
+    __gproperties__ = {
+            "state":  (gobject.TYPE_INT,
+                "State",
+                "The state of the communication with the server.",
+                0, 6, ProtocolState.CLOSED,
+                gobject.PARAM_READABLE)
+            }
+
+
     def __init__(self, client, transport, proxies={}):
         """Initializer
 
@@ -66,6 +73,8 @@ class BaseProtocol(object):
                 L{gnet.proxy.ProxyInfos} instance
             @type proxies: {type: string, proxy:L{gnet.proxy.ProxyInfos}}
         """
+        gobject.GObject.__init__(self)
+
         transport.connect("command-received", self._dispatch_command)
         transport.connect("connection-success", self._connect_cb)
         transport.connect("connection-failure", self._disconnect_cb)
@@ -105,7 +114,11 @@ class BaseProtocol(object):
             handler = getattr(self,
                     '_handle_' + command.name,
                     self._default_handler)
-            handler(command)
+            try:
+                handler(command)
+            except Exception, err:
+                logger.exception(err)
+                logger.error('Ignoring invalid command :' + unicode(command))
         else:
             self._error_handler(command)
    

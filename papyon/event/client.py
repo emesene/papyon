@@ -52,12 +52,6 @@ class ClientState(object):
     SYNCHRONIZED = 6
     OPEN = 7
 
-class ProtocolError(object):
-    "Protocol related errors"
-    UNKNOWN = 0
-    OTHER_CLIENT = 1
-    SERVER_DOWN = 2
-
 #Backward compatibility declarations
 
 ClientErrorType = papyon.errors.ClientErrorType
@@ -66,6 +60,7 @@ NetworkError = papyon.gnet.IoError
 AuthenticationError = papyon.service.SingleSignOn.AuthenticationError
 AddressBookError = papyon.service.AddressBook.constants.AddressBookError
 OfflineMessagesBoxError = papyon.service.OfflineIM.constants.OfflineMessagesBoxError
+ProtocolError = papyon.msnp.constants.ProtocolError
 
 
 class ClientEventInterface(BaseEventInterface):

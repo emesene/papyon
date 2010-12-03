@@ -17,7 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-__all__ = ["ProtocolConstant", "ClientTypes", "UserNotificationTypes"]
+__all__ = ["ProtocolConstant", "ProtocolError", "ProtocolState",
+        "ClientTypes", "UserNotificationTypes"]
 
 class ProtocolConstant(object):
     VER = (18, 16, 15)
@@ -25,6 +26,24 @@ class ProtocolConstant(object):
     PRODUCT_ID = "PROD0114ES4Z%Q5W"
     PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
     CHL_MAGIC_NUM = 0x0E79A9C1
+
+class ProtocolError(object):
+    "Protocol related errors"
+    UNKNOWN = 0
+    OTHER_CLIENT = 1
+    SERVER_DOWN = 2
+    INVALID_COMMAND = 3
+    AUTHENTICATION_FAILED = 4
+
+class ProtocolState(object):
+    CLOSED = 0
+    OPENING = 1
+    AUTHENTICATING = 2
+    AUTHENTICATED = 3
+    SYNCHRONIZING = 4
+    SYNCHRONIZED = 5
+    OPEN = 6
+    CLOSING = 7
 
 class ClientTypes(object):
     COMPUTER = 1

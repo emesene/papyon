@@ -23,9 +23,9 @@
 """Notification protocol Implementation
 Implements the protocol used to communicate with the Notification Server."""
 
-from base import BaseProtocol, ProtocolState
+from base import BaseProtocol
 from message import Message
-from constants import ProtocolConstant
+from constants import ProtocolConstant, ProtocolError, ProtocolState
 from challenge import _msn_challenge
 
 import papyon
@@ -55,7 +55,7 @@ __all__ = ['NotificationProtocol']
 logger = logging.getLogger('papyon.protocol.notification')
 
 
-class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
+class NotificationProtocol(BaseProtocol, Timer):
     """Protocol used to communicate with the Notification Server
 
         @undocumented: do_get_property, do_set_property
@@ -63,20 +63,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
 
         @ivar state: the current protocol state
         @type state: integer
-        @see L{base.ProtocolState}"""
+        @see L{constants.ProtocolState}"""
     __gsignals__ = {
-            "authentication-failed" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-
-            "disconnected-by-other" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-
-            "server-down" : (gobject.SIGNAL_RUN_FIRST,
-                gobject.TYPE_NONE,
-                ()),
-
             "buddy-notification-received" : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object, object, object, object)),
@@ -94,14 +82,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
                 (object, object)),
             }
 
-    __gproperties__ = {
-            "state":  (gobject.TYPE_INT,
-                "State",
-                "The state of the communication with the server.",
-                0, 6, ProtocolState.CLOSED,
-                gobject.PARAM_READABLE)
-            }
-
     def __init__(self, client, transport, proxies={}, version=15):
         """Initializer
 
@@ -116,7 +96,6 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             @type proxies: {type: string, proxy:L{gnet.proxy.ProxyInfos}}
         """
         BaseProtocol.__init__(self, client, transport, proxies)
-        gobject.GObject.__init__(self)
         Timer.__init__(self)
         self.__state = ProtocolState.CLOSED
         self._protocol_version = version
@@ -382,7 +361,8 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             if command.arguments[0] == "SSO":
                 self._client._sso.RequestMultipleSecurityTokens(
                     (self._sso_cb, command.arguments[3]),
-                    ((lambda *args: self.emit("authentication-failed")),),
+                    ((lambda error: self.emit("error",
+                        ProtocolError.AUTHENTICATION_FAILED)),),
                     SSO.LiveService.MESSENGER_CLEAR)
 
                 self._client.address_book.connect("notify::state",
@@ -421,9 +401,9 @@ class NotificationProtocol(BaseProtocol, gobject.GObject, Timer):
             reason = command.arguments[0]
 
         if reason == "OTH":
-            self.emit("disconnected-by-other")
+            self.emit("error", ProtocolError.OTHER_CLIENT)
         elif reason == "SSD":
-            self.emit("server-down")
+            self.emit("error", ProtocolError.SERVER_DOWN)
         else:
             self._transport.lose_connection()
 

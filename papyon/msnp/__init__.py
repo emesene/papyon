@@ -27,4 +27,3 @@ from constants import *
 from notification import *
 from switchboard import *
 from mailbox import *
-from base import ProtocolState

@@ -23,7 +23,8 @@
 """Switchboard protocol Implementation
 Implements the protocol used to communicate with the Switchboard Server."""
 
-from base import BaseProtocol, ProtocolState
+from base import BaseProtocol
+from constants import ProtocolError, ProtocolState
 from message import Message
 import papyon.profile
 
@@ -39,7 +40,7 @@ __all__ = ['SwitchboardProtocol']
 logger = logging.getLogger('papyon.protocol.switchboard')
 
 
-class SwitchboardProtocol(BaseProtocol, gobject.GObject):
+class SwitchboardProtocol(BaseProtocol):
     """Protocol used to communicate with the Switchboard Server
 
         @undocumented: do_get_property, do_set_property
@@ -77,12 +78,6 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
                 (object,))}
 
     __gproperties__ = {
-            "state":  (gobject.TYPE_INT,
-                "State",
-                "The state of the communication with the server.",
-                0, 6, ProtocolState.CLOSED,
-                gobject.PARAM_READABLE),
-
             "inviting":  (gobject.TYPE_BOOLEAN,
                 "Inviting",
                 "True if an invite was sent, and the contact didn't join yet",
@@ -109,7 +104,6 @@ class SwitchboardProtocol(BaseProtocol, gobject.GObject):
             @type proxies: {type: string, proxy:L{gnet.proxy.ProxyInfos}}
         """
         BaseProtocol.__init__(self, client, transport, proxies)
-        gobject.GObject.__init__(self)
         self.participants = {}
         self.end_points = {}
         self.__session_id = session_id

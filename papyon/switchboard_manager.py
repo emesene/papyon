@@ -236,7 +236,7 @@ class SwitchboardHandler(object):
                     transaction_id = self.switchboard.send_message(message, ack)
                     self._delivery_callbacks[transaction_id] = (callback, errback)
                 else:
-                    self.switchboard.send_message(message, ack, callback)
+                    transaction_id = self.switchboard.send_message(message, ack, callback)
                     self._delivery_callbacks[transaction_id] = (None, errback)
 
             self._pending_messages = []

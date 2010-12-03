@@ -1,3 +1,21 @@
+papyon-0.5.3 (2010-12-03)
+=========================
+
+Enhancements:
+  * Better feature tests
+  * Support for TURN relays in SIP calls
+
+Fixes:
+  * Improved handling of callbacks and exceptions
+  * Several SIP and P2P fixes
+  * Decode offline message display name to UTF-8 (fdo #30660)
+  * Correctly handle first conversation message (fdo #31430)
+  * Support receiving offline message from unknown peer (fdo #25487)
+
+API Changes:
+  * Method new_active_candidate_pair (media.MediaStream) now takes
+    MediaCandidate instead of just the foundation.
+
 papyon-0.5.2 (2010-10-21)
 =========================
 

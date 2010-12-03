@@ -272,15 +272,18 @@ class SwitchboardManager(gobject.GObject):
         gobject.GObject.__init__(self)
         self._client = weakref.proxy(client)
 
+        self._reset()
         self._handlers_class = set()
-        self._orphaned_handlers = WeakSet()
+
+        self._client._protocol.connect("switchboard-invitation-received",
+                self._ns_switchboard_invite)
+
+    def _reset(self):
         self._switchboards = {}
         self._orphaned_switchboards = set()
         self._requested_switchboards = {}
         self._pending_switchboards = {}
-
-        self._client._protocol.connect("switchboard-invitation-received",
-                self._ns_switchboard_invite)
+        self._orphaned_handlers = WeakSet()
 
     def close(self):
         for switchboard in self._orphaned_switchboards:
@@ -289,6 +292,7 @@ class SwitchboardManager(gobject.GObject):
             switchboard.leave()
         for switchboard in self._switchboards:
             switchboard.leave()
+        self._reset()
 
     def register_handler_class(self, handler_class, *extra_arguments):
         self._handlers_class.add((handler_class, extra_arguments))

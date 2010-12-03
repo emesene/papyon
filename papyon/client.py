@@ -285,6 +285,7 @@ class Client(EventsDispatcher):
             logger.warning('alreay logged out')
             return
         self.__die = True
+        self._call_manager.close()
         self._switchboard_manager.close()
         self._protocol.signoff()
         self.__state = ClientState.CLOSED

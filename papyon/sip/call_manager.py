@@ -56,6 +56,11 @@ class SIPCallManager(gobject.GObject):
         self._add_call(call)
         return call
 
+    def close(self):
+        for call, handle_id in self._calls.values():
+            call.end()
+            self._remove_call(call)
+
     ### Protected API --------------------------------------------------------
 
     def find_call(self, message):

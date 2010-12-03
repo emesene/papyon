@@ -65,6 +65,11 @@ class P2PSessionManager(gobject.GObject):
     def register_handler(self, handler_class):
         self._handlers.append(handler_class)
 
+    def close(self):
+        for session in self._sessions.values():
+            session._close()
+        self._transport_manager.close()
+
     def _register_session(self, session):
         self._sessions[session.id] = session
         self._transport_manager.remove_from_blacklist(session.peer,

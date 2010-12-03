@@ -111,6 +111,8 @@ class BaseP2PTransport(gobject.GObject):
         self._queue_lock.release()
 
     def close(self):
+        self._stop_processing()
+        self._reset()
         self._transport_manager._unregister_transport(self)
 
     def _ready_to_send(self):
@@ -181,16 +183,17 @@ class BaseP2PTransport(gobject.GObject):
         if not self.has_data_to_send():
             self._queue_lock.release()
             return False
-        if not self._ready_to_send():
-            logger.info("Transport is not ready to send, bail out")
-            self._queue_lock.release()
-            return False
 
         # FIXME find a better algorithm to choose session
         if 0 in self._data_blob_queue:
             session_id = 0
         else:
             session_id = self._data_blob_queue.keys()[0]
+
+        if session_id != 0 and not self._ready_to_send():
+            logger.info("Transport is not ready to send, bail out")
+            self._queue_lock.release()
+            return False
 
         sync = self._first
         self._first = False

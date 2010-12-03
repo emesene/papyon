@@ -24,6 +24,7 @@ from papyon.msnp2p.constants import *
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
 from papyon.util.parsing import build_account
+from papyon.util.timer import Timer
 import papyon.util.element_tree as ElementTree
 
 import gobject
@@ -41,7 +42,7 @@ MAX_INT32 = 0x7fffffff
 MAX_INT16 = 0x7fff
 
 
-class P2PSession(gobject.GObject, EventsDispatcher):
+class P2PSession(gobject.GObject, EventsDispatcher, Timer):
 
     __gsignals__ = {
             "accepted" : (gobject.SIGNAL_RUN_FIRST,
@@ -68,6 +69,7 @@ class P2PSession(gobject.GObject, EventsDispatcher):
             application_id=0, message=None):
         gobject.GObject.__init__(self)
         EventsDispatcher.__init__(self)
+        Timer.__init__(self)
         self._session_manager = session_manager
         self._transport_manager = session_manager._transport_manager
         self._client = session_manager._client
@@ -160,6 +162,7 @@ class P2PSession(gobject.GObject, EventsDispatcher):
                 call_id=self._call_id)
         message.body = body
         self._send_slp_message(message)
+        self.start_timeout("response", 60)
 
     def _transreq(self):
         self._cseq = 0
@@ -266,6 +269,7 @@ class P2PSession(gobject.GObject, EventsDispatcher):
 
     def _dispose(self):
         logger.info("Session %s disposed" % self._id)
+        self.stop_all_timeout()
         self._session_manager._transport_manager.cleanup(self.peer,
                 self.peer_guid, self._id)
         self._session_manager._unregister_session(self)
@@ -289,6 +293,7 @@ class P2PSession(gobject.GObject, EventsDispatcher):
                 print "Unhandled signaling blob :", message
         elif isinstance(message, SLPResponseMessage):
             if isinstance(message.body, SLPSessionRequestBody):
+                self.stop_timeout("response")
                 if message.status == 200:
                     self._emit("accepted")
                     self._on_session_accepted()
@@ -303,6 +308,7 @@ class P2PSession(gobject.GObject, EventsDispatcher):
         data.seek(0, os.SEEK_SET)
         self._completed = True
         self._emit("completed", data)
+        self.start_timeout("bye", 5)
 
     def _on_data_received(self, data):
         logger.info("Session data transfer completed")
@@ -313,6 +319,12 @@ class P2PSession(gobject.GObject, EventsDispatcher):
 
     def _on_data_transferred(self, size):
         self._emit("progressed", size)
+
+    def on_response_timeout(self):
+        self._close()
+
+    def on_bye_timeout(self):
+        self._dispose()
 
     # Methods to implement in different P2P applications
 

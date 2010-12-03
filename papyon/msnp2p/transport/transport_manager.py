@@ -88,6 +88,10 @@ class P2PTransportManager(gobject.GObject):
         blob = MessageBlob(0, buffer, size, session_id)
         self._data_blobs[(peer, peer_guid, session_id)] = blob
 
+    def close(self):
+        for transport in self._transports.copy():
+            transport.close()
+
     def cleanup(self, peer, peer_guid, session_id):
         logger.info("Cleaning up session %s" % session_id)
         if (peer, peer_guid, session_id) in self._data_blobs:

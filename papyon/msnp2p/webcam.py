@@ -22,9 +22,7 @@
 from papyon.msnp2p.constants import *
 from papyon.msnp2p.SLP import *
 from papyon.msnp2p.transport import *
-from papyon.msnp2p.exceptions import *
 from papyon.msnp2p.session import P2PSession
-from papyon.event import EventsDispatcher
 from papyon.util.decorator import rw_property
 import papyon.util.element_tree as ElementTree
 import struct

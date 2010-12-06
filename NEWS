@@ -1,3 +1,10 @@
+papyon-0.5.4 (2010-12-06)
+=========================
+
+Fixes:
+  * Added feature tests to the dist package
+  * Removed wrong import statements (fdo #32101)
+
 papyon-0.5.3 (2010-12-03)
 =========================
 

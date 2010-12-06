@@ -50,16 +50,17 @@ if pieces[-1] == '':
 else:
     len_root_dir = len(pieces)
 
-papyon_dir = os.path.join(root_dir, 'papyon')
-for dirpath, dirnames, filenames in os.walk(papyon_dir):
-    # Ignore dirnames that start with '.'
-    for i, dirname in enumerate(dirnames):
-        if dirname.startswith('.'):
-            del dirnames[i]
-    if '__init__.py' in filenames:
-        packages.append('.'.join(path_split(dirpath)[len_root_dir:]))
-    elif filenames:
-        data_files.append([dirpath, [os.path.join(dirpath, f) for f in filenames]])
+for directory in ('papyon', 'tests'):
+    papyon_dir = os.path.join(root_dir, directory)
+    for dirpath, dirnames, filenames in os.walk(papyon_dir):
+        # Ignore dirnames that start with '.'
+        for i, dirname in enumerate(dirnames):
+            if dirname.startswith('.'):
+                del dirnames[i]
+        if '__init__.py' in filenames:
+            packages.append('.'.join(path_split(dirpath)[len_root_dir:]))
+        elif filenames:
+            data_files.append([dirpath, [os.path.join(dirpath, f) for f in filenames]])
 
 # Setup
 setup(name=NAME,

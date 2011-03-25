@@ -142,7 +142,7 @@ class Storage(SOAPService):
     def get_display_picture(self, callback, errback, pre_auth_url, user_tile_url):
         token = str(self._tokens[LiveService.STORAGE])
 
-        def request_static_tile(error):
+        def request_static_tile(error, *args):
             # Request using the PreAuthURL didn't work, try with static tilephoto
             scheme, host, port, resource = url_split(user_tile_url)
             self.get_resource(scheme, host, resource, callback, errback)
@@ -168,7 +168,7 @@ class Storage(SOAPService):
         def failed_cb(transport, error, handles):
             for handle in handles:
                 transport.disconnect(handle)
-            run(errback, error)
+            run(errback, error, None)
         
         transport = ProtocolFactory(scheme, host, proxies=self._proxies)
 

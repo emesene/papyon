@@ -79,7 +79,7 @@ class TLPHeader(object):
                 self.dw2,
                 self.qw1)
 
-    def parse(self, data, chunk_size):
+    def parse(self, data):
         header = debug.hexify_string(data[:48])
 
         try:
@@ -96,10 +96,6 @@ class TLPHeader(object):
         self.dw1 = fields[6]
         self.dw2 = fields[7]
         self.qw1 = fields[8]
-
-        # if chunk is containing all blob data, chunk_size field might be 0
-        if self.blob_size == chunk_size and self.chunk_size == 0:
-            self.chunk_size = chunk_size
 
         if self.blob_offset + self.chunk_size > self.blob_size:
             raise TLPParseError(1, "chunk end exceeds blob size", header)
@@ -254,7 +250,7 @@ class MessageChunk(object):
             raise TLPParseError(1, "chunk should be at least 48 bytes")
 
         header = TLPHeader()
-        header.parse(data[:48], len(data) - 48)
+        header.parse(data[:48])
         body = data[48:]
         return MessageChunk(header, body)
 

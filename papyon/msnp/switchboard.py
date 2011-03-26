@@ -106,6 +106,7 @@ class SwitchboardProtocol(BaseProtocol):
         BaseProtocol.__init__(self, client, transport, proxies)
         self.participants = {}
         self.end_points = {}
+        self.inactivity_timer_id = 0
         self.__session_id = session_id
         self.__key = key
         self.__state = ProtocolState.CLOSED
@@ -172,10 +173,14 @@ class SwitchboardProtocol(BaseProtocol):
         return self._send_command('MSG', (ack,), message, True,
                 (self._on_message_sent, message, callback), errback)
 
-    def leave(self):
+    def leave(self, inactivity=False):
         """Leave the conversation"""
         if self.state != ProtocolState.OPEN:
             return
+        if self.inactivity_timer_id:
+            gobject.source_remove(self.inactivity_timer_id)
+        if inactivity:
+            logger.info("Switchboard timed out. Going to leave it.")
         logger.info("Leaving switchboard %s" % self.__session_id)
         self._send_command('OUT')
         self._state = ProtocolState.CLOSING
@@ -269,9 +274,11 @@ class SwitchboardProtocol(BaseProtocol):
         display_name = urllib.unquote(command.arguments[1])
         contact = self.__search_account(account, display_name)
         message = Message(contact, command.payload)
+        self._update_switchboard_timeout()
         self.emit("message-received", message)
 
     def _handle_ACK(self, command):
+        self._update_switchboard_timeout()
         self.emit("message-delivered", command.transaction_id)
 
     def _handle_NAK(self, command):
@@ -294,6 +301,14 @@ class SwitchboardProtocol(BaseProtocol):
                 pass
         else:
             logger.error('Notification got error :' + unicode(error))
+
+    def _update_switchboard_timeout(self):
+        if self.inactivity_timer_id:
+            gobject.source_remove(self.inactivity_timer_id)
+            self.inactivity_timer_id = 0
+        if len(self.participants) == 1: # don't leave multi-user conversations
+            self.inactivity_timer_id = gobject.timeout_add_seconds(60, self.leave, True)
+
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):
         self._state = ProtocolState.OPENING

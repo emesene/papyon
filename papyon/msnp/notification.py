@@ -499,7 +499,6 @@ class NotificationProtocol(BaseProtocol, Timer):
     def _handle_UBX(self, command): # contact infos
         if not command.payload:
             return
-        print command.payload
         idx, network_id, account = self.__parse_network_and_account(command)
 
         try:

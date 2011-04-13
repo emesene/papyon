@@ -428,6 +428,7 @@ class ExternalNetworkConversation(AbstractConversation):
     def __init__(self, client, contacts):
         AbstractConversation.__init__(self, client)
         self.participants = set(contacts)
+        self.total_participants = self.participants
         client._register_external_conversation(self)
         gobject.idle_add(self._open)
 

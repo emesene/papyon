@@ -1,3 +1,18 @@
+papyon-0.5.5 (2011-04-14)
+=========================
+
+Enhancements:
+  * Send and receive preview before file transfer
+
+Fixes:
+  * Switchboards are automatically closed after one minute of inactivity
+  * Don't crash when a participant joins an external conversation (Yahoo)
+  * Incompability with P2P transfer with pidgin
+  * Some callback errors (Adding groups now works)
+
+Regression:
+  * Tests have been removed from package for now.
+
 papyon-0.5.4 (2010-12-06)
 =========================
 

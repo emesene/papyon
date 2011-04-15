@@ -285,7 +285,7 @@ class Client(EventsDispatcher):
     def logout(self):
         """Logout from the server."""
         if self._state == ClientState.CLOSED:
-            logger.warning('alreay logged out')
+            logger.warning('already logged out')
             return
         self.__die = True
         self._call_manager.close()

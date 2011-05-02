@@ -695,9 +695,6 @@ class NotificationProtocol(BaseProtocol, Timer):
         self.emit("switchboard-invitation-received", session, inviter)
 
     # --------- Challenge ----------------------------------------------------
-    def _handle_QNG(self, command):
-        pass
-
     def _handle_QRY(self, command):
         pass
 

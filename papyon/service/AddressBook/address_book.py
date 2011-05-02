@@ -322,10 +322,11 @@ class AddressBook(gobject.GObject):
                 self.add_contact_to_group(group, c)
 
         contact = self.search_contact(account, network_id)
-        old_memberships = (contact and contact.memberships) or Membership.NONE
 
         if contact is self._client.profile:
             return # can't add ourself to the address book
+
+        old_memberships = (contact and contact.memberships) or Membership.NONE
 
         if contact is not None and contact.is_mail_contact():
             self.upgrade_mail_contact(contact, groups, done_cb, failed_cb)

@@ -145,7 +145,8 @@ class Storage(SOAPService):
         def request_static_tile(error, *args):
             # Request using the PreAuthURL didn't work, try with static tilephoto
             scheme, host, port, resource = url_split(user_tile_url)
-            self.get_resource(scheme, host, resource, callback, errback)
+            if host:
+                self.get_resource(scheme, host, resource, callback, errback)
 
         scheme, host, port, resource = url_split(pre_auth_url)
         resource += '?t=' + urllib.quote(token.split('&')[0][2:], '')

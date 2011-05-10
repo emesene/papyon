@@ -115,8 +115,8 @@ class HTTP(gobject.GObject):
             self._setup_transport()
 
     def _on_request_sent(self, transport, request, length):
-        assert(str(self._outgoing_queue[0]) == request)
         self._waiting_response = True
+        assert(str(self._outgoing_queue[0]) == request)
         self.emit("request-sent", self._outgoing_queue[0])
 
     def _on_response_received(self, parser, response):

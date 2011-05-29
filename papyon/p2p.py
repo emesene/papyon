@@ -316,7 +316,7 @@ class MSNObjectStore(P2PSessionHandler):
         self._handles[session].append(session.connect("completed",
             self._on_session_completed))
         self._handles[session].append(session.connect("rejected",
-            self._on_session_completed))
+            self._on_session_rejected))
 
     def _on_session_completed(self, session, data):
         if session in self._callbacks:

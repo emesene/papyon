@@ -70,11 +70,10 @@ class SocketClient(GIOChannelClient):
             try:
                 buf = self._channel.read(2048)
             except gobject.GError:
-                pass
-            if buf == "":
                 self.close()
                 return False
-            self.emit("received", buf, len(buf))
+            if buf != "":
+                self.emit("received", buf, len(buf))
 
         # Check for error/EOF
         if cond & (gobject.IO_ERR | gobject.IO_HUP):

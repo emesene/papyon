@@ -20,7 +20,7 @@
 
 from papyon.errors import ClientError, ClientErrorType
 
-__all__ = ['AddressBookError', 'AddressBookState', 'DEFAULT_TIMESTAMP']
+__all__ = ['AddressBookError', 'AddressBookState']
 
 
 class AddressBookError(ClientError):
@@ -119,10 +119,9 @@ class AddressBookState(object):
 
     NOT_SYNCHRONIZED = 0
     """The addressbook is not synchronized yet"""
-    SYNCHRONIZING = 1
-    """The addressbook is being synchronized"""
-    SYNCHRONIZED = 2
+    INITIAL_SYNC = 1
+    """The addressbook is being initialized"""
+    RESYNC = 2
+    """The addressbook is being re-synchronized after an update"""
+    SYNCHRONIZED = 3
     """The addressbook is already synchronized"""
-
-
-DEFAULT_TIMESTAMP = "0001-01-01T00:00:00.0000000-08:00"

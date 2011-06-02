@@ -98,6 +98,12 @@ class Contact(object):
             for group in groups:
                 self.Groups.append(group.text)
 
+        self.DeletedGroups = []
+        deletedGroups = contact_info.find("./ab:groupIdsDeleted")
+        if deletedGroups is not None:
+            for deletedGroup in deletedGroups:
+                self.DeletedGroups.append(deletedGroup.text)
+
         self.Type = contact_info.findtext("./ab:contactType")
         self.QuickName = contact_info.findtext("./ab:quickName")
         self.PassportName = contact_info.findtext("./ab:passportName")
@@ -155,7 +161,7 @@ class AB(SOAPService):
         SOAPService.__init__(self, "AB", proxies)
 
         self._creating_ab = False
-        self._last_changes = DEFAULT_TIMESTAMP
+        self._last_changes = XMLTYPE.datetime.DEFAULT_TIMESTAMP
 
     def Add(self, callback, errback, scenario, account):
         """Creates the address book on the server.
@@ -191,16 +197,22 @@ class AB(SOAPService):
             @param scenario: "Initial" | "ContactSave" ...
             @param deltas_only: True if the method should only check changes
                 since last_change, otherwise False"""
-        if deltas_only and self._last_changes == DEFAULT_TIMESTAMP:
+        if self._last_changes == XMLTYPE.datetime.DEFAULT_TIMESTAMP \
+        or not deltas_only:
             deltas_only = False
+            last_changes = XMLTYPE.datetime.DEFAULT_TIMESTAMP
+        else:
+            last_changes = self._last_changes
         self.__soap_request(callback, errback,
                 self._service.ABFindAll, scenario,
-                (XMLTYPE.bool.encode(deltas_only), self._last_changes),
+                (XMLTYPE.bool.encode(deltas_only),
+                 last_changes),
                 (scenario, deltas_only))
 
     def _HandleABFindAllResponse(self, callback, errback, response, user_data):
-        last_changes = response[0].find("./ab:lastChange")
-        if last_changes is not None:
+        last_changes = response[0] and response[0].find("./ab:lastChange")
+        if last_changes is not None \
+        and XMLTYPE.datetime.decode(self._last_changes) < XMLTYPE.datetime.decode(last_changes.text):
             self._last_changes = last_changes.text
 
         groups = []

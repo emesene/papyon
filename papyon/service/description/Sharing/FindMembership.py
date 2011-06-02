@@ -18,7 +18,6 @@
 #
 
 from common import *
-from papyon.profile import Membership
 
 import xml.sax.saxutils as xml
 
@@ -43,27 +42,23 @@ def soap_body(services_types, deltas_only, last_change):
                      %s
                 </ServiceType>""" % xml.escape(service)
 
-    deltas = ''
-    if deltas_only:
-        deltas = """<View xmlns="http://www.msn.com/webservices/AddressBook">
-                        Full
-                    </View>
-                    <deltasOnly xmlns="http://www.msn.com/webservices/AddressBook">
-                        true
-                    </deltasOnly>
-                    <lastChange xmlns="http://www.msn.com/webservices/AddressBook">
-                        %s
-                    </lastChange>""" % last_change
-
     return """
-       <FindMembership xmlns="http://www.msn.com/webservices/AddressBook">
-           <serviceFilter xmlns="http://www.msn.com/webservices/AddressBook">
-               <Types xmlns="http://www.msn.com/webservices/AddressBook">
-                  %(services)s
-               </Types>
-           </serviceFilter>
-           %(deltas)s
-       </FindMembership>""" % {'services' : services, 'deltas' : deltas}
+        <FindMembership xmlns="http://www.msn.com/webservices/AddressBook">
+            <serviceFilter xmlns="http://www.msn.com/webservices/AddressBook">
+                <Types xmlns="http://www.msn.com/webservices/AddressBook">
+                    %(services)s
+                </Types>
+            </serviceFilter>
+            <View xmlns="http://www.msn.com/webservices/AddressBook">
+                Full
+            </View>
+            <deltasOnly xmlns="http://www.msn.com/webservices/AddressBook">
+                %(delta_only)s
+            </deltasOnly>
+            <lastChange xmlns="http://www.msn.com/webservices/AddressBook">
+                %(last_change)s
+            </lastChange>
+        </FindMembership>""" % {'services' : services, 'delta_only' : deltas_only, 'last_change': last_change}
 
 def process_response(soap_response):
     # FIXME: don't pick the 1st service only, we need to extract them all
@@ -80,7 +75,7 @@ def process_response(soap_response):
                 if role is None or len(members) == 0:
                     continue
                 result[role.text] = members
-        last_changes = service.findtext("./ab:LastChange")
+        last_change = service.findtext("./ab:LastChange")
     else:
-        last_changes = "0001-01-01T00:00:00.0000000-08:00"
-    return (result, last_changes)
+        last_change = None
+    return (result, last_change)

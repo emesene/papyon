@@ -58,3 +58,6 @@ class AddressBookEventInterface(BaseEventInterface):
     def on_addressbook_group_contact_deleted(self, group, contact):
         pass
 
+    def on_addressbook_sync(self):
+        pass
+

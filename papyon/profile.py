@@ -411,9 +411,12 @@ class BaseContact(gobject.GObject):
                 gobject.PARAM_READABLE),
             }
 
-    def __init__(self):
+    BLANK_ID = "00000000-0000-0000-0000-000000000000"
+
+    def __init__(self, cid=None):
         gobject.GObject.__init__(self)
 
+        self._cid = cid or self.BLANK_ID
         self._client_capabilities = ClientCapabilities()
         self._current_media = None
         self._display_name = ""
@@ -429,6 +432,12 @@ class BaseContact(gobject.GObject):
         """Contact account
             @rtype: utf-8 encoded string"""
         return self._account
+
+    @property
+    def cid(self):
+        """Contact ID
+            @rtype: GUID string"""
+        return self._cid
 
     @property
     def client_id(self):
@@ -564,7 +573,7 @@ class Profile(BaseContact):
         self._account = account[0]
         self._password = account[1]
 
-        self._id = "00000000-0000-0000-0000-000000000000"
+        self._id = self.BLANK_ID
         self._profile = ""
         self._network_id = NetworkID.MSN
         self._display_name = self._account.split("@", 1)[0]
@@ -767,9 +776,8 @@ class Contact(BaseContact):
     def __init__(self, id, network_id, account, display_name, cid=None,
             memberships=Membership.NONE, contact_type=ContactType.REGULAR):
         """Initializer"""
-        BaseContact.__init__(self)
-        self._id = id or "00000000-0000-0000-0000-000000000000"
-        self._cid = cid or "00000000-0000-0000-0000-000000000000"
+        BaseContact.__init__(self, cid)
+        self._id = id or self.BLANK_ID
         self._network_id = network_id
         self._account = account
         self._display_name = display_name
@@ -803,12 +811,6 @@ class Contact(BaseContact):
         """Contact attributes
             @rtype: {key: string => value: string}"""
         return self._attributes.copy()
-
-    @property
-    def cid(self):
-        """Contact ID
-            @rtype: GUID string"""
-        return self._cid
 
     @property
     def groups(self):
@@ -859,20 +861,23 @@ class Contact(BaseContact):
 
     def is_mail_contact(self):
         """Determines if this contact is a mail contact"""
-        blank_id = "00000000-0000-0000-0000-000000000000"
-        return (not self.is_member(Membership.FORWARD) and self.id != blank_id)
+        return (not self.is_member(Membership.FORWARD) \
+                and self.id != self.BLANK_ID)
 
     def _set_memberships(self, memberships):
-        self._memberships = memberships
-        self.notify("memberships")
+        if self._memberships != memberships:
+            self._memberships = memberships
+            self.notify("memberships")
 
     def _add_membership(self, membership):
-        self._memberships |= membership
-        self.notify("memberships")
+        if self._memberships != (self._memberships | membership):
+            self._memberships |= membership
+            self.notify("memberships")
 
     def _remove_membership(self, membership):
-        self._memberships ^= membership
-        self.notify("memberships")
+        if self._memberships != (self._memberships & ~membership):
+            self._memberships &= ~membership
+            self.notify("memberships")
 
     def _server_attribute_changed(self, name, value):
         self._attributes[name] = value
@@ -883,8 +888,8 @@ class Contact(BaseContact):
         self.notify("infos")
 
     def _reset(self):
-        self._id = "00000000-0000-0000-0000-000000000000"
-        self._cid = "00000000-0000-0000-0000-000000000000"
+        self._id = self.BLANK_ID
+        self._cid = self.BLANK_ID
         self._groups = set()
         self._flags = 0
 

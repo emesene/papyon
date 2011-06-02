@@ -276,6 +276,7 @@ class Client(EventsDispatcher):
             """
         if (self._state != ClientState.CLOSED):
             logger.warning('login already in progress')
+            return
         self.__die = False
         self._state = ClientState.CONNECTING
         self._profile = profile.Profile((account, password), self._protocol)
@@ -501,6 +502,7 @@ class Client(EventsDispatcher):
         def connect_signal(name):
             self.address_book.connect(name, event, name)
 
+        connect_signal("sync")
         connect_signal("contact-added")
         connect_signal("contact-pending")
         connect_signal("contact-deleted")

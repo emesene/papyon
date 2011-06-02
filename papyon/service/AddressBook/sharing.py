@@ -36,7 +36,6 @@ class Member(object):
         self.DisplayName = member.findtext("./ab:DisplayName")
         self.State = member.findtext("./ab:State")
 
-        self.Deleted = member.findtext("./ab:Deleted", "bool")
         self.LastChanged = member.findtext("./ab:LastChanged", "datetime")
         self.Changes = [] # FIXME: extract the changes
         self.Annotations = annotations_to_dict(member.find("./ab:Annotations"))
@@ -133,7 +132,7 @@ class Sharing(SOAPService):
         self._tokens = {}
         SOAPService.__init__(self, "Sharing", proxies)
 
-        self._last_changes = "0001-01-01T00:00:00.0000000-08:00"
+        self._last_changes = XMLTYPE.datetime.DEFAULT_TIMESTAMP
 
     def FindMembership(self, callback, errback, scenario, services, deltas_only):
         """Requests the membership list.
@@ -147,25 +146,36 @@ class Sharing(SOAPService):
             @param deltas_only: True if the method should only check changes
                                 since last_change, False else
         """
+        if self._last_changes == XMLTYPE.datetime.DEFAULT_TIMESTAMP \
+        or not deltas_only:
+            deltas_only = False
+            last_changes = XMLTYPE.datetime.DEFAULT_TIMESTAMP
+        else:
+            last_changes = self._last_changes
         self.__soap_request(callback, errback,
                 self._service.FindMembership, scenario,
-                (services, deltas_only, self._last_changes),
+                (services,
+                 XMLTYPE.bool.encode(deltas_only),
+                 last_changes),
                 (scenario, services))
 
     def _HandleFindMembershipResponse(self, callback, errback, response, user_data):
-        if response[1] is not None:
-            self._last_changes = response[1]
-
         memberships = {}
+        last_changes = response[1]
+        if last_changes == "" \
+        or XMLTYPE.datetime.decode(self._last_changes) < XMLTYPE.datetime.decode(last_changes):
+            if last_changes != "":
+                self._last_changes = last_changes
+
         for role, members in response[0].iteritems():
             for member in members:
-                membership_id = XMLTYPE.int.decode(member.find("./ab:MembershipId").text)
+                deleted = member.findtext("./ab:Deleted", "bool")
                 member_obj = Member.new(member)
                 member_id = hash(member_obj)
                 if member_id in memberships:
-                    memberships[member_id].Roles[role] = membership_id
+                    memberships[member_id].Roles[role] = deleted
                 else:
-                    member_obj.Roles[role] = membership_id
+                    member_obj.Roles[role] = deleted
                     memberships[member_id] = member_obj
         run(callback, memberships.values())
 

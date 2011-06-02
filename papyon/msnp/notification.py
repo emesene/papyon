@@ -552,14 +552,17 @@ class NotificationProtocol(BaseProtocol, Timer):
 
     # --------- Contact List -------------------------------------------------
     def _handle_ADL(self, command):
-        if command.transaction_id == 0: # incoming ADL from the server
-            self._client.address_book.check_pending_invitations()
         if len(command.arguments) > 0 and command.arguments[0] == "OK":
-            if self._state != ProtocolState.OPEN: # Initial ADL
+            # Confirmation for one of our ADLs
+            if command.transaction_id != 0 \
+            and self._state != ProtocolState.OPEN:
+                # Initial ADL
                 self._state = ProtocolState.OPEN
                 self._transport.enable_ping()
-            else: # contact Added
-                pass
+        else:
+            if command.payload:
+                # Incoming payload ADL from the server
+                self._client.address_book.sync(True)
 
     def _handle_RML(self, command):
         pass
@@ -705,7 +708,31 @@ class NotificationProtocol(BaseProtocol, Timer):
 
     # --------- Notification -------------------------------------------------
     def _handle_NOT(self, command):
-        pass
+        notification_xml = xml_utils.unescape(command.payload)
+        notification = ElementTree.fromstring(notification_xml)
+
+        service = notification.findtext('MSG/BODY/NotificationData/Service')
+        if service != 'ABCHInternal':
+            return
+
+        try:
+            notification_id = notification.attrib['id']
+            site_id = notification.attrib['siteid']
+            message_id = notification.find('MSG').attrib['id']
+            send_device = notification.find('TO/VIA').attrib['agent']
+            receiver_cid = notification.findtext('MSG/BODY/NotificationData/CID')
+            receiver_account = notification.find('TO').attrib['name'].lower()
+
+            if notification_id != '0' or site_id != '45705' \
+            or message_id != '0' or send_device != 'messenger' \
+            or receiver_cid != str(self._client.profile.cid)  \
+            or receiver_account != self._client.profile.account.lower():
+                return
+
+        except KeyError:
+            return
+
+        self._client.address_book.sync(True)
 
     #---------- Errors -------------------------------------------------------
     def _error_handler(self, error):

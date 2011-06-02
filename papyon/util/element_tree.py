@@ -61,14 +61,36 @@ class XMLTYPE(object):
                 return 0
 
     class datetime(object):
+        DEFAULT_TIMESTAMP = "0001-01-01T00:00:00.0000000-08:00"
+
         @staticmethod
         def encode(datetime):
             return datetime.isoformat()
 
         @staticmethod
         def decode(date_str):
+            """Examples:
+                >>> XMLTYPE.datetime.decode('2011-05-13T17:45:23.0123456')
+                datetime.datetime(2011, 5, 13, 17, 45, 23, 12345)
+                >>> XMLTYPE.datetime.decode('2011-05-13T14:45:23.321-03:00')
+                datetime.datetime(2011, 5, 13, 17, 45, 23, 321000)
+                >>> XMLTYPE.datetime.decode('2011-05-13T17:45:23.12345678Z')
+                datetime.datetime(2011, 5, 13, 17, 45, 23, 123456)
+                >>> XMLTYPE.datetime.decode('2011-05-13T17:45:23')
+                datetime.datetime(2011, 5, 13, 17, 45, 23)
+                >>> XMLTYPE.datetime.decode('2011-05-13T17:45:23Z')
+                datetime.datetime(2011, 5, 13, 17, 45, 23)
+                >>> XMLTYPE.datetime.decode('2011-05-13T14:45:23-03:00')
+                datetime.datetime(2011, 5, 13, 17, 45, 23)
+                >>> XMLTYPE.datetime.decode('')
+                datetime.datetime(1, 1, 1, 8, 0)
+                >>> XMLTYPE.datetime.decode(None)
+                datetime.datetime(1, 1, 1, 8, 0)
+            """
+            if date_str is None or date_str == '':
+                date_str = XMLTYPE.datetime.DEFAULT_TIMESTAMP
             result = iso8601.parse_date(date_str.strip())
-            return result.replace(tzinfo=None) # FIXME: do not disable the timezone
+            return result.replace(tzinfo=None) - result.utcoffset()
 
 class _Element(object):
     def __init__(self, element, ns_shorthands):
@@ -162,3 +184,8 @@ class XMLResponse(object):
 
     def _parse(self, data):
         pass
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

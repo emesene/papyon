@@ -25,7 +25,7 @@ import scenario
 
 import papyon
 import papyon.profile as profile
-from papyon.profile import Membership, NetworkID
+from papyon.profile import Membership, NetworkID, Contact
 from papyon.util.decorator import rw_property
 from papyon.profile import ContactType
 from papyon.service.AddressBook.constants import *
@@ -34,6 +34,10 @@ from papyon.service.AddressBook.scenario.contacts import *
 from papyon.util.async import run
 
 import gobject
+
+import logging
+logger = logging.getLogger('papyon.service.address_book')
+
 
 __all__ = ['AddressBook', 'AddressBookState']
 
@@ -133,6 +137,10 @@ class AddressBook(gobject.GObject):
                 gobject.TYPE_NONE,
                 (object,)),
 
+            "sync"  : (gobject.SIGNAL_RUN_FIRST,
+                gobject.TYPE_NONE,
+                ()),
+
             "contact-added"           : (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -198,6 +206,8 @@ class AddressBook(gobject.GObject):
     def __init__(self, sso, client, proxies=None):
         """The address book object."""
         gobject.GObject.__init__(self)
+        self.__frozen = 0
+        self.__signal_queue = []
 
         self._ab = ab.AB(sso, client, proxies)
         self._sharing = sharing.Sharing(sso, proxies)
@@ -208,6 +218,8 @@ class AddressBook(gobject.GObject):
         self.groups = set()
         self.contacts = AddressBookStorage()
         self._profile = None
+
+        self.connect_after('contact-deleted', lambda self, contact: contact._reset())
 
     # Properties
     @property
@@ -227,31 +239,31 @@ class AddressBook(gobject.GObject):
     def profile(self):
         return self._profile
 
-    def sync(self):
-        if self._state != AddressBookState.NOT_SYNCHRONIZED:
+    def sync(self, delta_only=False):
+        # Avoid race conditions.
+        if self._state in \
+        (AddressBookState.INITIAL_SYNC, AddressBookState.RESYNC):
             return
-        self._state = AddressBookState.SYNCHRONIZING
 
-        def callback(address_book, memberships):
-            for group in address_book.groups:
-                g = profile.Group(group.Id, group.Name.encode("utf-8"))
-                self.groups.add(g)
-            for contact in address_book.contacts:
-                c = self.__build_contact(contact, Membership.FORWARD)
-                if c is None:
-                    continue
-                if contact.Type == ContactType.ME:
-                    self._profile = c
-                else:
-                    self.contacts.add(c)
+        if self._state == AddressBookState.NOT_SYNCHRONIZED:
+            self._state = AddressBookState.INITIAL_SYNC
+        else:
+            self._state = AddressBookState.RESYNC
+
+        def callback(ab_storage, memberships):
+            self.__log_sync_request(ab_storage, memberships)
+            self.__freeze_address_book()
+            self.__update_address_book(ab_storage)
             self.__update_memberships(memberships)
+            self.__unfreeze_address_book()
             self._state = AddressBookState.SYNCHRONIZED
+            self.__common_callback('sync', done_cb)
 
-        initial_sync = scenario.InitialSyncScenario(self._ab, self._sharing,
+        sc = scenario.SyncScenario(self._ab, self._sharing,
                 (callback,),
                 (self.__common_errback,),
-                self._client.profile.account)
-        initial_sync()
+                delta_only)
+        sc()
 
     # Public API
     def search_contact(self, account, network_id):
@@ -272,16 +284,6 @@ class AddressBook(gobject.GObject):
                 display_name = account
             contact = profile.Contact(None, network_id, account, display_name)
         return contact
-
-    def check_pending_invitations(self, done_cb=None, failed_cb=None):
-        def callback(memberships):
-            self.__update_memberships(memberships)
-            self.__common_callback('contact-pending', done_cb,
-                    self.contacts.search_by_memberships(Membership.PENDING))
-        cp = scenario.CheckPendingInviteScenario(self._sharing,
-                 (callback,),
-                 (self.__common_errback, failed_cb))
-        cp()
 
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True,
             done_cb=None, failed_cb=None):
@@ -334,10 +336,8 @@ class AddressBook(gobject.GObject):
             scenario_class = MessengerContactAddScenario
             s = scenario_class(self._ab,
                     (callback,),
-                    (self.__common_errback, failed_cb))
-            s.account = account
-            s.network_id = network_id
-            s.memberships = old_memberships
+                    (self.__common_errback, failed_cb),
+                    account, network_id, old_memberships)
             s.auto_manage_allow_list = auto_allow
             s.invite_display_name = invite_display_name
             s.invite_message = invite_message
@@ -345,11 +345,12 @@ class AddressBook(gobject.GObject):
 
     def upgrade_mail_contact(self, contact, groups=[],
             done_cb=None, failed_cb=None):
+        logger.info('upgrade mail contact: %s' % str(contact))
         def callback():
             contact._add_membership(Membership.ALLOW)
             for group in groups:
                 self.add_contact_to_group(group, contact)
-            self.__common_callback(None, done_cb)
+            self.__common_callback(None, done_cb, contact)
 
         up = scenario.ContactUpdatePropertiesScenario(self._ab,
                 (callback,), (self.__common_errback, failed_cb))
@@ -360,11 +361,7 @@ class AddressBook(gobject.GObject):
 
     def delete_contact(self, contact, done_cb=None, failed_cb=None):
         def callback():
-            contact._remove_membership(Membership.FORWARD)
-            self.__common_callback('contact-deleted', done_cb, contact)
-            contact._reset()
-            if contact.memberships == Membership.NONE:
-                self.contacts.discard(contact)
+            self.__remove_contact(contact, Membership.FORWARD, done_cb)
 
         dc = scenario.ContactDeleteScenario(self._ab,
                 (callback,),
@@ -455,10 +452,7 @@ class AddressBook(gobject.GObject):
 
     def delete_group(self, group, done_cb=None, failed_cb=None):
         def callback():
-            for contact in self.contacts:
-                contact._delete_group_ownership(group)
-            self.groups.discard(group)
-            self.__common_callback('group-deleted', done_cb, group)
+            self.__remove_group(group, done_cb)
         dg = scenario.GroupDeleteScenario(self._ab,
                 (callback,),
                 (self.__common_errback, failed_cb))
@@ -498,7 +492,38 @@ class AddressBook(gobject.GObject):
         dc.group_guid = group.id
         dc.contact_guid = contact.id
         dc()
+
+    def emit(self, detailed_signal, *args, **kwargs):
+        if self.__frozen:
+            self.__signal_queue.append((detailed_signal, args, kwargs))
+        else:
+            super(AddressBook, self).emit(detailed_signal, *args, **kwargs)
+
     # End of public API
+
+    def __freeze_address_book(self):
+        """Disable all AB notifications and events until we unfreeze."""
+        if not self.__frozen:
+            self.freeze_notify()
+            for group in self.groups:
+                group.freeze_notify()
+            for contact in self.contacts:
+                contact.freeze_notify()
+        self.__frozen += 1
+
+    def __unfreeze_address_book(self):
+        """Emit all queued AB notifications and events."""
+        if self.__frozen:
+            self.__frozen -= 1
+            if not self.__frozen:
+                for contact in self.contacts:
+                    contact.thaw_notify()
+                for group in self.groups:
+                    group.thaw_notify()
+                self.thaw_notify()
+                for signal in self.__signal_queue:
+                    super(AddressBook, self).emit(signal[0], *signal[1], **signal[2])
+                self.__signal_queue = []
 
     def __build_contact(self, contact=None, memberships=Membership.NONE):
         external_email = None
@@ -568,11 +593,14 @@ class AddressBook(gobject.GObject):
         if infos is not None:
             contact._id = infos.Id
             contact._cid = infos.CID
-            contact._display_name = infos.DisplayName
+            if infos.DisplayName:
+                contact._display_name = infos.DisplayName
             contact._server_infos_changed(infos.contact_infos)
             for group in self.groups:
                 if group.id in infos.Groups:
                     contact._add_group_ownership(group)
+                if group.id in infos.DeletedGroups:
+                    contact._delete_group_ownership(group)
         contact.thaw_notify()
 
     def __build_or_update_contact(self, account, network_id=NetworkID.MSN,
@@ -591,12 +619,122 @@ class AddressBook(gobject.GObject):
             self.emit('contact-added', contact)
         return contact
 
+    def __remove_contact(self, contact, removed_memberships, done_cb=None):
+        emit_deleted = False
+        if removed_memberships & Membership.FORWARD \
+        and contact.is_member(Membership.FORWARD):
+            emit_deleted = True
+            removed_memberships |= Membership.REVERSE
+        contact._remove_membership(removed_memberships)
+        # Do not use __common_callback() here to avoid race
+        # conditions with the event-triggered contact._reset().
+        run(done_cb, contact)
+        if contact.memberships == Membership.NONE:
+            self.contacts.discard(contact)
+        if emit_deleted:
+            self.emit('contact-deleted', contact)
+
+    def __remove_group(self, group, done_cb=None):
+        for contact in self.contacts:
+            contact._delete_group_ownership(group)
+        self.groups.discard(group)
+        self.__common_callback('group-deleted', done_cb, group)
+
+    def __log_sync_request(self, ab_storage, memberships):
+        myself = '???' if not self._profile else self._profile.account
+        contacts = ['%s-%s' % ('D' if contact.Deleted else 'A',
+                                   contact.PassportName)
+                        for contact in ab_storage.contacts]
+        groups = ['%s-%s' % ('D' if group.Deleted else 'A',
+                                   group.Name)
+                      for group in ab_storage.groups]
+        members = []
+        for member in memberships:
+            member_repr = member.PassportName
+            for role, deleted in member.Roles.items():
+                member_repr += ' %s-%s' % ('D' if deleted else 'A', role)
+            members.append(member_repr)
+        logger.info('[%s] Received sync request:\n'
+                     '...contacts:\n'
+                     '%s\n'
+                     '...groups:\n'
+                     '%s\n'
+                     '...memberships:\n'
+                     '%s'
+                     % (myself, str(contacts), str(groups), str(members)))
+
+    def __update_address_book(self, ab_storage):
+        for group_infos in ab_storage.groups:
+            group = None
+            for g in self.groups:
+                if g.id == group_infos.Id:
+                    group = g
+                    break
+
+            if group_infos.Deleted:
+                if group is not None:
+                    self.__remove_group(group)
+            else:
+                group_name = group_infos.Name.encode("utf-8")
+                if group:
+                    group._server_property_changed('name', group_name)
+                else:
+                    group = profile.Group(group_infos.Id, group_name)
+                    group.freeze_notify()
+                    self.groups.add(group)
+                    if self.state != AddressBookState.INITIAL_SYNC:
+                        self.emit('group-added', group)
+
+        for contact_infos in ab_storage.contacts:
+            new_contact = self.__build_contact(contact_infos, Membership.FORWARD)
+            if new_contact is None:
+                continue
+            new_contact.freeze_notify()
+
+            contact = self.search_contact(new_contact.account,
+                                          new_contact.network_id)
+
+            if contact_infos.Type == ContactType.ME:
+                if self._profile is None:
+                    self._profile = new_contact
+                else:
+                    self.__update_contact(self._profile, infos=contact_infos)
+                continue
+
+            if contact_infos.Deleted:
+                if contact:
+                    self.__remove_contact(contact, Membership.FORWARD)
+            else:
+                new_contact_added = False
+                if not contact \
+                or contact.id == Contact.BLANK_ID:
+                    new_contact_added = True
+
+                if contact:
+                    self.__update_contact(contact, infos=contact_infos)
+                else:
+                    contact = new_contact
+                    self.contacts.add(contact)
+
+                if new_contact_added:
+                    if not contact.is_member(Membership.PENDING):
+                        contact._add_membership(Membership.FORWARD)
+                    if self.state != AddressBookState.INITIAL_SYNC:
+                        self.emit('contact-added', contact)
+
     def __update_memberships(self, members):
         role_to_membership = {
             "Allow"   : Membership.ALLOW,
             "Block"   : Membership.BLOCK,
             "Reverse" : Membership.REVERSE,
             "Pending" : Membership.PENDING
+        }
+
+        membership_conflicts = {
+            Membership.ALLOW: Membership.BLOCK,
+            Membership.BLOCK: Membership.ALLOW,
+            Membership.FORWARD: Membership.PENDING,
+            Membership.PENDING: Membership.FORWARD
         }
 
         for member in members:
@@ -611,28 +749,55 @@ class AddressBook(gobject.GObject):
                 continue # ignore contacts with hidden passport name
 
             contact = self.search_contact(member.Account, network)
+
             new_contact = False
             if contact is None:
+                member_deleted = True
+                for role, deleted in member.Roles.items():
+                    if not deleted:
+                        member_deleted = False
+                        break
+                if member_deleted:
+                    continue
+
                 new_contact = True
                 cid = getattr(member, "CID", None)
                 account = member.Account.encode("utf-8")
                 display_name = (member.DisplayName or member.Account).encode("utf-8")
                 msg = member.Annotations.get('MSN.IM.InviteMessage', u'')
                 contact = profile.Contact(None, network, account, display_name, cid)
+                contact.freeze_notify()
                 contact._server_attribute_changed('invite_message', msg.encode("utf-8"))
                 self.contacts.add(contact)
 
             if contact is self._client.profile:
                 continue # don't update our own memberships
 
-            for role in member.Roles:
+            # TODO: Check whether the contact's membership was changed
+            # after member.LastChanged and if so ignore this member.
+            # To implement this papyon has to save full membership info
+            # for contacts.
+
+            deleted_memberships = Membership.NONE
+            for role, deleted in member.Roles.items():
                 membership = role_to_membership.get(role, None)
                 if membership is None:
                     raise NotImplementedError("Unknown Membership:" + membership)
-                contact._add_membership(membership)
 
-            if new_contact and self.state == AddressBookState.SYNCHRONIZED:
-                self.emit('contact-added', contact)
+                if deleted:
+                    deleted_memberships |= membership
+                else:
+                    conflicting_memberships = membership_conflicts.get(membership, Membership.NONE)
+                    contact._remove_membership(conflicting_memberships)
+                    contact._add_membership(membership)
+
+            if deleted_memberships:
+                self.__remove_contact(contact, deleted_memberships)
+            if self.state != AddressBookState.INITIAL_SYNC:
+                if contact.is_member(Membership.PENDING):
+                    self.emit('contact-pending', contact)
+                if new_contact:
+                    self.emit('contact-added', contact)
 
     # Callbacks
     def __common_callback(self, signal, callback, *args):
@@ -642,6 +807,8 @@ class AddressBook(gobject.GObject):
 
     def __common_errback(self, error, errback=None):
         run(errback, error)
+        while self.__frozen:
+            self.__unfreeze_address_book()
         self.emit('error', error)
 
 gobject.type_register(AddressBook)
@@ -701,7 +868,7 @@ if __name__ == '__main__':
             print address_book.contacts[0].account
             address_book.update_contact_infos(address_book.contacts[0], {ContactGeneral.FIRST_NAME : "lolibouep"})
 
-            #address_book._check_pending_invitations()
+            #address_book.sync(True)
             #address_book.accept_contact_invitation(address_book.pending_contacts.pop())
             #print address_book.pending_contacts.pop()
             #address_book.accept_contact_invitation(address_book.pending_contacts.pop())

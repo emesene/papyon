@@ -18,10 +18,11 @@
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
 
-__all__ = ['InitialSyncScenario']
+__all__ = ['SyncScenario']
 
-class InitialSyncScenario(BaseScenario):
-    def __init__(self, address_book, sharing, callback, errback, account=''):
+class SyncScenario(BaseScenario):
+    def __init__(self, address_book, sharing, callback, errback,
+                 delta_only=False):
         """Synchronizes the membership content when logging in.
 
             @param address_book: the address book service
@@ -36,14 +37,14 @@ class InitialSyncScenario(BaseScenario):
         self.__membership_response = None
         self.__ab_response = None
 
-        self.__account = account
+        self.__delta_only = delta_only
 
     def execute(self):
         self.__address_book.FindAll((self.__ab_findall_callback,),
-                                    self._errback, self._scenario, False)
+                                    self._errback, self._scenario, self.__delta_only)
         self.__sharing.FindMembership((self.__membership_findall_callback,),
                                       self._errback, self._scenario,
-                                      ['Messenger'], False)
+                                      ['Messenger'], self.__delta_only)
 
     def __membership_findall_callback(self, result):
         self.__membership_response = result

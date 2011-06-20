@@ -155,7 +155,7 @@ class NotificationProtocol(BaseProtocol, Timer):
             @type personal_message: string"""
         cm = ''
         if current_media is not None:
-            cm ='\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0' % \
+            cm = '\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0' % \
                 (xml_utils.escape(current_media[0]),
                  xml_utils.escape(current_media[1]))
 
@@ -335,7 +335,7 @@ class NotificationProtocol(BaseProtocol, Timer):
                 host = command.arguments[1]
                 port = self._transport.server[1]
             logger.debug("<-> Redirecting to " + command.arguments[1])
-            self._transport.reset_connection((host,port))
+            self._transport.reset_connection((host, port))
         else: # connect to a switchboard
             try:
                 host, port = command.arguments[1].split(":", 1)
@@ -687,7 +687,7 @@ class NotificationProtocol(BaseProtocol, Timer):
     # --------- Invitation ---------------------------------------------------
     def _handle_RNG(self, command):
         session_id = command.arguments[0]
-        host, port = command.arguments[1].split(':',1)
+        host, port = command.arguments[1].split(':', 1)
         port = int(port)
         key = command.arguments[3]
         account = command.arguments[4]
@@ -840,7 +840,7 @@ class NotificationProtocol(BaseProtocol, Timer):
 
         if contact.network_id != profile.NetworkID.MOBILE:
             account, domain = contact.account.split('@', 1)
-            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>'% \
+            payload = '<ml l="2"><d n="%s"><c n="%s"/></d></ml>' % \
                     (domain, account)
             self._send_command("FQY", payload=payload)
 

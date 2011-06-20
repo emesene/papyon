@@ -117,13 +117,13 @@ class ClientCapabilities(gobject.GObject):
         @undocumented: __getattr__, __setattr__, __str__
         """
 
-    __gsignals__ =  {
+    __gsignals__ = {
             "capability-changed": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object, object)),
             }
 
-    MSNC = [0x0,        # MSNC0
+    MSNC = [0x0, # MSNC0
             0x10000000, # MSNC1
             0x20000000, # MSNC2
             0x30000000, # MSNC3
@@ -294,11 +294,11 @@ class Membership(object):
     FORWARD = 1
     """Contact belongs to our contact list"""
 
-    ALLOW   = 2
+    ALLOW = 2
     """Contact is explicitely allowed to see our presence regardless of the
     currently set L{Privacy<papyon.profile.Privacy>}"""
 
-    BLOCK   = 4
+    BLOCK = 4
     """Contact is explicitely forbidden from seeing our presence regardless of
     the currently set L{Privacy<papyon.profile.Privacy>}"""
 
@@ -348,7 +348,7 @@ class ContactFlag(object):
 
 class BaseContact(gobject.GObject):
 
-    __gsignals__ =  {
+    __gsignals__ = {
             "end-point-added": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -745,7 +745,7 @@ gobject.type_register(Profile)
 class Contact(BaseContact):
     """Contact related information"""
 
-    __gsignals__ =  {
+    __gsignals__ = {
             "infos-changed": (gobject.SIGNAL_RUN_FIRST,
                 gobject.TYPE_NONE,
                 (object,)),
@@ -845,7 +845,7 @@ class Contact(BaseContact):
             return result[1]
         else:
             return ""
-            
+
     @property
     def profile_url(self):
         """Contact profile url

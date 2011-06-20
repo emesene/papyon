@@ -21,7 +21,7 @@
 """ElementTree independent from the available distribution"""
 
 try:
-    from xml.etree.cElementTree import * 
+    from xml.etree.cElementTree import *
 except ImportError:
     try:
         from cElementTree import *
@@ -129,7 +129,7 @@ class _Element(object):
 
     def findall(self, path):
         path = self._process_path(path)
-        
+
         result = []
         nodes = self.element.findall(path)
         for node in nodes:
@@ -141,7 +141,7 @@ class _Element(object):
         if result is None:
             return ""
         result = result.text
-        
+
         if type is None:
             return result
         return getattr(XMLTYPE, type).decode(result)

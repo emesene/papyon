@@ -25,27 +25,27 @@ __all__ = ['AddressBookError', 'AddressBookState']
 
 class AddressBookError(ClientError):
     "Address book related errors"
-    UNKNOWN                   = 0
+    UNKNOWN = 0
 
-    AB_DOES_NOT_EXIST         = 1
-    AB_ALREADY_EXISTS         = 2
+    AB_DOES_NOT_EXIST = 1
+    AB_ALREADY_EXISTS = 2
 
-    CONTACT_ALREADY_EXISTS    = 3
-    CONTACT_ALREADY_IN_GROUP  = 3 # deprecated
-    CONTACT_DOES_NOT_EXIST    = 4
-    CONTACT_NOT_IN_GROUP      = 4 # deprecated
-    INVALID_CONTACT_ADDRESS   = 5
+    CONTACT_ALREADY_EXISTS = 3
+    CONTACT_ALREADY_IN_GROUP = 3 # deprecated
+    CONTACT_DOES_NOT_EXIST = 4
+    CONTACT_NOT_IN_GROUP = 4 # deprecated
+    INVALID_CONTACT_ADDRESS = 5
 
-    GROUP_ALREADY_EXISTS      = 6
-    GROUP_DOES_NOT_EXIST      = 7
+    GROUP_ALREADY_EXISTS = 6
+    GROUP_DOES_NOT_EXIST = 7
 
-    MEMBER_ALREADY_EXISTS     = 8
-    MEMBER_DOES_NOT_EXIST     = 9
+    MEMBER_ALREADY_EXISTS = 8
+    MEMBER_DOES_NOT_EXIST = 9
 
-    INVALID_ARGUMENT          = 10
-    GROUP_NAME_TOO_LONG       = 10 # deprecated
-    LIMIT_REACHED             = 11
-    FULL_SYNC_REQUIRED        = 12
+    INVALID_ARGUMENT = 10
+    GROUP_NAME_TOO_LONG = 10 # deprecated
+    LIMIT_REACHED = 11
+    FULL_SYNC_REQUIRED = 12
 
 
     def __init__(self, code, fault="", details=""):

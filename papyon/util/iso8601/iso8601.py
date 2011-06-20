@@ -55,7 +55,7 @@ class FixedOffset(tzinfo):
 
     def dst(self, dt):
         return ZERO
-    
+
     def __repr__(self):
         return "<FixedOffset %r>" % self.__name
 

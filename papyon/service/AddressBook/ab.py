@@ -227,7 +227,7 @@ class AB(SOAPService):
             contacts.append(Contact(contact))
 
         #FIXME: add support for the ab param
-        address_book =  ABResult(None, contacts, groups)
+        address_book = ABResult(None, contacts, groups)
         run(callback, address_book)
 
     def _HandleABFindAllFault(self, callback, errback, response, user_data):

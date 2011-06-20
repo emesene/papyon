@@ -34,8 +34,8 @@ def soap_action():
 
     return "http://www.msn.com/webservices/AddressBook/ABContactAdd"
 
-def soap_body(passport_name, is_messenger_user, contact_type, first_name, 
-              last_name, birth_date, email, phone, location, web_site,  
+def soap_body(passport_name, is_messenger_user, contact_type, first_name,
+              last_name, birth_date, email, phone, location, web_site,
               annotation, comment, anniversary, display_name, invite_message,
               capability, enable_allow_list_management=True):
     """Returns the SOAP xml body
@@ -66,7 +66,7 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
 
     if contact_type is not None:
         contact_info += "<contactType>%s</contactType>" % contact_type
-            
+
     if first_name is not None:
         contact_info += "<firstName>%s</firstName>" % xml.escape(first_name)
 
@@ -75,7 +75,7 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
 
     if birth_date is not None:
         contact_info += "<birthdate>%s</birthdate>" % birth_date
-    
+
     if email is not None:
         emails = ""
         for type, email in email.iteritems():
@@ -112,7 +112,7 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
             items = changes = ""
             for item, value in parts.iteritems():
                 items += "<%s>%s</%s>" % (item, value, item)
-                changes += " %s%s" % (item[0].upper(), item[1:len(item)]) 
+                changes += " %s%s" % (item[0].upper(), item[1:len(item)])
             locations += """<ContactLocation>
                                <contactLocationType>%s</contactLocationType>
                                %s

@@ -20,6 +20,7 @@
 
 __all__ = ['annotations_to_dict']
 
+
 def annotations_to_dict(annotations):
     if annotations is None:
         return {}

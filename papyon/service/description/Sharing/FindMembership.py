@@ -62,7 +62,7 @@ def soap_body(services_types, deltas_only, last_change):
 
 def process_response(soap_response):
     # FIXME: don't pick the 1st service only, we need to extract them all
-    result = {'Allow':{},'Block':{},'Reverse':{},'Pending':{}}
+    result = {'Allow':{}, 'Block':{}, 'Reverse':{}, 'Pending':{}}
     service = soap_response.body.find("./ab:FindMembershipResponse/"
                                       "ab:FindMembershipResult/ab:Services/"
                                       "ab:Service")

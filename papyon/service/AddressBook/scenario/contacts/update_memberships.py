@@ -110,7 +110,8 @@ class UpdateMembershipsScenario(BaseScenario):
             if self.__late_pending_delete:
                 membership = UpdateMembershipsScenario.__mapping[Membership.PENDING]
                 callback = list(self._callback)
-                callback.insert(1, self.__done)
+                callback.insert(1, self.__done & ~Membership.PENDING)
+                callback = tuple(callback) # Required to pass type check in run()
                 self.__sharing.DeleteMember(callback,
                                             (self.__common_errback, self.__done,
                                              Membership.PENDING),

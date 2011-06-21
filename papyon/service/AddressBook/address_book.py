@@ -239,7 +239,7 @@ class AddressBook(gobject.GObject):
     def profile(self):
         return self._profile
 
-    def sync(self, delta_only=False):
+    def sync(self, delta_only=False, done_cb=None):
         # Avoid race conditions.
         if self._state in \
         (AddressBookState.INITIAL_SYNC, AddressBookState.RESYNC):
@@ -287,17 +287,31 @@ class AddressBook(gobject.GObject):
 
     def accept_contact_invitation(self, pending_contact, add_to_contact_list=True,
             done_cb=None, failed_cb=None):
-        def callback(contact_infos, memberships):
-            self.__update_contact(pending_contact, memberships, contact_infos)
-            self.__common_callback('contact-accepted', done_cb, pending_contact)
-        ai = scenario.AcceptInviteScenario(self._ab, self._sharing,
-                 (callback,),
-                 (self.__common_errback, failed_cb))
-        ai.account = pending_contact.account
-        ai.network = pending_contact.network_id
-        ai.memberships = pending_contact.memberships
-        ai.add_to_contact_list = add_to_contact_list
-        ai()
+
+        if not pending_contact.is_member(Membership.PENDING) \
+        and pending_contact.is_member(Membership.REVERSE):
+            return
+
+        def callback(memberships, contact):
+            self.__update_contact(contact, memberships)
+            self.__common_callback('contact-accepted', done_cb, contact)
+
+        def contact_added(pending_contact):
+            ai = scenario.AcceptInviteScenario(self._sharing,
+                     (callback, pending_contact),
+                     (self.__common_errback, failed_cb),
+                     pending_contact.account,
+                     pending_contact.memberships,
+                     pending_contact.network_id)
+            ai()
+
+        if add_to_contact_list \
+        and not pending_contact.memberships & Membership.FORWARD:
+            self.add_messenger_contact(account=pending_contact.account,
+                                       network_id=pending_contact.network_id,
+                                       done_cb=(contact_added,))
+        else:
+            contact_added(pending_contact)
 
     def decline_contact_invitation(self, pending_contact, block=True,
             done_cb=None, failed_cb=None):
@@ -316,12 +330,32 @@ class AddressBook(gobject.GObject):
     def add_messenger_contact(self, account, invite_display_name='',
             invite_message='', groups=[], network_id=NetworkID.MSN,
             auto_allow=True, done_cb=None, failed_cb=None):
-        def callback(contact_infos, memberships):
-            c = self.__build_or_update_contact(account, network_id,
-                    memberships, contact_infos)
-            self.__common_callback('messenger-contact-added', done_cb, c)
-            for group in groups:
-                self.add_contact_to_group(group, c)
+
+        def contact_added(was_hidden):
+            new_contact = None
+            for contact in self.contacts:
+                if contact.account == account:
+                    new_contact = contact
+                    break
+            if new_contact is not None:
+                allowed_or_blocked = new_contact.memberships & \
+                    (Membership.BLOCK | Membership.ALLOW)
+                if auto_allow and not allowed_or_blocked:
+                    new_contact._add_membership(Membership.ALLOW)
+                if not was_hidden:
+                    new_contact._remove_membership(Membership.PENDING)
+                if new_contact.id != Contact.BLANK_ID:
+                    if not new_contact.is_member(Membership.PENDING):
+                        new_contact._add_membership(Membership.FORWARD)
+                    self.__common_callback('messenger-contact-added',
+                                           done_cb, new_contact)
+                for group in groups:
+                    self.add_contact_to_group(group, new_contact)
+            self.__unfreeze_address_book()
+
+        def sync(contact_guid, was_hidden=False):
+            self.__freeze_address_book()
+            self.sync(True, (contact_added, was_hidden))
 
         contact = self.search_contact(account, network_id)
 
@@ -335,9 +369,9 @@ class AddressBook(gobject.GObject):
         elif contact is None or not contact.is_member(Membership.FORWARD):
             scenario_class = MessengerContactAddScenario
             s = scenario_class(self._ab,
-                    (callback,),
+                    (sync,),
                     (self.__common_errback, failed_cb),
-                    account, network_id, old_memberships)
+                    account, network_id)
             s.auto_manage_allow_list = auto_allow
             s.invite_display_name = invite_display_name
             s.invite_message = invite_message
@@ -363,10 +397,14 @@ class AddressBook(gobject.GObject):
         def callback():
             self.__remove_contact(contact, Membership.FORWARD, done_cb)
 
-        dc = scenario.ContactDeleteScenario(self._ab,
+        dc = scenario.ContactDeleteScenario(self._sharing,
+                self._ab,
                 (callback,),
                 (self.__common_errback, failed_cb))
         dc.contact_guid = contact.id
+        dc.account = contact.account
+        dc.memberships = contact.memberships
+        dc.network = contact.network_id
         dc()
 
     def update_contact_infos(self, contact, infos, done_cb=None, failed_cb=None):
@@ -624,7 +662,6 @@ class AddressBook(gobject.GObject):
         if removed_memberships & Membership.FORWARD \
         and contact.is_member(Membership.FORWARD):
             emit_deleted = True
-            removed_memberships |= Membership.REVERSE
         contact._remove_membership(removed_memberships)
         # Do not use __common_callback() here to avoid race
         # conditions with the event-triggered contact._reset().
@@ -655,12 +692,9 @@ class AddressBook(gobject.GObject):
                 member_repr += ' %s-%s' % ('D' if deleted else 'A', role)
             members.append(member_repr)
         logger.info('[%s] Received sync request:\n'
-                     '...contacts:\n'
-                     '%s\n'
-                     '...groups:\n'
-                     '%s\n'
-                     '...memberships:\n'
-                     '%s'
+                     '...contacts: %s\n'
+                     '...groups: %s\n'
+                     '...memberships: %s'
                      % (myself, str(contacts), str(groups), str(members)))
 
     def __update_address_book(self, ab_storage):

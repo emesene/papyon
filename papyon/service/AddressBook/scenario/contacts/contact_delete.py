@@ -22,15 +22,18 @@ from papyon.service.AddressBook.scenario.base import Scenario
 __all__ = ['ContactDeleteScenario']
 
 class ContactDeleteScenario(BaseScenario):
-    def __init__(self, ab, callback, errback, contact_guid=''):
+    def __init__(self, sharing, ab, callback, errback, contact_guid=''):
         """Deletes a contact from the address book.
 
             @param ab: the address book service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
-            @param contact_guid: the guid of the contact to delete"""
+            @param contact_guid: the guid of the contact to delete
+            @param memberships: the current memberships of the
+                                contact to delete"""
         BaseScenario.__init__(self, Scenario.TIMER, callback, errback)
         self.__ab = ab
+        self.__sharing = sharing
 
         self.contact_guid = contact_guid
 

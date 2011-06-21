@@ -18,7 +18,6 @@
 #
 from papyon.service.AddressBook.scenario.base import BaseScenario
 from papyon.service.AddressBook.scenario.base import Scenario
-from messenger_contact_add import MessengerContactAddScenario
 from update_memberships import UpdateMembershipsScenario
 
 from papyon.profile import NetworkID, Membership
@@ -26,62 +25,39 @@ from papyon.profile import NetworkID, Membership
 __all__ = ['AcceptInviteScenario']
 
 class AcceptInviteScenario(BaseScenario):
-    def __init__(self, ab, sharing, callback, errback,
+    def __init__(self, sharing, callback, errback,
                  account='',
                  memberships=Membership.NONE,
-                 network=NetworkID.MSN,
-                 state='Accepted'):
+                 network=NetworkID.MSN):
         """Accepts an invitation.
 
-            @param ab: the address book service
             @param sharing: the membership service
             @param callback: tuple(callable, *args)
             @param errback: tuple(callable, *args)
+            @param account: str
+            @param memberships: int
+            @param network: int
         """
         BaseScenario.__init__(self, Scenario.CONTACT_MSGR_API, callback, errback)
-        self.__ab = ab
         self.__sharing = sharing
-
-        self.add_to_contact_list = True
-
         self.account = account
         self.memberships = memberships
         self.network = network
-        self.state = state
 
     def execute(self):
-        if self.add_to_contact_list and not (self.memberships & Membership.FORWARD):
-            self.__add_messenger_contact()
-        else:
-            new_membership = self.memberships | Membership.ALLOW
-            self.__update_memberships(None, new_membership)
-
-    def __add_messenger_contact(self):
-        am = MessengerContactAddScenario(self.__ab,
-                 (self.__add_contact_callback,),
-                 self._errback,
-                 self.account,
-                 self.network)
-        am()
-
-    def __update_memberships(self, contact, new_membership):
+        new_membership = self.memberships
+        new_membership |= Membership.ALLOW | Membership.REVERSE
+        new_membership &= ~Membership.PENDING
         um = UpdateMembershipsScenario(self.__sharing,
-                (self.__update_memberships_callback, contact),
+                (self.__update_memberships_callback,),
                 self._errback,
                 self._scenario,
                 self.account,
                 self.network,
-                self.state,
+                'Accepted',
                 self.memberships,
                 new_membership)
         um()
 
-    def __add_contact_callback(self, contact, memberships):
-        memberships &= ~Membership.PENDING
-        memberships |= Membership.REVERSE
-        self.callback(contact, memberships)
-
-    def __update_memberships_callback(self, memberships, contact):
-        memberships &= ~Membership.PENDING
-        memberships |= Membership.REVERSE
-        self.callback(contact, memberships)
+    def __update_memberships_callback(self, memberships):
+        self.callback(memberships)

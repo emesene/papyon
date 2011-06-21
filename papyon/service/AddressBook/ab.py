@@ -27,6 +27,9 @@ from papyon.service.AddressBook.constants import *
 
 from papyon.service.description.AB.constants import ContactGeneral
 
+import logging
+logger = logging.getLogger('papyon.service.address_book')
+
 __all__ = ['AB']
 
 class ABResult(object):
@@ -274,6 +277,31 @@ class AB(SOAPService):
 
     def _HandleABContactAddResponse(self, callback, errback, response, user_data):
         run(callback, response)
+
+    def _HandleABContactAddFault(self, callback, errback, response, user_data):
+        """Make sure that "contact exists" errors are handled gracefully."""
+        error = AddressBookError.from_fault(response.fault)
+        if error == AddressBookError.CONTACT_ALREADY_EXISTS:
+            # This error may occur when we try to re-add a previously
+            # deleted (and now hidden) contact.
+            # We ignore this error as the contact will be added (aka:
+            # made visible) anyway.
+            logger.warning('AddressBookError: Contact already exists!')
+            conflict_id = response.fault.detail. \
+                findtext('additionalDetails/conflictObjectId')
+            if conflict_id:
+                run(callback, conflict_id.lower(), True)
+                return True
+        elif error == AddressBookError.MEMBER_DOES_NOT_EXIST:
+            # This error may occur when the counterpart blocked us
+            # and we're trying to add.
+            # We ignore this error as the contact may have been added
+            # anyway. We'll discover the real content of our address
+            # book (including the GUID) via delta sync.
+            logger.warning('AddressBookError: Member does not exist!')
+            run(callback, None, True)
+            return True
+        return False
 
     def ContactDelete(self, callback, errback, scenario,
             contact_id):

@@ -123,10 +123,10 @@ def soap_body(passport_name, is_messenger_user, contact_type, first_name,
     if web_site is not None:
         web_sites = ""
         for type, url in web_site.iteritems():
-            websites += """<ContactWebSite>
-                              <contactWebSiteType>%s</contactWebSiteType>
-                              <webURL>%s</webURL>
-                           </ContactWebSite>""" % (type, xml.escape(url))
+            web_sites += """<ContactWebSite>
+                               <contactWebSiteType>%s</contactWebSiteType>
+                               <webURL>%s</webURL>
+                            </ContactWebSite>""" % (type, xml.escape(url))
         contact_info += "<webSites>%s</webSites>" % web_sites
 
     if annotation is not None:

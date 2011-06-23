@@ -506,7 +506,7 @@ class BaseContact(gobject.GObject):
         return self._presence
 
     @property
-    def signature_sound():
+    def signature_sound(self):
         """Contact signature sound
             @type: string"""
         return self._signature_sound

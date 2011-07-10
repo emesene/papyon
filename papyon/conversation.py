@@ -294,7 +294,7 @@ class TextFormat(object):
         return format
 
     def __repr__(self):
-        return __str__(self)
+        return self.__str__()
 
 
 class AbstractConversation(ConversationInterface, EventsDispatcher):

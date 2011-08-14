@@ -438,7 +438,7 @@ class FileTransferManager(P2PSessionHandler):
 
     ### Public API -----------------------------------------------------------
 
-    def send(self, peer, filename, size, data=None):
+    def send(self, peer, filename, size, data=None, preview=None):
         """Send a request to start sending a file.
 
            The request is sent to each peer endpoint and we keep only the
@@ -453,12 +453,14 @@ class FileTransferManager(P2PSessionHandler):
            @type size: int
            @param data: Data to send once session is accepted
            @type data: str or file-like object
+           @param preview: Preview data to send with the invitation
+           @type data: string
            
            @returns the meta session created to handle the invite."""
 
         session = FileTransferMetaSession(self._client, peer)
         self._add_session(session)
-        session.invite(filename, size, data)
+        session.invite(filename, size, data, preview)
         return session
 
     ### ----------------------------------------------------------------------
@@ -658,9 +660,9 @@ class FileTransferMetaSession(P2PMetaSession):
     def _on_session_canceled(self, canceled_session):
         self.emit("canceled")
 
-    def invite(self, filename, size, data):
+    def invite(self, filename, size, data, preview):
         for session in self._sessions:
-            session.invite(filename, size, data)
+            session.invite(filename, size, data, preview)
 
     def cancel(self):
         for session in self._sessions:

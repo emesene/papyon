@@ -55,10 +55,12 @@ class FileTransferSession(P2PSession):
     def preview(self):
         return self._preview
 
-    def invite(self, filename, size, data):
+    def invite(self, filename, size, data, preview):
         self._filename = filename
         self._size = size
         self._data = data
+        self._has_preview = preview is not None
+        self._preview = preview
         context = self._build_context()
         self._invite(context)
 
@@ -85,7 +87,7 @@ class FileTransferSession(P2PSession):
             self._has_preview = not bool(info[4])
             self._filename = unicode(context[20:570], "utf-16-le").rstrip("\x00")
 
-            if(self._has_preview):
+            if self._has_preview:
                 self._preview = context[574:]
 
         except:
@@ -96,8 +98,8 @@ class FileTransferSession(P2PSession):
         context = struct.pack("<5I", 574, 2, self._size, 0, int(self._has_preview))
         context += struct.pack("550s", filename)
         context += "\xFF" * 4
-        if(self._data != None):
-            context += self._data
+        if self._has_preview:
+            context += self._preview
         return context
 
     def _on_session_accepted(self):

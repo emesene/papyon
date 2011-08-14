@@ -188,9 +188,10 @@ class OfflineMessagesBox(gobject.GObject):
                                    gobject.TYPE_NONE,
                                    (object,)),
             "messages-deleted"  : (gobject.SIGNAL_RUN_FIRST,
-                                   gobject.TYPE_NONE, ()),
+                                   gobject.TYPE_NONE,
+                                   (object,)),
             "message-sent"      : (gobject.SIGNAL_RUN_FIRST,
-                                   gobject.TYPE_NONE, 
+                                   gobject.TYPE_NONE,
                                    (object, str))
             }
 
@@ -369,7 +370,7 @@ class OfflineMessagesBox(gobject.GObject):
                 self._messages.remove(message)
             except ValueError:
                 pass
-        self.emit('messages-deleted')
+        self.emit('messages-deleted', messages)
 
     def __common_callback(self, signal, *args):
         self.emit(signal, *args)

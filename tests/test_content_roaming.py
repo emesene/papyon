@@ -34,24 +34,30 @@ class ContentRoamingClient(TestClient):
         args = [("nickname", "string"),
                 ("message", "string"),
                 ("path", "string")]
-        TestClient.__init__(self, "Content Roaming", opts, args)
+        TestClient.__init__(self, "Content Roaming", opts, args, ContentRoamingClientEvents)
 
     def connected(self):
-        self._roaming.connect("notify::state",
-                self.on_content_roaming_state_changed)
-        self._roaming.sync()
+        self.content_roaming.sync()
 
-    def on_content_roaming_state_changed(self, cr, pspec):
-        if cr.state == ContentRoamingState.SYNCHRONIZED:
+
+class ContentRoamingClientEvents(TestClientEvents,
+                                 papyon.event.ContentRoamingEventInterface):
+
+    def __init__(self, client):
+        TestClientEvents.__init__(self, client)
+        papyon.event.ContentRoamingEventInterface.__init__(self, client)
+
+    def on_content_roaming_state_changed(self, state):
+        if state == ContentRoamingState.SYNCHRONIZED:
             path = self.arguments['path']
             if self.options.action == 'get':
-                type, data = cr.display_picture
+                type, data = self._client.content_roaming.display_picture
                 f = open(path, 'w')
                 f.write(data)
             elif self.options.action == 'put':
                 f = open(path, 'r')
-                cr.store(self.arguments['nickname'], self.arguments['message'],
-                    f.read())
+                self._client.content_roaming.store(self.arguments['nickname'],
+                    self.arguments['message'], f.read())
 
 
 if __name__ == "__main__":

@@ -70,6 +70,7 @@ from conversation import *
 from profile import *
 from contact import *
 from address_book import *
+from content_roaming import *
 from offline_messages import *
 from invite import *
 from mailbox import *

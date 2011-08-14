@@ -147,6 +147,8 @@ class Storage(SOAPService):
             scheme, host, port, resource = url_split(user_tile_url)
             if host:
                 self.get_resource(scheme, host, resource, callback, errback)
+            else:
+                run(errback, error, None)
 
         scheme, host, port, resource = url_split(pre_auth_url)
         resource += '?t=' + urllib.quote(token.split('&')[0][2:], '')

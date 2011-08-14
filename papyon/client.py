@@ -403,14 +403,16 @@ class Client(EventsDispatcher):
                                          self.profile.password,
                                          self._proxies)
             self._address_book = AB.AddressBook(self._sso, self, self._proxies)
-            self.__connect_addressbook_signals()
             self._mailbox = msnp.Mailbox(self._protocol)
-            self.__connect_mailbox_signals()
             self._oim_box = OIM.OfflineMessagesBox(self._sso, self, self._proxies)
-            self.__connect_oim_box_signals()
             self._spaces = Spaces.Spaces(self._sso, self._proxies)
             self._roaming = CR.ContentRoaming(self._sso, self._address_book, self._proxies)
             self._turn_client = TURNClient(self._sso, self.profile.account)
+
+            self.__connect_addressbook_signals()
+            self.__connect_mailbox_signals()
+            self.__connect_oim_box_signals()
+            self.__connect_roaming_signals()
 
             self._state = ClientState.CONNECTED
 
@@ -529,6 +531,16 @@ class Client(EventsDispatcher):
         connect_signal("messages-fetched")
         connect_signal("message-sent")
         connect_signal("messages-deleted")
+
+    def __connect_roaming_signals(self):
+        """Connect Content Roaming signals"""
+        def state_changed(roaming, pspec):
+            self._dispatch("on_roaming_state_changed", roaming.state)
+        def error(roaming, error_code):
+            self._dispatch("on_client_error", ClientErrorType.CONTENT_ROAMING, error_code)
+
+        self._roaming.connect("notify::state", state_changed)
+        self._roaming.connect("error", error)
 
     def __connect_webcam_handler_signals(self):
         """Connect Webcam Handler signals"""

@@ -103,6 +103,8 @@ class ContentRoaming(gobject.GObject):
     def display_picture(self):
         return self.__display_picture
 
+    ### Public API -----------------------------------------------------------
+
     def sync(self):
         if self._state != ContentRoamingState.NOT_SYNCHRONIZED:
             return
@@ -116,9 +118,7 @@ class ContentRoaming(gobject.GObject):
         gp.cid = self._ab.profile.cid
         gp()
 
-    ### Public API -----------------------------------------------------------
-
-    def store(self, display_name=None, personal_message=None, 
+    def store(self, display_name=None, personal_message=None,
               display_picture=None, callback=None, errback=None):
         if display_name is None:
             display_name = self.__display_name

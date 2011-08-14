@@ -151,7 +151,7 @@ class P2PTransportManager(gobject.GObject):
 
         if key in self._blacklist:
             return
-        if chunk.size == 0 or chunk.blob_size == 0:
+        if chunk.size == 0 or (chunk.version == 1 and chunk.blob_size == 0):
             return
 
         if key in self._data_blobs:

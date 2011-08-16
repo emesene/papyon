@@ -100,6 +100,7 @@ class NotificationProtocol(BaseProtocol, Timer):
         self.__state = ProtocolState.CLOSED
         self._protocol_version = version
         self._callbacks = {} # tr_id=>(callback, errback)
+        self._time_id = 0
 
     # Properties ------------------------------------------------------------
     def __get_state(self):
@@ -316,6 +317,10 @@ class NotificationProtocol(BaseProtocol, Timer):
 
     # Handlers ---------------------------------------------------------------
     # --------- Connection ---------------------------------------------------
+    def _check_ping(self, time_id):
+        if self.time_id == time_id:
+            self.emit("connection-lost", "Ping timeout")
+
     def _handle_VER(self, command):
         self._protocol_version = int(command.arguments[0].lstrip('MSNP'))
         self._send_command('CVR',
@@ -396,6 +401,9 @@ class NotificationProtocol(BaseProtocol, Timer):
     def _handle_QNG(self, command):
         timeout = int(command.arguments[0])
         self.start_timeout("ping", timeout)
+        self._time_id = time.time()
+        self.start_timeout("ping-%s" % self._time_id, timeout+5, \
+                           (self._check_ping, self._time_id))
 
     def _handle_OUT(self, command):
         reason = None

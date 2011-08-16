@@ -177,6 +177,8 @@ class Client(EventsDispatcher):
         self._roaming = None
         self._turn_client = None
 
+        self.__keepalive_conversations = True
+
         self.__die = False
         self.__connect_transport_signals()
         self.__connect_protocol_signals()
@@ -264,6 +266,14 @@ class Client(EventsDispatcher):
         """Type of client (computer, mobile, web...)
             @rtype: L{ClientTypes<papyon.msnp.constants.ClientTypes>}"""
         return self._client_type
+
+    @rw_property
+    def keepalive_conversations():
+        def fget(self):
+            return self.__keepalive_conversations
+        def fset(self, k_):
+            self.__keepalive_conversations = k_
+        return locals()
 
     def login(self, account, password):
         """Login to the server.

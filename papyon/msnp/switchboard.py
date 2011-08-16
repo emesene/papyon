@@ -107,6 +107,7 @@ class SwitchboardProtocol(BaseProtocol):
         self.participants = {}
         self.end_points = {}
         self.inactivity_timer_id = 0
+        self.keepalive_timer_id = 0
         self.__session_id = session_id
         self.__key = key
         self.__state = ProtocolState.CLOSED
@@ -116,6 +117,8 @@ class SwitchboardProtocol(BaseProtocol):
 
         logger.info("New switchboard session %s" % session_id)
         client.profile.connect("end-point-added", self._on_end_point_added)
+        if client.keepalive_conversations:
+            gobject.timeout_add_seconds(8, self._keepalive_conversation)
 
     # Properties ------------------------------------------------------------
     @property
@@ -180,6 +183,9 @@ class SwitchboardProtocol(BaseProtocol):
         if self.inactivity_timer_id:
             gobject.source_remove(self.inactivity_timer_id)
             self.inactivity_timer_id = 0
+        if self.keepalive_timer_id:
+            gobject.source_remove(self.keepalive_timer_id)
+            self.keepalive_timer_id = 0
         if inactivity:
             logger.info("Switchboard timed out. Going to leave it.")
         logger.info("Leaving switchboard %s" % self.__session_id)
@@ -206,6 +212,7 @@ class SwitchboardProtocol(BaseProtocol):
 
     def _handle_OUT(self, command):
         pass
+
     # --------- Invitation ---------------------------------------------------
     def __search_account(self, account, display_name):
         """Search account in address book and make sure it's not ourself."""
@@ -338,3 +345,12 @@ class SwitchboardProtocol(BaseProtocol):
             return
         logger.info("New end point connected, re-invite local user")
         self.invite_user(profile)
+
+    def _keepalive_conversation(self):
+        if self.state != ProtocolState.OPEN:
+            return True
+        message = Message()
+        message.add_header('Content-Type', 'text/x-keep-alive')
+        self._send_command('MSG', 'N', message, True)
+        return True
+

@@ -179,6 +179,7 @@ class SwitchboardProtocol(BaseProtocol):
             return
         if self.inactivity_timer_id:
             gobject.source_remove(self.inactivity_timer_id)
+            self.inactivity_timer_id = 0
         if inactivity:
             logger.info("Switchboard timed out. Going to leave it.")
         logger.info("Leaving switchboard %s" % self.__session_id)

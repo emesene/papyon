@@ -24,6 +24,7 @@ from iochannel import GIOChannelClient
 
 import gobject
 import socket
+import sys
 import OpenSSL.SSL as OpenSSL
 
 __all__ = ['SSLSocketClient']
@@ -83,6 +84,9 @@ class SSLSocketClient(GIOChannelClient):
                         buf = self._transport.recv(2048)
                         if buf != "":
                             self.emit("received", buf, len(buf))
+                        elif sys.platform != "win32":
+                            self.close()
+                            return False
                 except (OpenSSL.WantX509LookupError,
                         OpenSSL.WantReadError, OpenSSL.WantWriteError):
                     pass

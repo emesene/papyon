@@ -24,6 +24,7 @@ from iochannel import GIOChannelClient
 
 import gobject
 import socket
+import sys
 
 
 __all__ = ['SocketClient']
@@ -74,6 +75,9 @@ class SocketClient(GIOChannelClient):
                 return False
             if buf != "":
                 self.emit("received", buf, len(buf))
+            elif sys.platform != "win32":
+                self.close()
+                return False
 
         # Check for error/EOF
         if cond & (gobject.IO_ERR | gobject.IO_HUP):

@@ -314,7 +314,7 @@ class SwitchboardProtocol(BaseProtocol):
         if self.inactivity_timer_id:
             gobject.source_remove(self.inactivity_timer_id)
             self.inactivity_timer_id = 0
-        if len(self.participants) == 1: # don't leave multi-user conversations
+        if len(self.participants) == 1 and not self.keepalive_timer_id:
             self.inactivity_timer_id = gobject.timeout_add_seconds(60, self.leave, True)
 
     # callbacks --------------------------------------------------------------

@@ -351,7 +351,10 @@ class HTTPPollConnection(BaseTransport):
     url"""
     def __init__(self, server, server_type=ServerType.NOTIFICATION, proxies={}):
         self._target_server = server
-        server = ("gateway.messenger.hotmail.com", 80)
+        if server_type == ServerType.SWITCHBOARD:
+            server = (server[0], 80)
+        else:
+            server = ("gateway.messenger.hotmail.com", 80)
         BaseTransport.__init__(self, server, server_type, proxies)
         self._setup_transport(server[0], server[1], proxies)
         

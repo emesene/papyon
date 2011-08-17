@@ -102,10 +102,10 @@ class TLPHeader(object):
             self.chunk_size = chunk_size
 
         if self.blob_offset + self.chunk_size > self.blob_size:
-            logger.warning(TLPParseError(1, "chunk end exceeds blob size", header))
+            logger.warning(str(TLPParseError(1, "chunk end exceeds blob size", header)))
             self.chunk_size = chunk_size
         if self.blob_size >= 0 and self.chunk_size == 0:
-            logger.warning(TLPParseError(1, "empty chunk for non-empty blob", header))
+            logger.warning(str(TLPParseError(1, "empty chunk for non-empty blob", header)))
             self.blob_size = 0
 
 

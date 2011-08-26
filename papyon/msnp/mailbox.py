@@ -43,6 +43,11 @@ class MailMessage(object):
         return self._address
 
     @property
+    def subject(self):
+        """Email subject"""
+        return self._subject
+
+    @property
     def post_url(self):
         """post url"""
         return self._post_url

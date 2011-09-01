@@ -118,7 +118,7 @@ class SwitchboardProtocol(BaseProtocol):
         logger.info("New switchboard session %s" % session_id)
         client.profile.connect("end-point-added", self._on_end_point_added)
         if client.keepalive_conversations:
-            gobject.timeout_add_seconds(8, self._keepalive_conversation)
+            self.keepalive_timer_id = gobject.timeout_add_seconds(8, self._keepalive_conversation)
 
     # Properties ------------------------------------------------------------
     @property

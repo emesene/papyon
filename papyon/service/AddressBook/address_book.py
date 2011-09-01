@@ -633,12 +633,13 @@ class AddressBook(gobject.GObject):
             contact._cid = infos.CID
             if infos.DisplayName:
                 contact._display_name = infos.DisplayName
-            contact._server_infos_changed(infos.contact_infos)
-            for group in self.groups:
-                if group.id in infos.Groups:
-                    contact._add_group_ownership(group)
-                if group.id in infos.DeletedGroups:
-                    contact._delete_group_ownership(group)
+            if not isinstance(contact, profile.Profile):
+                contact._server_infos_changed(infos.contact_infos)
+                for group in self.groups:
+                    if group.id in infos.Groups:
+                        contact._add_group_ownership(group)
+                    if group.id in infos.DeletedGroups:
+                        contact._delete_group_ownership(group)
         contact.thaw_notify()
 
     def __build_or_update_contact(self, account, network_id=NetworkID.MSN,
@@ -687,7 +688,7 @@ class AddressBook(gobject.GObject):
                       for group in ab_storage.groups]
         members = []
         for member in memberships:
-            member_repr = member.PassportName
+            member_repr = member.PassportName if not isinstance(member, sharing.EmailMember) else member.Email
             for role, deleted in member.Roles.items():
                 member_repr += ' %s-%s' % ('D' if deleted else 'A', role)
             members.append(member_repr)
@@ -750,7 +751,7 @@ class AddressBook(gobject.GObject):
                     contact = new_contact
                     self.contacts.add(contact)
 
-                if new_contact_added:
+                if new_contact_added and not isinstance(contact, profile.Profile):
                     if not contact.is_member(Membership.PENDING):
                         contact._add_membership(Membership.FORWARD)
                     if self.state != AddressBookState.INITIAL_SYNC:

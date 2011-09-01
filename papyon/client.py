@@ -177,7 +177,7 @@ class Client(EventsDispatcher):
         self._roaming = None
         self._turn_client = None
 
-        self.__keepalive_conversations = True
+        self.__keepalive_conversations = False
 
         self.__die = False
         self.__connect_transport_signals()

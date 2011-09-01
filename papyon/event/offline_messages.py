@@ -45,10 +45,6 @@ class OfflineMessagesEventInterface(BaseEventInterface):
     def on_oim_messages_deleted(self, messages):
         self.on_oim_messages_deleted()
 
-    # Deprecated - present for backward compatibility
-    def on_oim_messages_deleted(self):
-        pass
-
     def on_oim_message_sent(self, recipient, message):
         pass
 

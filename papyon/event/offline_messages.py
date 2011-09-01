@@ -43,7 +43,7 @@ class OfflineMessagesEventInterface(BaseEventInterface):
         pass
 
     def on_oim_messages_deleted(self, messages):
-        self.on_oim_messages_deleted()
+        pass
 
     def on_oim_message_sent(self, recipient, message):
         pass

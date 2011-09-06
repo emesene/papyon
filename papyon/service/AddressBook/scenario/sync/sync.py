@@ -50,7 +50,7 @@ class SyncScenario(BaseScenario):
         self.__membership_response = result
         self.__sync_callback()
 
-    def __ab_findall_callback(self, result):
+    def __ab_findall_callback(self, result=None):
         self.__ab_response = result
         self.__sync_callback()
 

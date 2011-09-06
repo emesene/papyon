@@ -71,7 +71,7 @@ class MobileContactAddScenario(BaseScenario):
         # instead of transmitting it via _errback.
         self.errback(reason)
 
-    def __find_all_callback(self):
+    def __find_all_callback(self, *args):
         # TODO : complete the contact list in the client, need to access to
         # the local address book storage, not the service..
         pass

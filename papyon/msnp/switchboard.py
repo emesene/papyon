@@ -172,6 +172,8 @@ class SwitchboardProtocol(BaseProtocol):
             @param message: the message to send
             @type message: L{message.Message}"""
         assert(self.state == ProtocolState.OPEN)
+        # TODO: FIXME: MSNP18 doesn't reply with ACKs?
+        self._update_switchboard_timeout()
         message.add_header('MIME-Version', '1.0')
         return self._send_command('MSG', (ack,), message, True,
                 (self._on_message_sent, message, callback), errback)
@@ -286,7 +288,8 @@ class SwitchboardProtocol(BaseProtocol):
         self.emit("message-received", message)
 
     def _handle_ACK(self, command):
-        self._update_switchboard_timeout()
+        # TODO: FIXME: MSNP18 doesn't reply with ACKs?
+        #self._update_switchboard_timeout()
         self.emit("message-delivered", command.transaction_id)
 
     def _handle_NAK(self, command):

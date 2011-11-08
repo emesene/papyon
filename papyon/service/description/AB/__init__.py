@@ -20,7 +20,7 @@
 name = "AB"
 description = "Hotmail address book service"
 
-url = "http://contacts.msn.com/abservice/abservice.asmx"
+url = "http://byrdr.omega.contacts.msn.com/abservice/abservice.asmx"
 
 from constants import *
 

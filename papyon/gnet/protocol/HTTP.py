@@ -143,8 +143,8 @@ class HTTP(gobject.GObject):
         if response.status >= 100 and response.status < 200:
             return
         if not self._waiting_response:
-            logger.warning("Received response but wasn't waiting for one %s" % (parser))
-            logger.warning(response)
+            logger.warning("Received response but wasn't waiting for one")
+            logger.warning("<<< " + str(response))
             return
 
         self._waiting_response = False
@@ -153,21 +153,20 @@ class HTTP(gobject.GObject):
             self.close()
             location = response.headers['Location']
             logger.info("Server moved to %s" % location)
-            logger.warning(response)
+            logger.info("<<< " + str(response))
 
             protocol, host, path, query, fragment = urlsplit(location)
-            if protocol == "http":
-                self._redirected = True
-                self._outgoing_queue[0].headers['Host'] = host
-                try:
-                    host, port = host.rsplit(":", 1)
-                    port = int(port)
-                except:
-                    port = None
-                self._host = host
-                self._redirected = False
-                self._setup_transport()
-                return
+            self._redirected = True
+            self._outgoing_queue[0].headers['Host'] = host
+            try:
+                host, port = host.rsplit(":", 1)
+                port = int(port)
+            except:
+                port = None
+            self._host = host
+            self._redirected = False
+            self._setup_transport()
+            return
 
         if len(self._outgoing_queue) > 0:
             self._outgoing_queue.pop(0) # pop the request from the queue

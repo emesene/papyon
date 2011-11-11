@@ -1,3 +1,19 @@
+papyon-0.5.6 (2011-11-10)
+=========================
+
+Enhancements:
+  * Synchronize address book after ABCHInternal notification (fdo #37962)
+  * Handle exceptions when trying to add/accept a hidden contact (fdo #38336)
+  * Implement keepalives for switchboards
+  * Add support for preview data when sending files
+
+Fixes:
+  * Use the right server for AB services and allow HTTP redirection (fdo #42689)
+  * Don't disconnect after a period of inactivity because of ping handling
+  * Don't use 100% cpu when a file transfer session is ended
+  * Properly handle broken content roaming profiles (fdo #32941 and #36655)
+  * Use the correct callback for rejected sessions (fdo #37098)
+
 papyon-0.5.5 (2011-04-14)
 =========================
 

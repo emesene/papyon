@@ -318,7 +318,7 @@ class SwitchboardProtocol(BaseProtocol):
             gobject.source_remove(self.inactivity_timer_id)
             self.inactivity_timer_id = 0
         if len(self.participants) == 1 and not self.keepalive_timer_id:
-            self.inactivity_timer_id = gobject.timeout_add_seconds(60, self.leave, True)
+            self.inactivity_timer_id = gobject.timeout_add_seconds(300, self.leave, True)
 
     # callbacks --------------------------------------------------------------
     def _connect_cb(self, transport):

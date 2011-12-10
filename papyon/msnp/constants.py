@@ -21,10 +21,12 @@ __all__ = ["ProtocolConstant", "ProtocolError", "ProtocolState",
         "ClientTypes", "UserNotificationTypes"]
 
 class ProtocolConstant(object):
-    VER = (18, 16, 15)
-    CVR = ('0x0409', 'winnt', '5.1', 'i386', 'MSNMSGR', '8.1.0178', 'msmsgs')
-    PRODUCT_ID = "PROD0114ES4Z%Q5W"
-    PRODUCT_KEY = "PK}_A_0N_K%O?A9S"
+    # https://github.com/sanko/anyevent-msn/commit/2a77bc878ed7cee13cb487980e5468259a9455f4#lib
+    VER = (21, 18, 16, 15)
+    CLIENT_VERSION = '15.4.3508.1109'
+    CVR = ('0x0409', 'winnt', '6.1.1', 'i386', 'MSNMSGR', CLIENT_VERSION, 'MSNMSGR')
+    PRODUCT_ID = "PROD0120PW!CCV9@"
+    PRODUCT_KEY = "C1BX{V4W}Q3*10SM"
     CHL_MAGIC_NUM = 0x0E79A9C1
 
 class ProtocolError(object):

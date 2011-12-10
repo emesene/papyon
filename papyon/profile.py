@@ -249,6 +249,9 @@ class NetworkID(object):
     MOBILE = 4
     """Mobile phones"""
 
+    FACEBOOK = 13 #TODO: CHECK
+    """Facebook chat"""
+
     EXTERNAL = 32
     """External IM etwork, currently Yahoo!"""
 

@@ -139,11 +139,16 @@ class NotificationProtocol(BaseProtocol, Timer):
         else:
             if msn_object:
                 self._client._msn_object_store.publish(msn_object)
-            self._send_command('CHG',
+            if self._protocol_version >= 21:
+                return self._send_user_status_notification()
+            else:
+                self._send_command('CHG',
                     (presence, str(client_id), urllib.quote(str(msn_object))))
 
     @throttled(2, LastElementQueue())
     def set_display_name(self, display_name):
+        if self._protocol_version >= 21:
+            return self._send_user_status_notification()
         """Sets the new display name
 
             @param display_name: the new friendly name
@@ -158,6 +163,8 @@ class NotificationProtocol(BaseProtocol, Timer):
 
             @param personal_message: the new personal message
             @type personal_message: string"""
+        if self._protocol_version >= 21:
+            return self._send_user_status_notification()
         cm = ''
         if current_media is not None:
             cm = '\\0Music\\01\\0{0} - {1}\\0%s\\0%s\\0\\0' % \
@@ -183,6 +190,8 @@ class NotificationProtocol(BaseProtocol, Timer):
 
     @throttled(2, LastElementQueue())
     def set_end_point_name(self, name="Papyon", idle=False):
+        if self._protocol_version >= 21:
+            return self._send_user_status_notification()
         ep = '<EndpointData>'\
                 '<Capabilities>%s</Capabilities>'\
             '</EndpointData>' % self._client.profile.client_id
@@ -200,7 +209,8 @@ class NotificationProtocol(BaseProtocol, Timer):
 
     @throttled(2, LastElementQueue())
     def set_privacy(self, privacy=profile.Privacy.BLOCK):
-        self._send_command("BLP", (privacy,))
+        if self._protocol_version < 21:
+            self._send_command("BLP", (privacy,))
 
     def signoff(self):
         """Logout from the server"""
@@ -290,6 +300,80 @@ class NotificationProtocol(BaseProtocol, Timer):
         tr_id = self._send_command('URL', url_command_args)
         self._callbacks[tr_id] = (callback, None)
 
+    def _send_user_status_notification(self):
+        body = '<user>'\
+              '<s n="PE">'\
+                '<UserTileLocation>%s</UserTileLocation>'\
+                '<FriendlyName>%s</FriendlyName>'\
+                '<PSM>%s</PSM>'\
+                '<RUM>%s</RUM>'\
+                '<RLT>0</RLT>'\
+              '</s>'\
+              '<s n="IM">'\
+                '<Status>%s</Status>'\
+                '<CurrentMedia></CurrentMedia>'\
+              '</s>'\
+              '<sep n="PD">'\
+                '<ClientType>%i</ClientType>'\
+                '<EpName>%s</EpName>'\
+                '<Idle>%s</Idle>'\
+                '<State>%s</State>'\
+              '</sep>'\
+              '<sep n="PE" epid="{%s}">'\
+                '<VER>MSNMSGR:%s</VER>'\
+                '<TYP>%i</TYP>'\
+                '<Capabilities>%s</Capabilities>'\
+              '</sep>'\
+              '<sep n="IM">'\
+                '<Capabilities>%s</Capabilities>'\
+              '</sep>'\
+            '</user>' % (
+                        urllib.quote(str(self._client.profile.msn_object or "")),
+                        urllib.quote(str(self._client.profile.display_name)), 
+                        urllib.quote(str(self._client.profile.personal_message)), 
+                        urllib.quote(str(self._client.profile.personal_message)), 
+                        "NLN",  # TODO: FIXME
+                        self._client.client_type, "Papyon", str(False), # TODO: FIXME
+                        "NLN",  # TODO: FIXME
+                        str(self._client.machine_guid), 
+                        ProtocolConstant.CLIENT_VERSION,
+                        self._client.client_type,
+                        str(self._client.profile.client_id).upper(), # TODO: FIXME
+                        str(self._client.profile.client_id).upper()) # TODO: FIXME
+
+        headers1 = {
+            'Routing' : '1.0',
+            'To'      : '1:' + self._client.profile.account,
+            'From'    : '1:' + self._client.profile.account + ";epid={%s}" % str(self._client.machine_guid),
+        }
+        headers2 = {
+            'Reliability' : '1.0',
+            'Stream'      : '1',
+            'Flags'       : 'ACK',
+        }
+        headers3 = {
+            'Publication'    : '1.0',
+            'Uri'            : '/user',
+            'Content-Type'   : 'application/user+xml',
+            'Content-Length' : str(len(body)),
+        }
+
+        data = ""
+        for key, value in headers1.items():
+            data += key + ": " + value + "\r\n"
+        data  += "\r\n"
+        for key, value in headers2.items():
+            data += key + ": " + value + "\r\n"
+        data  += "\r\n"
+        for key, value in headers3.items():
+            data += key + ": " + value + "\r\n"
+        data  += "\r\n"
+        data  += body
+
+        self._send_command('PUT', payload=data)
+
+        print data
+
     # Helpers ----------------------------------------------------------------
     def __derive_key(self, key, magic):
         hash1 = hmac.new(key, magic, hashlib.sha1).digest()
@@ -327,9 +411,28 @@ class NotificationProtocol(BaseProtocol, Timer):
             return default
 
     # Handlers ---------------------------------------------------------------
+    # --------- msnp >= 21 ---------------------------------------------------
+    def _handle_SDG(self, command):
+        print command
+
+    def _handle_NFY(self, command):
+        print command
+
+    def _handle_PUT(self, command):
+        print command
+
+    def _handle_NFY(self, command):
+        print command
+
     # --------- Connection ---------------------------------------------------
     def _handle_VER(self, command):
         self._protocol_version = int(command.arguments[0].lstrip('MSNP'))
+        if self._protocol_version >= 21:
+            # http://code.google.com/p/msnp-sharp/wiki/KB_MSNP21
+            xfrcount = base64.b64encode("Version: 1\r\nXfrCount: 1\r\n")
+            self._send_command('CVR',
+                ProtocolConstant.CVR + (self._client.profile.account,) + (xfrcount,))
+            return
         self._send_command('CVR',
                 ProtocolConstant.CVR + (self._client.profile.account,))
 
@@ -868,6 +971,14 @@ class NotificationProtocol(BaseProtocol, Timer):
                 logger.warning("Contact is on both Allow and Block list; " \
                                "removing from Allow list (%s)" % contact.account)
                 contact._remove_membership(profile.Membership.ALLOW)
+
+        if self._protocol_version >= 21:
+            # http://code.google.com/p/msnp-sharp/source/detail?r=2519
+            ownerAccount = contact.account.split("@", 1)
+            payload = "<ml><d n=\"" + ownerAccount[1] + "\"><c n=\"" + ownerAccount[0] + "\" t=\"1\"><s l=\"3\" n=\"IM\" /><s l=\"3\" n=\"PE\" /><s l=\"3\" n=\"PD\" /><s l=\"3\" n=\"PF\"/></c></d></ml>";
+            self._send_command("ADL", payload=payload)
+            self._state = ProtocolState.SYNCHRONIZED
+            return
 
         payloads = ['<ml l="1">']
         for domain, contacts in contacts.iteritems():

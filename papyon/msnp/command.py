@@ -133,13 +133,15 @@ class Command(object):
 
     OUTGOING_PAYLOAD = (
             'QRY', 'SDC', 'PGD', 'ADL', 'RML', 'UUN',
-            'UUM', 'UUX', 'MSG', 'FQY')
+            'UUM', 'UUX', 'MSG', 'FQY', 'SDG', 'NFY',
+            'PUT', 'DEL', 'GET', 'FSL')
 
     INCOMING_PAYLOAD = (
             'GCF', 'MSG', 'UBN', 'UBM', 'UBX', 'IPG',
-            'NOT', 'ADL', 'RML', 'FQY',
-
-            '241', '509')
+            'NOT', 'ADL', 'RML', 'FQY', 'SDG', 'NFY',
+            'PUT', 'DEL', 'GET', 'FSL',
+            '201', '203', '204', '205', '210', '234',
+            '508', '509', '511', '591', '731', '801', '933')
 
     def __init__(self):
         self._reset()

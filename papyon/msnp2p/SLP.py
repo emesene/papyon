@@ -189,7 +189,7 @@ class SLPResponseMessage(SLPMessage):
 
 class SLPMessageBody(HTTPMessage):
     content_classes = {}
-    
+
     def __init__(self, content_type, session_id=None, s_channel_state=0, capabilities_flags=1):
         HTTPMessage.__init__(self)
         self.type = content_type
@@ -201,7 +201,6 @@ class SLPMessageBody(HTTPMessage):
         if capabilities_flags is not None:
             self.add_header("Capabilities-Flags", capabilities_flags)
 
-          
     @property
     def session_id(self):
         try:
@@ -293,18 +292,26 @@ SLPMessageBody.register_content(SLPContentType.SESSION_REQUEST, SLPSessionReques
 
 class SLPTransportRequestBody(SLPMessageBody):
     def __init__(self, session_id=None, s_channel_state=None,
-            capabilities_flags=None):
+            capabilities_flags=None, bridges=[], conn_type="Unknown-Connect",
+            upnp=False, firewall=False):
         SLPMessageBody.__init__(self,SLPContentType.TRANSPORT_REQUEST,
                                     session_id, s_channel_state, capabilities_flags)
 
         self.add_header("NetID",-1388627126)
-        self.add_header("Bridges","TCPv1 SBBridge")
-        self.add_header("Conn-Type","Port-Restrict-NAT")
-        self.add_header("TCP-Conn-Type","Symmetric-NAT")
-        self.add_header("UPnPNat","false")
-        self.add_header("ICF","false")
+        self.add_header("Bridges", " ".join(bridges))
+        self.add_header("Conn-Type", conn_type)
+        self.add_header("TCP-Conn-Type", conn_type)
+        self.add_header("UPnPNat", upnp and "true" or "false")
+        self.add_header("ICF", firewall and "true" or "false")
         self.add_header("Nonce", "{%s}" % str(uuid.uuid4()).upper())
         self.add_header("Nat-Trav-Msg-Type", "WLX-Nat-Trav-Msg-Direct-Connect-Req")
+
+    @property
+    def bridges(self):
+        try:
+            return self.get_header("Bridges").split(" ")
+        except (KeyError, ValueError):
+            return []
 
     @property
     def nonce(self):
@@ -318,9 +325,12 @@ SLPMessageBody.register_content(SLPContentType.TRANSPORT_REQUEST, SLPTransportRe
 class SLPTransportResponseBody(SLPMessageBody):
     def __init__(self, bridge=None, listening=None, nonce=None, internal_ips=None,
             internal_port=None, external_ips=None, external_port=None,
-            session_id=None, s_channel_state=None, capabilities_flags=None):
+            session_id=None, s_channel_state=None, capabilities_flags=None,
+            conn_type="Unknown-Connect", version=1):
         SLPMessageBody.__init__(self,SLPContentType.TRANSPORT_RESPONSE,
                                     session_id, s_channel_state, capabilities_flags)
+
+        self._version = version
 
         if bridge is not None:
             self.add_header("Bridge", bridge)
@@ -330,18 +340,32 @@ class SLPTransportResponseBody(SLPMessageBody):
             self.add_header("Nonce", "{%s}" % str(nonce).upper())
         if internal_ips is not None:
             internal_ips = " ".join(internal_ips)
-            self.add_header("IPv4Internal-Addrs"[::-1], internal_ips[::-1])
+            self._add_header("IPv4Internal-Addrs", internal_ips)
         if internal_port is not None:
-            self.add_header("IPv4Internal-Port"[::-1], str(internal_port)[::-1])
+            self._add_header("IPv4Internal-Port", str(internal_port))
         if external_ips is not None:
             external_ips = " ".join(external_ips)
-            self.add_header("IPv4External-Addrs"[::-1], external_ips[::-1])
+            self._add_header("IPv4External-Addrs", external_ips)
         if external_port is not None:
-            self.add_header("IPv4External-Port"[::-1], str(external_port)[::-1])
+            self._add_header("IPv4External-Port", str(external_port))
         self.add_header("Nat-Trav-Msg-Type", "WLX-Nat-Trav-Msg-Direct-Connect-Req")
-        self.add_header("Conn-Type","Port-Restrict-NAT")
-        self.add_header("TCP-Conn-Type", "Symmetric-NAT")
+        self.add_header("Conn-Type", conn_type)
+        self.add_header("TCP-Conn-Type", conn_type)
         self.add_header("IPv6-global", "")
+
+    def _add_header(self, name, value):
+        ''' add_header convenience method for p2pv1 and p2pv2'''
+        if self._version >= 2:
+            self.add_header(name[::-1], value[::-1])
+        else:
+            self.add_header(name, value)
+
+    def _get_header(self, name):
+        ''' get_header convenience method for p2pv1 and p2pv2'''
+        if self._version >= 2:
+            return self.get_header(name[::-1])[::-1]
+        else:
+            return self.get_header(name)
 
     @property
     def bridge(self):
@@ -368,28 +392,28 @@ class SLPTransportResponseBody(SLPMessageBody):
     @property
     def internal_ips(self):
         try:
-            return self.get_header("IPv4Internal-Addrs"[::-1])[::-1].split()
+            return self._get_header("IPv4Internal-Addrs").split()
         except (KeyError, ValueError):
             return []
 
     @property
     def internal_port(self):
         try:
-            return int(self.get_header("IPv4Internal-Port"[::-1])[::-1])
+            return int(self._get_header("IPv4Internal-Port"))
         except (KeyError, ValueError):
             return 0
 
     @property
     def external_ips(self):
         try:
-            return self.get_header("IPv4External-Addrs"[::-1])[::-1].split()
+            return self._get_header("IPv4External-Addrs").split()
         except (KeyError, ValueError):
             return []
 
     @property
     def external_port(self):
         try:
-            return int(self.get_header("IPv4External-Port"[::-1])[::-1])
+            return int(self._get_header("IPv4External-Port"))
         except (KeyError, ValueError):
             return 0
 
@@ -426,4 +450,3 @@ class SLPSessionFailureResponseBody(SLPMessageBody):
                 session_id, s_channel_state, capabilities_flags)
 
 SLPMessageBody.register_content(SLPContentType.SESSION_FAILURE, SLPSessionFailureResponseBody)
-

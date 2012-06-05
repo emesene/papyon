@@ -258,6 +258,7 @@ class P2PSession(gobject.GObject, EventsDispatcher, Timer):
             new_bridge.listen()
 
     def _transreq_accepted(self, transresp):
+        transresp._version = self._version
         if not transresp.listening: # other client isn't listening, fall back to switchboard
             # TODO: offer to be the server
             self._bridge_failed(None)

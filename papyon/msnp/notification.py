@@ -281,6 +281,7 @@ class NotificationProtocol(BaseProtocol, Timer):
             message_type = 2
         else:
             message_type = 1
+        message.headers['MIME-Version'] = '1.0'
         tr_id = self._send_command('UUM',
                 (contact.account, contact.network_id, message_type),
                 payload=message, callback=callback)
@@ -477,9 +478,9 @@ class NotificationProtocol(BaseProtocol, Timer):
 
         contact = self.__search_account(account, network_id)
         if contact is not None:
-            # don't change local presence and capabilities
+            contact._server_property_changed("presence", presence)
+            # don't change capabilities
             if contact is not self._client.profile:
-                contact._server_property_changed("presence", presence)
                 contact._server_property_changed("client-capabilities", capabilities)
             contact._server_property_changed("display-name", display_name)
             # only change MSNObject if the extended presence is known (MSNP18)

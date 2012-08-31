@@ -183,7 +183,7 @@ class ClientCapabilities(gobject.GObject):
             'supports_uucp_sip_stack' : 0x04,
             #'supports_application_messages' : 0x08,
             'supports_rtc_video' : 0x10,
-            'supports_p2pv2' : 0x20,
+            'supports_p2pv2' : 0x30,
             #'is_authenticated_webim_user' : 0x40,
             #'supports_1on1_via_group' : 0x80,
             #'supports_oim' : 0x100,
@@ -795,6 +795,8 @@ class Profile(BaseContact):
         self._ns_client.set_presence(*self.__pending_set_presence)
 
     def _server_property_changed(self, name, value):
+        if name == "presence" and value is not None:
+            self.__pending_set_presence[0] = value
         if name == "msn-object" and value is not None:
             self.__pending_set_presence[2] = value
         BaseContact._server_property_changed(self, name, value)

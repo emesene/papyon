@@ -67,6 +67,7 @@ class P2PTransportManager(gobject.GObject):
         self._default_transport = "SBBridge"
         self._supported_transports = {"SBBridge" : SwitchboardP2PTransport,
                                       "TCPv1"    : DirectP2PTransport}
+
         self._transports = set()
         self._transport_signals = {}
         self._data_blobs = {} # (peer, peer_guid, session_id) => blob
@@ -148,6 +149,7 @@ class P2PTransportManager(gobject.GObject):
             return None
         transport_class = self._supported_transports[proto]
         transport = transport_class.handle_peer(self._client, peer, peer_guid, self)
+        logger.debug("Created new transport: %s" % transport)
         return transport
 
     def close_transport(self, peer, peer_guid):
@@ -164,7 +166,7 @@ class P2PTransportManager(gobject.GObject):
                 if best is None or transport.rating > best.rating:
                     if transport.connected:
                         best = transport
-                    logger.debug("Best transport is now: %s" % best)
+                        logger.debug("Best transport is now: %s" % best)
         return best
 
     def _get_transport(self, peer, peer_guid, blob):
